@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TimeTrackingApp Proto</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --primary: #0054d1;
+      --secondary: #0d1117;
+      --success: #18a957;
+      --warning: #d15800;
+      --border: rgba(0, 0, 0, 0.08);
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.6rem;
+    }
+    .card {
+      width: min(480px, 100%);
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 15px 45px rgba(15, 23, 42, 0.15);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .login,
+    .chat {
+      padding: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .login h1,
+    .chat h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 4vw, 1.8rem);
+    }
+    .pin-input {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+    .pin-input input {
+      width: 100%;
+      padding: 0.9rem 1rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      font-size: 1.1rem;
+      text-align: center;
+      letter-spacing: 0.35rem;
+      font-weight: 600;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 16px;
+      padding: 0.95rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .chat-area {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 18px;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      max-height: 60vh;
+    }
+    .bubble {
+      padding: 0.85rem 1rem;
+      border-radius: 16px;
+      line-height: 1.45;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.assistant {
+      align-self: flex-start;
+      background: rgba(0, 0, 0, 0.05);
+      border-bottom-left-radius: 4px;
+    }
+    .composer {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.7rem;
+      align-items: stretch;
+    }
+    .composer textarea {
+      flex: 1;
+      resize: none;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      min-height: 60px;
+    }
+    .composer button {
+      min-width: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: #555;
+      min-height: 1.2rem;
+    }
+    .pill {
+      align-self: flex-start;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      color: var(--primary);
+      background: rgba(0, 84, 209, 0.12);
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+    }
+    @media (max-width: 520px) {
+      body {
+        padding: 0.8rem;
+      }
+      .card {
+        border-radius: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section class="login" id="loginScreen" aria-live="polite">
+      <h1>TimeTrackingApp</h1>
+      <p>Syötä henkilökohtainen 5-numeroinen PIN-koodi jatkaaksesi.</p>
+      <div class="pin-input">
+        <input
+          type="password"
+          inputmode="numeric"
+          maxlength="5"
+          autocomplete="one-time-code"
+          aria-label="PIN-koodi"
+          id="pinInput"
+        />
+      </div>
+      <button class="btn-primary" id="pinBtn">Kirjaudu sisään</button>
+      <div class="status" id="pinStatus"></div>
+    </section>
+
+    <section class="chat hidden" id="chatScreen">
+      <div class="pill">Kirjattu sisään</div>
+      <h1>Työtuntichat</h1>
+      <div class="chat-area" id="chatArea"></div>
+      <div class="composer">
+        <textarea id="chatInput" placeholder="Kirjoita tai sanelu esim. '15.11 klo 8–12 projekti Alfa'"></textarea>
+        <button class="btn-primary" id="sendBtn" title="Lähetä">➤</button>
+        <button id="micBtn" title="Sanelu">🎙️</button>
+      </div>
+      <div class="status" id="chatStatus">Valmis.</div>
+    </section>
+  </main>
+
+  <script>
+    const PIN_CODE = "12345";
+    const APP_KEY = "VAIHDA_VAHVA_SALAINEN"; // sama kuin save_hours.php:ssa
+
+    const loginScreen = document.getElementById("loginScreen");
+    const chatScreen = document.getElementById("chatScreen");
+    const pinInput = document.getElementById("pinInput");
+    const pinBtn = document.getElementById("pinBtn");
+    const pinStatus = document.getElementById("pinStatus");
+
+    const chatArea = document.getElementById("chatArea");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const chatStatus = document.getElementById("chatStatus");
+    const micBtn = document.getElementById("micBtn");
+
+    let conversationHistory = [
+      {
+        role: "system",
+        content:
+          "Olet TimeTrackingApp tuntikirjausassistentti. Keskustele suomeksi. Pyydä käyttäjää tarkentamaan tarvittavat tiedot ja muodosta lopuksi JSON, joka sisältää päivämäärän, kellonajat, projektin ja tuntimäärän. Esimerkki: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Projekti Alfa\",\"notes\":\"Asennus\"}]}",
+      },
+    ];
+    let recognition;
+
+    function showError(el, msg) {
+      el.textContent = msg;
+      el.style.color = "var(--warning)";
+    }
+    function showSuccess(el, msg) {
+      el.textContent = msg;
+      el.style.color = "var(--success)";
+    }
+
+    function appendBubble(text, role = "assistant") {
+      const div = document.createElement("div");
+      div.className = `bubble ${role}`;
+      div.textContent = text;
+      chatArea.appendChild(div);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function toggleLoading(isLoading, message = "") {
+      chatStatus.textContent = message || (isLoading ? "Työstetään..." : "Valmis.");
+      sendBtn.disabled = isLoading;
+    }
+
+    function parseJSONFromText(text) {
+      const match = text.match(/```json([\s\S]*?)```/);
+      if (!match) return null;
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.warn("JSON-parsaus epäonnistui", e);
+        return null;
+      }
+    }
+
+    async function persistEntries(structuredData) {
+      try {
+        const res = await fetch("save_hours.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-App-Key": APP_KEY,
+          },
+          body: JSON.stringify(structuredData),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || "Tallennus epäonnistui");
+        showSuccess(chatStatus, "Tunnit tallennettu.");
+      } catch (error) {
+        showError(chatStatus, `Tallennusvirhe: ${error.message}`);
+      }
+    }
+
+    async function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      appendBubble(text, "user");
+      conversationHistory.push({ role: "user", content: text });
+      chatInput.value = "";
+      toggleLoading(true, "Kysytään assistentilta...");
+
+      try {
+        const res = await fetch("llm_proxy.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ history: conversationHistory.slice(-12) }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "LLM-virhe");
+        const reply = data.reply || "En saanut vastausta.";
+        appendBubble(reply, "assistant");
+        conversationHistory.push({ role: "assistant", content: reply });
+
+        const structured = parseJSONFromText(reply);
+        if (structured?.entries?.length) {
+          await persistEntries(structured);
+        } else {
+          showError(chatStatus, "Assistentti ei palauttanut JSON-tietoja. Pyydä tarkennusta.");
+        }
+      } catch (error) {
+        console.error(error);
+        showError(chatStatus, `Virhe: ${error.message}`);
+      } finally {
+        toggleLoading(false);
+      }
+    }
+
+    function initSpeech() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        micBtn.disabled = true;
+        micBtn.title = "Selain ei tue sanelua";
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.lang = "fi-FI";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        chatInput.value = chatInput.value
+          ? `${chatInput.value.trim()} ${transcript}`
+          : transcript;
+      };
+      recognition.onerror = () => {
+        showError(chatStatus, "Sanelu epäonnistui.");
+      };
+      recognition.onend = () => {
+        micBtn.textContent = "🎙️";
+      };
+
+      micBtn.addEventListener("click", () => {
+        if (micBtn.textContent === "⏹️") {
+          recognition.stop();
+          return;
+        }
+        recognition.start();
+        micBtn.textContent = "⏹️";
+        showSuccess(chatStatus, "Kuunnellaan...");
+      });
+    }
+
+    pinBtn.addEventListener("click", () => {
+      if (pinInput.value === PIN_CODE) {
+        loginScreen.classList.add("hidden");
+        chatScreen.classList.remove("hidden");
+        showSuccess(chatStatus, "Tervetuloa! Kirjaa tunteja luonnollisella kielellä.");
+        appendBubble(
+          "Hei! Kerro mitä teit, minä muotoilen tunnit ja tallennan ne. Esim: 'Tänään 9–12 Projekti Nordic, tarjouslaskenta'."
+        );
+      } else {
+        showError(pinStatus, "Väärä PIN. Yritä uudelleen.");
+        pinInput.focus();
+      }
+    });
+
+    sendBtn.addEventListener("click", sendMessage);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", initSpeech);
+  </script>
+</body>
+</html>
