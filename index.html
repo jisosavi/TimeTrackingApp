@@ -104,6 +104,17 @@
       color: #fff;
       border: none;
     }
+    .btn-salaxy {
+      margin-top: 0.8rem;
+      background: var(--success);
+      color: #fff;
+      border: none;
+      width: 100%;
+    }
+    .btn-salaxy:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .hidden {
       display: none !important;
     }
@@ -248,6 +259,7 @@
         </div>
       </div>
       <div class="status" id="chatStatus">Valmis.</div>
+      <button class="btn-salaxy" id="salaxyBtn" title="Lähetä tunnit Salaxyyn">📤 Lähetä Salaxyyn</button>
     </section>
   </main>
 
@@ -266,6 +278,7 @@
     const sendBtn = document.getElementById("sendBtn");
     const chatStatus = document.getElementById("chatStatus");
     const micBtn = document.getElementById("micBtn");
+    const salaxyBtn = document.getElementById("salaxyBtn");
 
     let conversationHistory = [
       {
@@ -458,6 +471,65 @@
         sendMessage();
       }
     });
+
+    // Salaxy sync -toiminto
+    let pendingEntries = []; // Tallenna viimeisimmät kirjaukset lähetystä varten
+    
+    async function syncToSalaxy() {
+      if (pendingEntries.length === 0) {
+        showError(chatStatus, "Ei lähetettäviä tunteja. Kirjaa ensin tunteja.");
+        return;
+      }
+      
+      salaxyBtn.disabled = true;
+      showSuccess(chatStatus, "Lähetetään Salaxyyn...");
+      
+      try {
+        const res = await fetch("salaxy_sync.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-App-Key": APP_KEY,
+          },
+          body: JSON.stringify({ entries: pendingEntries }),
+        });
+        const result = await res.json();
+        
+        if (res.ok && result.totalFailed === 0) {
+          showSuccess(chatStatus, `✅ ${result.totalSent} tuntikirjausta lisätty palkkalistalle!`);
+          appendBubble(`Salaxy-synkronointi onnistui!\n\n${result.totalSent} tuntikirjausta lisätty palkkalistan luonnokselle (${result.draftDate}).`, "assistant");
+          pendingEntries = []; // Tyhjennä lähetetyt
+        } else if (result.totalSent > 0) {
+          showError(chatStatus, `⚠️ ${result.totalSent} onnistui, ${result.totalFailed} epäonnistui`);
+          appendBubble(`Salaxy-synkronointi osittain onnistui.\n\nLisätty luonnokselle (${result.draftDate}):\nOnnistui: ${result.totalSent}\nEpäonnistui: ${result.totalFailed}`, "assistant");
+        } else {
+          const err = new Error(result.errors?.[0]?.error || result.message || "Lähetys epäonnistui");
+          err.debug = result.debug;
+          throw err;
+        }
+      } catch (error) {
+        console.error("Salaxy sync error:", error);
+        showError(chatStatus, `Salaxy-virhe: ${error.message}`);
+        // Näytä debug-tiedot konsolissa
+        if (error.debug) {
+          console.error("Salaxy API debug:", error.debug);
+        }
+      } finally {
+        salaxyBtn.disabled = false;
+      }
+    }
+    
+    // Muokkaa persistEntries tallentamaan myös pendingEntries:iin
+    const originalPersistEntries = persistEntries;
+    persistEntries = async function(structuredData) {
+      await originalPersistEntries(structuredData);
+      // Lisää entries pending-listaan Salaxy-lähetystä varten
+      if (structuredData?.entries) {
+        pendingEntries = pendingEntries.concat(structuredData.entries);
+      }
+    };
+    
+    salaxyBtn.addEventListener("click", syncToSalaxy);
 
     document.addEventListener("DOMContentLoaded", initSpeech);
   </script>
