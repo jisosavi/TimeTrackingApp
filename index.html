@@ -10,11 +10,27 @@
       font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --bg: #f5f5f5;
       --card: #ffffff;
+      --text: #1a1a1a;
+      --text-muted: #555555;
       --primary: #0054d1;
       --secondary: #0d1117;
       --success: #18a957;
       --warning: #d15800;
       --border: rgba(0, 0, 0, 0.08);
+      --input-bg: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --text: #e6edf3;
+        --text-muted: #8b949e;
+        --primary: #388bfd;
+        --success: #3fb950;
+        --warning: #d29922;
+        --border: rgba(255, 255, 255, 0.1);
+        --input-bg: #21262d;
+      }
     }
     * {
       box-sizing: border-box;
@@ -23,6 +39,7 @@
       margin: 0;
       min-height: 100vh;
       background: var(--bg);
+      color: var(--text);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -60,6 +77,8 @@
       padding: 0.9rem 1rem;
       border-radius: 16px;
       border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
       font-size: 1.1rem;
       text-align: center;
       letter-spacing: 0.35rem;
@@ -72,6 +91,9 @@
       padding: 0.95rem 1rem;
       font-size: 1rem;
       font-weight: 600;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
       transition: transform 0.2s ease, background 0.2s ease;
     }
     button:active {
@@ -80,13 +102,14 @@
     .btn-primary {
       background: var(--primary);
       color: #fff;
+      border: none;
     }
     .hidden {
       display: none !important;
     }
     .chat-area {
       flex: 1;
-      background: rgba(0, 0, 0, 0.02);
+      background: var(--input-bg);
       border-radius: 18px;
       padding: 1rem;
       overflow-y: auto;
@@ -111,7 +134,8 @@
     }
     .bubble.assistant {
       align-self: flex-start;
-      background: rgba(0, 0, 0, 0.05);
+      background: var(--card);
+      border: 1px solid var(--border);
       border-bottom-left-radius: 4px;
     }
     .json-toggle {
@@ -127,13 +151,14 @@
     }
     .json-content {
       display: none;
-      background: rgba(0, 0, 0, 0.03);
+      background: var(--input-bg);
       border-radius: 8px;
       padding: 0.6rem;
       margin-top: 0.5rem;
       font-family: monospace;
       font-size: 0.8rem;
       overflow-x: auto;
+      color: var(--text);
     }
     .json-content.visible {
       display: block;
@@ -149,6 +174,8 @@
       resize: none;
       border-radius: 16px;
       border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
       padding: 0.85rem 1rem;
       font-size: 1rem;
       min-height: 120px;
@@ -166,7 +193,7 @@
     }
     .status {
       font-size: 0.85rem;
-      color: #555;
+      color: var(--text-muted);
       min-height: 1.2rem;
     }
     .pill {
