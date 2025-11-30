@@ -114,22 +114,51 @@
       background: rgba(0, 0, 0, 0.05);
       border-bottom-left-radius: 4px;
     }
+    .json-toggle {
+      color: var(--primary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+    .json-toggle:hover {
+      opacity: 0.7;
+    }
+    .json-content {
+      display: none;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+      padding: 0.6rem;
+      margin-top: 0.5rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+    }
+    .json-content.visible {
+      display: block;
+    }
     .composer {
       margin-top: 1rem;
       display: flex;
+      flex-direction: column;
       gap: 0.7rem;
-      align-items: stretch;
     }
     .composer textarea {
-      flex: 1;
+      width: 100%;
       resize: none;
       border-radius: 16px;
       border: 1px solid var(--border);
       padding: 0.85rem 1rem;
       font-size: 1rem;
-      min-height: 60px;
+      min-height: 120px;
+    }
+    .composer .buttons {
+      display: flex;
+      gap: 0.7rem;
     }
     .composer button {
+      flex: 1;
       min-width: 56px;
       display: flex;
       align-items: center;
@@ -165,7 +194,7 @@
   <main class="card">
     <section class="login" id="loginScreen" aria-live="polite">
       <h1>TimeTrackingApp</h1>
-      <p>Syötä henkilökohtainen 5-numeroinen PIN-koodi jatkaaksesi.</p>
+      <p>Kirjaudu henkilökohtaisella PIN-koodillasi.</p>
       <div class="pin-input">
         <input
           type="password"
@@ -176,18 +205,20 @@
           id="pinInput"
         />
       </div>
-      <button class="btn-primary" id="pinBtn">Kirjaudu sisään</button>
+      <button class="btn-primary" id="pinBtn">Kirjaudu</button>
       <div class="status" id="pinStatus"></div>
     </section>
 
     <section class="chat hidden" id="chatScreen">
       <div class="pill">Kirjattu sisään</div>
-      <h1>Työtuntichat</h1>
+      <h1>Työtuntien kirjaus</h1>
       <div class="chat-area" id="chatArea"></div>
       <div class="composer">
-        <textarea id="chatInput" placeholder="Kirjoita tai sanelu esim. '15.11 klo 8–12 projekti Alfa'"></textarea>
-        <button class="btn-primary" id="sendBtn" title="Lähetä">➤</button>
-        <button id="micBtn" title="Sanelu">🎙️</button>
+        <textarea id="chatInput" placeholder="Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa."></textarea>
+        <div class="buttons">
+          <button class="btn-primary" id="sendBtn" title="Lähetä">➤</button>
+          <button id="micBtn" title="Sanelu">🎙️</button>
+        </div>
       </div>
       <div class="status" id="chatStatus">Valmis.</div>
     </section>
@@ -195,7 +226,7 @@
 
   <script>
     const PIN_CODE = "12345";
-    const APP_KEY = "VAIHDA_VAHVA_SALAINEN"; // sama kuin save_hours.php:ssa
+    const APP_KEY = "tT9#kL2$mN7@pQ4!23"; // sama kuin save_hours.php:ssa
 
     const loginScreen = document.getElementById("loginScreen");
     const chatScreen = document.getElementById("chatScreen");
@@ -230,7 +261,40 @@
     function appendBubble(text, role = "assistant") {
       const div = document.createElement("div");
       div.className = `bubble ${role}`;
-      div.textContent = text;
+      
+      // Piilota JSON toggle-elementin taakse assistant-viesteissä
+      if (role === "assistant" && text.includes("```json")) {
+        const parts = text.split(/```json[\s\S]*?```/);
+        const jsonMatch = text.match(/```json([\s\S]*?)```/);
+        
+        const textSpan = document.createElement("span");
+        textSpan.textContent = parts[0].trim();
+        div.appendChild(textSpan);
+        
+        if (jsonMatch) {
+          const toggleLink = document.createElement("span");
+          toggleLink.className = "json-toggle";
+          toggleLink.textContent = "📋 Avaa JSON";
+          
+          const jsonContent = document.createElement("pre");
+          jsonContent.className = "json-content";
+          jsonContent.textContent = jsonMatch[1].trim();
+          
+          toggleLink.addEventListener("click", () => {
+            jsonContent.classList.toggle("visible");
+            toggleLink.textContent = jsonContent.classList.contains("visible") 
+              ? "📋 Piilota JSON" 
+              : "📋 Avaa JSON";
+          });
+          
+          div.appendChild(document.createElement("br"));
+          div.appendChild(toggleLink);
+          div.appendChild(jsonContent);
+        }
+      } else {
+        div.textContent = text;
+      }
+      
       chatArea.appendChild(div);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
@@ -343,13 +407,20 @@
       if (pinInput.value === PIN_CODE) {
         loginScreen.classList.add("hidden");
         chatScreen.classList.remove("hidden");
-        showSuccess(chatStatus, "Tervetuloa! Kirjaa tunteja luonnollisella kielellä.");
+        showSuccess(chatStatus, "Kirjaa työtunteja sanelemalla tai kirjoittamalla.");
         appendBubble(
-          "Hei! Kerro mitä teit, minä muotoilen tunnit ja tallennan ne. Esim: 'Tänään 9–12 Projekti Nordic, tarjouslaskenta'."
+          "Hei!\n\nKerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9–12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8–12 projekti Alfa kommentti: Meni ennakoitua pidempään'"
         );
       } else {
         showError(pinStatus, "Väärä PIN. Yritä uudelleen.");
         pinInput.focus();
+      }
+    });
+
+    // Lisää tämä - Enter-näppäin PIN-kentässä
+    pinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        pinBtn.click();
       }
     });
 

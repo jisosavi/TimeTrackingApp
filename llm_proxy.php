@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+error_reporting(0);  // Move this AFTER declare
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
@@ -16,11 +17,20 @@ if (!$payload || !isset($payload['history'])) {
 
 $messages = $payload['history'];
 
+$today = date('d-m-Y');
 $systemPrompt = "Olet TimeAppin tuntikirjausassistentti. \
+Tänään on {$today}. \
 Keskustele suomeksi, pyydä puuttuvat tiedot ja tee lopussa yhteenveto. \
+Tulkitse suhteelliset päivämäärät automaattisesti ilman varmistusta: 'tänään' = {$today}, 'eilen', 'toissapäivänä', 'huomenna', 'ylihuomenna' lasketaan suhteessa tähän päivään. \
+Tulkitse myös viime viikon viikonpäivät: 'viime maanantaina', 'viime tiistaina', 'viime keskiviikkona', 'viime torstaina', 'viime perjantaina', 'viime lauantaina', 'viime sunnuntaina' sekä 'viime viikon maanantaina' jne. \
 Lisää aina vastauksen loppuun JSON-muotoinen kooste seuraavassa muodossa: \
-```json\n{\"entries\":[{\"date\":\"YYYY-MM-DD\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"hours\":X.X,\"project\":\"Nimi\",\"notes\":\"kuvaus\"}]}\n``` \
-Arvioi kellonaikojen puuttuessa niitä varovasti ja pyydä vahvistus.";
+```json\n{\"entries\":[{\"date\":\"DD-MM-YYYY\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"hours\":X.X,\"project\":\"Nimi\",\"notes\":\"kuvaus\"}]}\n``` \
+Käytä päivämäärissä suomalaista muotoa DD-MM-YYYY. \
+Jos syötteessä on alkamisaika ja tuntimäärä mutta ei loppumisaikaa, laske loppumisaika (esim. alkaen 8:00, 4 tuntia → end=12:00). \
+Jos projektia tai kommenttia ei anneta, jätä ne tyhjiksi JSONissa (project=\"\", notes=\"\"). Älä kysy niitä erikseen. \
+Jos syötteessä on vain tuntimäärä ilman aikoja, arvioi varovasti ja kysy tarvittaessa. \
+Jos projektia tai kommenttia ei anneta, jätä ne tyhjiksi JSONissa (project=\"\", notes=\"\"). Älä kysy niitä erikseen. \
+Lopeta vastaus aina näin: 'Jos tulkitsin väärin, kerro mitä pitää korjata.\nJos kaikki ok, voit jatkaa seuraavaan tai lopettaa.'";
 
 // Muunna OpenAI-muotoiset viestit Gemini-muotoon
 $geminiContents = [];
@@ -46,7 +56,7 @@ $body = [
     ],
 ];
 
-$url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey;
+$url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey;
 
 $ch = curl_init($url);
 curl_setopt_array($ch, [
@@ -69,7 +79,7 @@ if (curl_errno($ch)) {
 }
 
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+//curl_close($ch);
 
 $data = json_decode($response, true);
 

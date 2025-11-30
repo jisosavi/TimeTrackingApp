@@ -2,7 +2,7 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-const APP_KEY = 'VAIHDA_VAHVA_SALAINEN'; // sama kuin index.html:n APP_KEY
+const APP_KEY = 'tT9#kL2$mN7@pQ4!23'; // sama kuin index.html:n APP_KEY
 
 if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
     http_response_code(401);
