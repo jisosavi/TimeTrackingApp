@@ -119,6 +119,7 @@ function getOrCreateTodaysDraft(): ?array {
     if ($response['success'] && isset($response['data']['id'])) {
         $newDraft = [
             'payrollId' => $response['data']['id'],
+            'calculationId' => null, // Asetetaan kun ensimmäinen laskelma luodaan
             'createdDate' => $today,
             'createdAt' => date('c')
         ];
@@ -147,21 +148,15 @@ function getOrCreateTodaysDraft(): ?array {
 }
 
 /**
- * Lisää tuntipalkkarivi palkkalistalle (luo Calculation)
- * 
- * HUOM: Tuntien päivitys ei vielä toimi täydellisesti API:n kautta.
- * Calculation luodaan oikealla työntekijällä ja oletusriveillä.
+ * Rakenna kuvaus tuntipalkkariville
  */
-function addHourlyWageRow(string $payrollId, array $entry): array {
-    // Rakenna kuvaus: päivämäärä, kellonajat, projekti, kommentti
+function buildDescription(array $entry): string {
     $parts = [];
     
-    // Päivämäärä
     if (!empty($entry['date'])) {
         $parts[] = $entry['date'];
     }
     
-    // Kellonajat
     $start = $entry['start'] ?? '';
     $end = $entry['end'] ?? '';
     if ($start && $end) {
@@ -170,24 +165,35 @@ function addHourlyWageRow(string $payrollId, array $entry): array {
         $parts[] = 'alkaen ' . $start;
     }
     
-    // Projekti
     if (!empty($entry['project'])) {
         $parts[] = $entry['project'];
     }
     
-    // Kommentti
     if (!empty($entry['notes'])) {
         $parts[] = $entry['notes'];
     }
     
-    $description = implode(' | ', $parts);
+    return implode(' | ', $parts);
+}
+
+/**
+ * Hae olemassaoleva laskelma palkkalistalta tai luo uusi
+ */
+function getOrCreateCalculation(string $payrollId, ?string $existingCalcId): array {
+    // Jos meillä on jo laskelma-ID, käytä sitä
+    if ($existingCalcId) {
+        $getResponse = salaxyRequest('GET', '/calculations/' . $existingCalcId);
+        if ($getResponse['success'] && isset($getResponse['data'])) {
+            return [
+                'success' => true,
+                'calculationId' => $existingCalcId,
+                'calcObject' => $getResponse['data'],
+                'isNew' => false
+            ];
+        }
+    }
     
-    $debugLog = [
-        'hours_value' => $entry['hours'] ?? 'missing',
-        'description' => $description
-    ];
-    
-    // VAIHE 1: Luo calculation oletusriveillä
+    // Luo uusi calculation oletusriveillä
     $createData = [
         'workflow' => ['status' => 'PayrollDraft'],
         'employer' => ['isSelf' => true],
@@ -196,43 +202,103 @@ function addHourlyWageRow(string $payrollId, array $entry): array {
     ];
     
     $createResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=true', $createData);
-    $response = $createResponse;
-    $response['debug'] = $debugLog;
     
     if (!$createResponse['success'] || !isset($createResponse['data']['id'])) {
-        return $response;
+        return ['success' => false, 'error' => 'Create calculation failed', 'response' => $createResponse];
     }
     
     $calculationId = $createResponse['data']['id'];
     
-    // VAIHE 2: Hae calculation oletusriveineen
+    // Hae luotu calculation
     $getResponse = salaxyRequest('GET', '/calculations/' . $calculationId);
     
     if (!$getResponse['success'] || !isset($getResponse['data'])) {
-        $response['error'] = 'GET calculation failed';
+        return ['success' => false, 'error' => 'GET new calculation failed'];
+    }
+    
+    return [
+        'success' => true,
+        'calculationId' => $calculationId,
+        'calcObject' => $getResponse['data'],
+        'isNew' => true
+    ];
+}
+
+/**
+ * Lisää tuntipalkkarivi palkkalistalle
+ * - Käyttää olemassaolevaa laskelmaa jos sellainen on
+ * - Lisää UUDEN tuntirivin (ei korvaa vanhoja)
+ */
+function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalcId = null): array {
+    $description = buildDescription($entry);
+    
+    $response = [
+        'debug' => [
+            'hours_value' => $entry['hours'] ?? 'missing',
+            'description' => $description,
+            'existingCalcId' => $existingCalcId
+        ]
+    ];
+    
+    // Hae tai luo laskelma
+    $calcResult = getOrCreateCalculation($payrollId, $existingCalcId);
+    
+    if (!$calcResult['success']) {
+        $response['error'] = $calcResult['error'] ?? 'Failed to get/create calculation';
+        $response['success'] = false;
         return $response;
     }
     
-    $calcObject = $getResponse['data'];
+    $calculationId = $calcResult['calculationId'];
+    $calcObject = $calcResult['calcObject'];
+    $isNewCalc = $calcResult['isNew'];
+    
+    $response['calculationId'] = $calculationId;
+    $response['isNewCalculation'] = $isNewCalc;
+    
     $existingRows = $calcObject['rows'] ?? [];
     $response['debug_existing_rows'] = $existingRows;
     
-    // VAIHE 3: Muokkaa tuntirivi (tai lisää jos ei ole)
-    $hourlyRowFound = false;
-    foreach ($existingRows as $index => $row) {
-        if (isset($row['rowType']) && $row['rowType'] === 'hourlySalary') {
-            $calcObject['rows'][$index]['count'] = floatval($entry['hours'] ?? 0);
-            $calcObject['rows'][$index]['message'] = $description;
-            $hourlyRowFound = true;
-            $response['debug_modified_row'] = $calcObject['rows'][$index];
-            break;
+    if ($isNewCalc) {
+        // Uusi laskelma: muokkaa olemassaolevaa oletustuntiriviä
+        $hourlyRowFound = false;
+        foreach ($existingRows as $index => $row) {
+            if (isset($row['rowType']) && $row['rowType'] === 'hourlySalary') {
+                $calcObject['rows'][$index]['count'] = floatval($entry['hours'] ?? 0);
+                $calcObject['rows'][$index]['message'] = $description;
+                $hourlyRowFound = true;
+                $response['debug_modified_row'] = $calcObject['rows'][$index];
+                break;
+            }
         }
-    }
-    
-    // Jos tuntiriviä ei ollut, lisää se
-    if (!$hourlyRowFound) {
+        
+        // Jos tuntiriviä ei ollut, lisää se
+        if (!$hourlyRowFound) {
+            $calcObject['rows'][] = [
+                'rowIndex' => count($existingRows),
+                'rowType' => 'hourlySalary',
+                'count' => floatval($entry['hours'] ?? 0),
+                'price' => 20,
+                'unit' => 'hours',
+                'message' => $description,
+                'source' => 'undefined',
+                'sourceId' => null,
+                'accounting' => ['vatPercent' => null, 'vatEntries' => null, 'dimensions' => [], 'entry' => null],
+                'period' => null,
+                'data' => new \stdClass()
+            ];
+        }
+    } else {
+        // Olemassaoleva laskelma: LISÄÄ uusi tuntirivi
+        $maxRowIndex = -1;
+        foreach ($existingRows as $row) {
+            if (isset($row['rowIndex']) && $row['rowIndex'] > $maxRowIndex) {
+                $maxRowIndex = $row['rowIndex'];
+            }
+        }
+        
         $calcObject['rows'][] = [
-            'rowIndex' => count($existingRows),
+            'rowIndex' => $maxRowIndex + 1,
             'rowType' => 'hourlySalary',
             'count' => floatval($entry['hours'] ?? 0),
             'price' => 20,
@@ -244,9 +310,8 @@ function addHourlyWageRow(string $payrollId, array $entry): array {
             'period' => null,
             'data' => new \stdClass()
         ];
-        $response['debug_added_hourly_row'] = true;
+        $response['debug_added_new_hourly_row'] = true;
     }
-    $response['debug_hourly_row_found'] = $hourlyRowFound;
     
     // VAIHE 4: Tallenna muokattu laskelma (updateRows=false säilyttää rivit)
     $saveResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=false', $calcObject);
@@ -255,10 +320,14 @@ function addHourlyWageRow(string $payrollId, array $entry): array {
     // Käytä tallennettua ID:tä (voi olla sama tai uusi)
     $finalCalcId = $saveResponse['data']['id'] ?? $calculationId;
     
-    // VAIHE 5: Liitä palkkalistaan
-    $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
-    $response['addCalcResponse'] = $addCalcResponse;
+    // VAIHE 5: Liitä palkkalistaan VAIN jos uusi laskelma
+    if ($isNewCalc) {
+        $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
+        $response['addCalcResponse'] = $addCalcResponse;
+    }
+    
     $response['finalCalculationId'] = $finalCalcId;
+    $response['success'] = true;
     
     return $response;
 }
@@ -298,46 +367,43 @@ if (!$draft) {
 }
 
 $payrollId = $draft['payrollId'];
+$existingCalcId = $draft['calculationId'] ?? null;
 $results = [];
 $errors = [];
 
 // Lisää jokainen tuntikirjaus palkkalistalle
 foreach ($entries as $entry) {
-    $response = addHourlyWageRow($payrollId, $entry);
+    $response = addHourlyWageRow($payrollId, $entry, $existingCalcId);
     
-    // Tarkista onko calculation luotu onnistuneesti (on id)
-    // Huom: update-from-employment palauttaa täyden calculation-objektin, jossa on id
-    $calcId = $response['data']['id'] ?? 
-              $response['updateFromEmployment']['data']['id'] ?? 
-              null;
+    // Päivitä calculationId jatkokäyttöä varten
+    $calcId = $response['finalCalculationId'] ?? $response['calculationId'] ?? null;
+    
+    // Jos tämä oli uusi laskelma, tallenna ID draft-tiedostoon
+    if ($calcId && !$existingCalcId) {
+        $existingCalcId = $calcId;
+        $draft['calculationId'] = $calcId;
+        file_put_contents(DRAFT_FILE, json_encode($draft, JSON_PRETTY_PRINT));
+    }
+    
     $calculationCreated = $calcId !== null;
     
     // Debug: näytä mitä saimme
     $debugInfo = [
-        'response_success' => $response['success'],
-        'response_httpCode' => $response['httpCode'] ?? 'N/A',
-        'data_has_id' => isset($response['data']['id']),
-        'update_has_id' => isset($response['updateFromEmployment']['data']['id']),
+        'response_success' => $response['success'] ?? false,
+        'isNewCalculation' => $response['isNewCalculation'] ?? 'unknown',
         'calcId' => $calcId
     ];
     
-    if ($response['success'] || $calculationCreated) {
+    if (($response['success'] ?? false) || $calculationCreated) {
         $results[] = [
             'date' => $entry['date'],
             'hours' => $entry['hours'],
             'project' => $entry['project'] ?? '',
             'status' => 'ok',
             'calculationId' => $calcId,
-            'addCalcStatus' => $response['saveCalcsResponse']['success'] ?? 'unknown',
+            'isNewCalculation' => $response['isNewCalculation'] ?? false,
             'debugInfo' => $debugInfo,
-            'getResponse' => $response['getResponse'] ?? 'not set',
-            'saveResponse' => $response['saveResponse'] ?? 'not set',
-            'debug_existing_rows' => $response['debug_existing_rows'] ?? 'not set',
-            'debug_hours_to_set' => $response['debug_hours_to_set'] ?? 'not set',
-            'debug_hourly_row_found' => $response['debug_hourly_row_found'] ?? false,
-            'debug_modified_row' => $response['debug_modified_row'] ?? 'not set',
-            'debug_rows_to_save' => $response['debug_rows_to_save'] ?? 'not set',
-            'debug_get_failed' => $response['debug_get_failed'] ?? false
+            'debug_existing_rows' => $response['debug_existing_rows'] ?? 'not set'
         ];
     } else {
         // Hae oikea virheilmoitus

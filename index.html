@@ -277,6 +277,9 @@
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
     const chatStatus = document.getElementById("chatStatus");
+    
+    // Salaxy-lähetystä varten
+    let pendingEntries = [];
     const micBtn = document.getElementById("micBtn");
     const salaxyBtn = document.getElementById("salaxyBtn");
 
@@ -396,6 +399,9 @@
         const structured = parseJSONFromText(reply);
         if (structured?.entries?.length) {
           await persistEntries(structured);
+          // Lisää suoraan pending-listaan Salaxy-lähetystä varten
+          pendingEntries = pendingEntries.concat(structured.entries);
+          console.log("Lisätty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
         } else {
           showError(chatStatus, "Assistentti ei palauttanut JSON-tietoja. Pyydä tarkennusta.");
         }
@@ -473,8 +479,6 @@
     });
 
     // Salaxy sync -toiminto
-    let pendingEntries = []; // Tallenna viimeisimmät kirjaukset lähetystä varten
-    
     async function syncToSalaxy() {
       if (pendingEntries.length === 0) {
         showError(chatStatus, "Ei lähetettäviä tunteja. Kirjaa ensin tunteja.");
@@ -518,16 +522,6 @@
         salaxyBtn.disabled = false;
       }
     }
-    
-    // Muokkaa persistEntries tallentamaan myös pendingEntries:iin
-    const originalPersistEntries = persistEntries;
-    persistEntries = async function(structuredData) {
-      await originalPersistEntries(structuredData);
-      // Lisää entries pending-listaan Salaxy-lähetystä varten
-      if (structuredData?.entries) {
-        pendingEntries = pendingEntries.concat(structuredData.entries);
-      }
-    };
     
     salaxyBtn.addEventListener("click", syncToSalaxy);
 
