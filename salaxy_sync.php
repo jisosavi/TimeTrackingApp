@@ -5,8 +5,9 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
 
-const APP_KEY = 'tT9#kL2$mN7@pQ4!23';
+// APP_KEY tulee config.php:stä
 const DRAFT_FILE = __DIR__ . '/data/salaxy_draft.json';
+const TOKEN_FILE = __DIR__ . '/data/salaxy_token.json';
 
 // Tarkista APP_KEY
 if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
@@ -16,9 +17,77 @@ if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
 }
 
 /**
+ * Hae Salaxy access token (cachetetaan tiedostoon)
+ */
+function getSalaxyAccessToken(): ?string {
+    // Tarkista onko cachessa validi token
+    if (file_exists(TOKEN_FILE)) {
+        $cached = json_decode(file_get_contents(TOKEN_FILE), true);
+        // Token on voimassa jos se on alle 23 tuntia vanha (token kestää 24h)
+        if (isset($cached['access_token'], $cached['fetched_at'])) {
+            $age = time() - $cached['fetched_at'];
+            if ($age < 23 * 60 * 60) {
+                return $cached['access_token'];
+            }
+        }
+    }
+    
+    // Hae uusi token
+    $ch = curl_init(SALAXY_TOKEN_URL);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode([
+            'grant_type' => 'password',
+            'username' => SALAXY_USERNAME,
+            'password' => SALAXY_PASSWORD
+        ]),
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200) {
+        error_log("Salaxy token fetch failed: HTTP $httpCode - $response");
+        return null;
+    }
+    
+    $data = json_decode($response, true);
+    if (!isset($data['access_token'])) {
+        error_log("Salaxy token fetch: no access_token in response");
+        return null;
+    }
+    
+    // Tallenna cacheen
+    $cacheData = [
+        'access_token' => $data['access_token'],
+        'token_type' => $data['token_type'] ?? 'Bearer',
+        'fetched_at' => time()
+    ];
+    
+    $dataDir = dirname(TOKEN_FILE);
+    if (!is_dir($dataDir)) {
+        mkdir($dataDir, 0775, true);
+    }
+    file_put_contents(TOKEN_FILE, json_encode($cacheData, JSON_PRETTY_PRINT));
+    
+    return $data['access_token'];
+}
+
+/**
  * Tee API-kutsu Salaxyyn
  */
 function salaxyRequest(string $method, string $endpoint, ?array $data = null): array {
+    // Hae token dynaamisesti
+    $token = getSalaxyAccessToken();
+    if (!$token) {
+        return ['success' => false, 'error' => 'Failed to get Salaxy access token', 'httpCode' => 0];
+    }
+    
     $url = SALAXY_API_URL . $endpoint;
     
     // Debug: log the full URL
@@ -29,7 +98,7 @@ function salaxyRequest(string $method, string $endpoint, ?array $data = null): a
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . SALAXY_JWT_TOKEN,
+            'Authorization: Bearer ' . $token,
             'Accept: application/json',
         ],
         CURLOPT_TIMEOUT => 30,
