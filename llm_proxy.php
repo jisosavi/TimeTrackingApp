@@ -26,6 +26,7 @@ TULKINTAOHJEET:
 - Käytä päivämäärissä muotoa DD-MM-YYYY
 - Jos on alkamisaika ja tuntimäärä ilman loppuaikaa, laske loppuaika
 - Jos projektia tai kommenttia ei anneta, jätä tyhjäksi
+- TÄRKEÄÄ: Laske tunnit AINA kellonaikojen perusteella (loppu - alku). Jos käyttäjä antaa eri tuntimäärän kuin kellonajat osoittavat, käytä kellonaikojen mukaista laskelmaa ja huomauta erosta.
 
 VASTAA AINA TÄSSÄ MUODOSSA:
 

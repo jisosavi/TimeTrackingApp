@@ -2,13 +2,17 @@
 
 Time Tracking App is a very simple time tracking app for small businesses.
 It utilises Gemini AI to interpret the user's voice or text input and log the time entries.
-It saves the time entries to a JSON file in the data directory.
+
+It interpretes the time entries as a JSON, and the entries are exported to a payroll to Salaxy utilising Salaxy API. Export is initiated by the user.
+
 
 ## 🌟 Features
 
     - Time tracking for projects and tasks
     - Voice or text input to log the time entries
-    - JSON file saving the time entries
+    - JSON generation from inputted time entries
+    - Time entries export to Salaxy via Salaxy API. Payroll created and entries added as payslip entries to an employee. A new payroll is created daily, not for every time entry.
+
 
 ## 📸 Screenshots
 
