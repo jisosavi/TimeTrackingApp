@@ -181,9 +181,9 @@ function getOrCreateTodaysDraft(): ?array {
     $payrollData = [
         'employmentId' => SALAXY_EMPLOYMENT_ID,
         'status' => 'Draft',
-        'name' => $payrollName,
-        'title' => $payrollName,
-        'description' => $payrollName,
+        'input' => [
+            'title' => $payrollName,
+        ],
     ];
     
     $response = salaxyRequest('POST', '/payroll', $payrollData);
@@ -191,17 +191,8 @@ function getOrCreateTodaysDraft(): ?array {
     if ($response['success'] && isset($response['data']['id'])) {
         $payrollId = $response['data']['id'];
         
-        // Yritä päivittää palkkalistan nimi/kuvaus POST-kutsulla (sama endpoint)
-        $updateData = [
-            'id' => $payrollId,
-            'title' => $payrollName,
-            'description' => $payrollName,
-            'info' => [
-                'title' => $payrollName,
-                'description' => $payrollName
-            ]
-        ];
-        $patchResult = salaxyRequest('POST', '/payroll/' . $payrollId, $updateData);
+        // Debug: ei tarvitse päivittää erikseen kun input.title on asetettu
+        $patchResult = null;
         
         $newDraft = [
             'payrollId' => $payrollId,

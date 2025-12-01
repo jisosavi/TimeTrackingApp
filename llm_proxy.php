@@ -24,11 +24,19 @@ TULKINTAOHJEET:
 - Tulkitse 'tänään' = {$today}, 'eilen', 'toissapäivänä', 'huomenna' automaattisesti
 - Tulkitse 'viime maanantaina', 'viime tiistaina' jne. oikein
 - Käytä päivämäärissä muotoa DD-MM-YYYY
-- Jos on alkamisaika ja tuntimäärä ilman loppuaikaa, laske loppuaika
+- Jos on alkamisaika ja tuntimäärä ilman loppuaikaa, LASKE loppuaika automaattisesti
+- Jos on loppuaika ja tuntimäärä ilman alkuaikaa, LASKE alkuaika automaattisesti
 - Jos projektia tai kommenttia ei anneta, jätä tyhjäksi
-- TÄRKEÄÄ: Laske tunnit AINA kellonaikojen perusteella (loppu - alku). Jos käyttäjä antaa eri tuntimäärän kuin kellonajat osoittavat, käytä kellonaikojen mukaista laskelmaa ja huomauta erosta.
+- TÄRKEÄÄ: Laske tunnit AINA kellonaikojen perusteella (loppu - alku)
 
-VASTAA AINA TÄSSÄ MUODOSSA:
+MILLOIN KIRJAUS ON VALMIS:
+Kirjaus on valmis kun voit määrittää päivämäärän JA kellonajat (alku+loppu). Kellonajat voi päätellä:
+- Suoraan annettu: '9-12' tai 'klo 9-12'
+- Alkuaika + tunnit: '9 alkaen 3h' -> 09:00-12:00
+- Loppuaika + tunnit: '12 asti 3h' -> 09:00-12:00
+- Pelkkä tuntimäärä EI RIITÄ, kysy alkuaikaa
+
+VASTAUSMUOTO:
 
 Yhteenveto:
 * Päivämäärä: [DD-MM-YYYY]
@@ -41,15 +49,21 @@ Yhteenveto:
 Jos tulkitsin väärin, kerro mitä pitää korjata.
 Jos kaikki ok, voit jatkaa seuraavaan tai lopettaa.
 
-TÄRKEÄÄ JSON-SÄÄNNÖT:
-- Lisää JSON-lohko VAIN kun kirjaus on VALMIS ja TÄYDELLINEN (päivämäärä JA kellonajat annettu)
-- ÄLÄ lisää JSON-lohkoa jos kysyt käyttäjältä tarkennusta (esim. kellonaikoja)
-- Kun käyttäjä antaa tarkennuksen, palauta VASTA SITTEN täydellinen JSON
+JSON-SÄÄNNÖT:
+- Lisää JSON-lohko AINA kun kirjaus on VALMIS (päivämäärä + kellonajat tiedossa)
+- ÄLÄ lisää JSON-lohkoa VAIN jos et voi päätellä kellonaikoja ja kysyt niitä
+- ÄLÄ KOSKAAN kysy varmistuksia kuten 'Onko tämä oikein?', 'Onko muita muutoksia?', 'Haluatko muuttaa jotain?'
+- Kun käyttäjä antaa korjauksen, lisää HETI päivitetty JSON - käyttäjä voi aina korjata lisää jos haluaa
 
-JSON-muoto kun kirjaus on valmis:
-\`\`\`json
-{\"entries\":[{\"date\":\"DD-MM-YYYY\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"hours\":X.X,\"project\":\"nimi\",\"notes\":\"kommentti\"}]}
-\`\`\`";
+TÄRKEÄÄ - action-kenttä:
+- action: 'new' = ensimmäinen kirjaus tai uusi kirjaus (käyttäjä sanoo 'seuraava', 'toinen kirjaus', tai selvästi eri päivä/konteksti)
+- action: 'update' = käyttäjä KORJAA tai TÄYDENTÄÄ juuri käsiteltyä kirjausta
+
+JSON-muoto (käytä TARKALLEEN kolme backtick-merkkiä):
+" . '```json
+{"action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"project":"nimi","notes":"kommentti"}]}
+```' . "
+";
 
 // Muunna OpenAI-muotoiset viestit Gemini-muotoon
 $geminiContents = [];

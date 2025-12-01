@@ -306,9 +306,13 @@
       div.className = `bubble ${role}`;
       
       // Piilota JSON toggle-elementin taakse assistant-viesteissä
-      if (role === "assistant" && text.includes("```json")) {
-        const parts = text.split(/```json[\s\S]*?```/);
-        const jsonMatch = text.match(/```json([\s\S]*?)```/);
+      // Tue eri backtick-muotoja
+      const jsonPattern = /(`{3}|\\`\\`\\`)json\s*([\s\S]*?)\s*(`{3}|\\`\\`\\`)/;
+      const hasJson = jsonPattern.test(text);
+      
+      if (role === "assistant" && hasJson) {
+        const parts = text.split(jsonPattern);
+        const jsonMatch = text.match(jsonPattern);
         
         const textSpan = document.createElement("span");
         textSpan.textContent = parts[0].trim();
@@ -321,7 +325,7 @@
           
           const jsonContent = document.createElement("pre");
           jsonContent.className = "json-content";
-          jsonContent.textContent = jsonMatch[1].trim();
+          jsonContent.textContent = jsonMatch[2].trim();
           
           toggleLink.addEventListener("click", () => {
             jsonContent.classList.toggle("visible");
@@ -369,14 +373,24 @@ ${info}<br>
     }
 
     function parseJSONFromText(text) {
-      const match = text.match(/```json([\s\S]*?)```/);
-      if (!match) return null;
-      try {
-        return JSON.parse(match[1]);
-      } catch (e) {
-        console.warn("JSON-parsaus epäonnistui", e);
-        return null;
+      // Tue eri backtick-muotoja (normaali, escaped, unicode)
+      const patterns = [
+        /```json\s*([\s\S]*?)\s*```/,
+        /`{3}json\s*([\s\S]*?)\s*`{3}/,
+        /\\`\\`\\`json\s*([\s\S]*?)\s*\\`\\`\\`/,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) {
+          try {
+            return JSON.parse(match[1].trim());
+          } catch (e) {
+            console.warn("JSON-parsaus epäonnistui", e, match[1]);
+          }
+        }
       }
+      return null;
     }
 
     async function persistEntries(structuredData) {
@@ -419,11 +433,23 @@ ${info}<br>
 
         const structured = parseJSONFromText(reply);
         if (structured?.entries?.length) {
+          const action = structured.action || "new";
+          
+          if (action === "update" && pendingEntries.length > 0) {
+            // Korjaus: korvaa viimeisin kirjaus
+            pendingEntries.pop();
+            pendingEntries = pendingEntries.concat(structured.entries);
+            console.log("Päivitetty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
+            showSuccess(chatStatus, "Kirjaus päivitetty.");
+          } else {
+            // Uusi kirjaus
+            pendingEntries = pendingEntries.concat(structured.entries);
+            console.log("Lisätty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
+            showSuccess(chatStatus, `${structured.entries.length} tuntikirjaus(ta) tallennettu.`);
+          }
+          
+          // Tallenna myös paikallisesti (aina uutena, historia säilyy)
           await persistEntries(structured);
-          // Lisää suoraan pending-listaan Salaxy-lähetystä varten
-          pendingEntries = pendingEntries.concat(structured.entries);
-          console.log("Lisätty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
-          showSuccess(chatStatus, `${structured.entries.length} tuntikirjaus(ta) tallennettu.`);
         } else {
           // Ei JSON-lohkoa = assistentti kysyy tarkennusta, ei virhettä
           showSuccess(chatStatus, "Odottaa tarkennusta...");
