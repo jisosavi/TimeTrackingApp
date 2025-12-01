@@ -342,6 +342,27 @@
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
+    function appendSalaxySuccess(result, partial = false) {
+      const div = document.createElement("div");
+      div.className = "bubble assistant";
+      
+      const title = partial 
+        ? "Salaxy-synkronointi osittain onnistui!" 
+        : "Salaxy-synkronointi onnistui!";
+      
+      const info = partial
+        ? `Onnistui: ${result.totalSent}, Epäonnistui: ${result.totalFailed}`
+        : `${result.totalSent} tuntikirjausta lisätty palkkalistalle.`;
+      
+      div.innerHTML = `<strong>${title}</strong><br>
+${info}<br>
+<strong>Palkkalista:</strong> ${result.payrollName || 'TimeTrackingApp'} (${result.draftDate})<br>
+<a href="${result.payrollUrl}" target="_blank" style="color: #0066cc; text-decoration: underline;">DEBUG: Palkkalistan linkki Salaxyssä</a>`;
+      
+      chatArea.appendChild(div);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
     function toggleLoading(isLoading, message = "") {
       chatStatus.textContent = message || (isLoading ? "Työstetään..." : "Valmis.");
       sendBtn.disabled = isLoading;
@@ -408,9 +429,10 @@
       } catch (error) {
         console.error(error);
         showError(chatStatus, `Virhe: ${error.message}`);
-      } finally {
-        toggleLoading(false);
+        sendBtn.disabled = false; // Palauta nappi käyttöön ilman "Valmis"-tekstiä
+        return; // Älä ylikirjoita virheviestiä
       }
+      toggleLoading(false);
     }
 
     function initSpeech() {
@@ -501,11 +523,11 @@
         
         if (res.ok && result.totalFailed === 0) {
           showSuccess(chatStatus, `✅ ${result.totalSent} tuntikirjausta lisätty palkkalistalle!`);
-          appendBubble(`Salaxy-synkronointi onnistui!\n\n${result.totalSent} tuntikirjausta lisätty palkkalistan luonnokselle (${result.draftDate}).`, "assistant");
+          appendSalaxySuccess(result);
           pendingEntries = []; // Tyhjennä lähetetyt
         } else if (result.totalSent > 0) {
           showError(chatStatus, `⚠️ ${result.totalSent} onnistui, ${result.totalFailed} epäonnistui`);
-          appendBubble(`Salaxy-synkronointi osittain onnistui.\n\nLisätty luonnokselle (${result.draftDate}):\nOnnistui: ${result.totalSent}\nEpäonnistui: ${result.totalFailed}`, "assistant");
+          appendSalaxySuccess(result, true);
         } else {
           const err = new Error(result.errors?.[0]?.error || result.message || "Lähetys epäonnistui");
           err.debug = result.debug;

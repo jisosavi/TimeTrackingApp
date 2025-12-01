@@ -108,20 +108,39 @@ function getOrCreateTodaysDraft(): ?array {
     }
     
     // Luo uusi palkkalistan luonnos
+    $payrollName = 'TimeTrackingApp_Test: ' . date('d.m.Y') . ' : ' . date('H:i');
     $payrollData = [
         'employmentId' => SALAXY_EMPLOYMENT_ID,
         'status' => 'Draft',
-        'description' => 'TimeTrackingApp - ' . date('d.m.Y'),
+        'name' => $payrollName,
+        'title' => $payrollName,
+        'description' => $payrollName,
     ];
     
     $response = salaxyRequest('POST', '/payroll', $payrollData);
     
     if ($response['success'] && isset($response['data']['id'])) {
+        $payrollId = $response['data']['id'];
+        
+        // Yritä päivittää palkkalistan nimi/kuvaus POST-kutsulla (sama endpoint)
+        $updateData = [
+            'id' => $payrollId,
+            'title' => $payrollName,
+            'description' => $payrollName,
+            'info' => [
+                'title' => $payrollName,
+                'description' => $payrollName
+            ]
+        ];
+        $patchResult = salaxyRequest('POST', '/payroll/' . $payrollId, $updateData);
+        
         $newDraft = [
-            'payrollId' => $response['data']['id'],
-            'calculationId' => null, // Asetetaan kun ensimmäinen laskelma luodaan
+            'payrollId' => $payrollId,
+            'payrollName' => $payrollName,
+            'calculationId' => null,
             'createdDate' => $today,
-            'createdAt' => date('c')
+            'createdAt' => date('c'),
+            'patchResult' => $patchResult // Debug
         ];
         
         // Tallenna luonnoksen tiedot
@@ -436,9 +455,12 @@ echo json_encode([
         ? 'Kaikki tunnit lisätty palkkalistalle' 
         : 'Osa tunneista epäonnistui',
     'payrollId' => $payrollId,
+    'payrollName' => $draft['payrollName'] ?? 'TimeTrackingApp',
+    'payrollUrl' => 'https://test.salaxy.fi/payroll/' . $payrollId,
     'draftDate' => $draft['createdDate'],
     'success' => $results,
     'errors' => $errors,
     'totalSent' => count($results),
-    'totalFailed' => count($errors)
+    'totalFailed' => count($errors),
+    'debug_patchResult' => $draft['patchResult'] ?? 'not available'
 ]);

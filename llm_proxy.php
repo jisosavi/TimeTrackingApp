@@ -99,6 +99,16 @@ $data = json_decode($response, true);
 if ($httpCode >= 400) {
     http_response_code($httpCode);
     $errorMsg = $data['error']['message'] ?? 'Tuntematon virhe';
+    
+    // Käyttäjäystävälliset virheilmoitukset
+    if ($httpCode === 429 || strpos($errorMsg, 'Resource exhausted') !== false) {
+        $errorMsg = 'Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen, tai luo uusi API-avain.';
+    } elseif ($httpCode === 401 || $httpCode === 403 || strpos($errorMsg, 'API key') !== false) {
+        $errorMsg = 'API-avain on virheellinen tai vanhentunut. Tarkista config.php.';
+    } elseif ($httpCode === 404) {
+        $errorMsg = 'Tekoälymallia ei löydy. Tarkista mallin nimi llm_proxy.php:ssä.';
+    }
+    
     echo json_encode(['error' => $errorMsg]);
     exit;
 }
