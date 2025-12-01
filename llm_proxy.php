@@ -41,10 +41,15 @@ Yhteenveto:
 Jos tulkitsin väärin, kerro mitä pitää korjata.
 Jos kaikki ok, voit jatkaa seuraavaan tai lopettaa.
 
-TÄRKEÄÄ: Lisää AINA vastauksen loppuun JSON-lohko täsmälleen tässä muodossa:
-```json
+TÄRKEÄÄ JSON-SÄÄNNÖT:
+- Lisää JSON-lohko VAIN kun kirjaus on VALMIS ja TÄYDELLINEN (päivämäärä JA kellonajat annettu)
+- ÄLÄ lisää JSON-lohkoa jos kysyt käyttäjältä tarkennusta (esim. kellonaikoja)
+- Kun käyttäjä antaa tarkennuksen, palauta VASTA SITTEN täydellinen JSON
+
+JSON-muoto kun kirjaus on valmis:
+\`\`\`json
 {\"entries\":[{\"date\":\"DD-MM-YYYY\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"hours\":X.X,\"project\":\"nimi\",\"notes\":\"kommentti\"}]}
-```";
+\`\`\`";
 
 // Muunna OpenAI-muotoiset viestit Gemini-muotoon
 $geminiContents = [];

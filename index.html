@@ -423,8 +423,10 @@ ${info}<br>
           // Lisää suoraan pending-listaan Salaxy-lähetystä varten
           pendingEntries = pendingEntries.concat(structured.entries);
           console.log("Lisätty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
+          showSuccess(chatStatus, `${structured.entries.length} tuntikirjaus(ta) tallennettu.`);
         } else {
-          showError(chatStatus, "Assistentti ei palauttanut JSON-tietoja. Pyydä tarkennusta.");
+          // Ei JSON-lohkoa = assistentti kysyy tarkennusta, ei virhettä
+          showSuccess(chatStatus, "Odottaa tarkennusta...");
         }
       } catch (error) {
         console.error(error);
