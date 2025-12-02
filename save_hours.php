@@ -3,7 +3,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
-// APP_KEY tulee config.php:stä
+// APP_KEY talletettu erikseen muualle
 
 if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
     http_response_code(401);
