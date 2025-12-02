@@ -264,8 +264,8 @@
   </main>
 
   <script>
-    const PIN_CODE = "12345";
     const APP_KEY = "tT9#kL2$mN7@pQ4!23"; // sama kuin save_hours.php:ssa
+    let currentEmployee = null; // Kirjautuneen työntekijän tiedot
 
     const loginScreen = document.getElementById("loginScreen");
     const chatScreen = document.getElementById("chatScreen");
@@ -499,17 +499,42 @@ ${info}<br>
       });
     }
 
-    pinBtn.addEventListener("click", () => {
-      if (pinInput.value === PIN_CODE) {
-        loginScreen.classList.add("hidden");
-        chatScreen.classList.remove("hidden");
-        showSuccess(chatStatus, "Kirjaa työtunteja sanelemalla tai kirjoittamalla.");
-        appendBubble(
-          "Hei!\n\nKerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9–12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8–12 projekti Bravo kommentti: Meni ennakoitua pidempään'"
-        );
-      } else {
-        showError(pinStatus, "Väärä PIN. Yritä uudelleen.");
+    pinBtn.addEventListener("click", async () => {
+      const pin = pinInput.value.trim();
+      if (!pin) {
+        showError(pinStatus, "Syötä PIN-koodi.");
         pinInput.focus();
+        return;
+      }
+      
+      pinBtn.disabled = true;
+      showSuccess(pinStatus, "Tarkistetaan...");
+      
+      try {
+        const res = await fetch("validate_pin.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin }),
+        });
+        const data = await res.json();
+        
+        if (data.valid) {
+          currentEmployee = data;
+          loginScreen.classList.add("hidden");
+          chatScreen.classList.remove("hidden");
+          showSuccess(chatStatus, "Tervetuloa, " + data.name + "!");
+          appendBubble(
+            "Hei " + data.name + "!\n\nKerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9-12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8-12 projekti Bravo kommentti: Meni ennakoitua pidempään'"
+          );
+        } else {
+          showError(pinStatus, data.error || "Väärä PIN. Yritä uudelleen.");
+          pinInput.focus();
+        }
+      } catch (error) {
+        console.error("PIN validation error:", error);
+        showError(pinStatus, "Virhe kirjautumisessa. Yritä uudelleen.");
+      } finally {
+        pinBtn.disabled = false;
       }
     });
 
@@ -545,7 +570,10 @@ ${info}<br>
             "Content-Type": "application/json",
             "X-App-Key": APP_KEY,
           },
-          body: JSON.stringify({ entries: pendingEntries }),
+          body: JSON.stringify({ 
+            entries: pendingEntries,
+            employmentId: currentEmployee?.employmentId || null
+          }),
         });
         const result = await res.json();
         

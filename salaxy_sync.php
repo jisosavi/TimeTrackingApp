@@ -156,9 +156,9 @@ function convertDateToISO(string $date): string {
 $lastApiError = null;
 
 /**
- * Hae tai luo tämän päivän palkkalistan luonnos
+ * Hae tai luo tämän päivän palkkalistan luonnos (jaettu kaikille työntekijöille)
  */
-function getOrCreateTodaysDraft(): ?array {
+function getOrCreateTodaysDraft(string $employmentId): ?array {
     global $lastApiError;
     $today = date('Y-m-d');
     
@@ -166,20 +166,25 @@ function getOrCreateTodaysDraft(): ?array {
     if (file_exists(DRAFT_FILE)) {
         $draftData = json_decode(file_get_contents(DRAFT_FILE), true);
         
-        // Jos luonnos on tältä päivältä, käytä sitä
-        if (isset($draftData['createdDate']) && $draftData['createdDate'] === $today && isset($draftData['payrollId'])) {
+        // Jos luonnos on tältä päivältä, käytä sitä (jaettu kaikille työntekijöille)
+        if (isset($draftData['createdDate']) && $draftData['createdDate'] === $today 
+            && isset($draftData['payrollId'])) {
             // Tarkista että luonnos on edelleen olemassa Salaxyssä
             $checkResponse = salaxyRequest('GET', '/payroll/' . $draftData['payrollId']);
             if ($checkResponse['success']) {
+                // Varmista että calculations-objekti on olemassa
+                if (!isset($draftData['calculations'])) {
+                    $draftData['calculations'] = [];
+                }
                 return $draftData;
             }
         }
     }
     
-    // Luo uusi palkkalistan luonnos
+    // Luo uusi palkkalistan luonnos (käytetään ensimmäisen työntekijän employmentId:tä)
     $payrollName = 'TimeTrackingApp_Test: ' . date('d.m.Y') . ' : ' . date('H:i');
     $payrollData = [
-        'employmentId' => SALAXY_EMPLOYMENT_ID,
+        'employmentId' => $employmentId,
         'status' => 'Draft',
         'input' => [
             'title' => $payrollName,
@@ -191,16 +196,12 @@ function getOrCreateTodaysDraft(): ?array {
     if ($response['success'] && isset($response['data']['id'])) {
         $payrollId = $response['data']['id'];
         
-        // Debug: ei tarvitse päivittää erikseen kun input.title on asetettu
-        $patchResult = null;
-        
         $newDraft = [
             'payrollId' => $payrollId,
             'payrollName' => $payrollName,
-            'calculationId' => null,
             'createdDate' => $today,
             'createdAt' => date('c'),
-            'patchResult' => $patchResult // Debug
+            'calculations' => [] // Työntekijäkohtaiset laskelmat: employmentId => calculationId
         ];
         
         // Tallenna luonnoksen tiedot
@@ -258,7 +259,7 @@ function buildDescription(array $entry): string {
 /**
  * Hae olemassaoleva laskelma palkkalistalta tai luo uusi
  */
-function getOrCreateCalculation(string $payrollId, ?string $existingCalcId): array {
+function getOrCreateCalculation(string $payrollId, ?string $existingCalcId, string $employmentId): array {
     // Jos meillä on jo laskelma-ID, käytä sitä
     if ($existingCalcId) {
         $getResponse = salaxyRequest('GET', '/calculations/' . $existingCalcId);
@@ -276,7 +277,7 @@ function getOrCreateCalculation(string $payrollId, ?string $existingCalcId): arr
     $createData = [
         'workflow' => ['status' => 'PayrollDraft'],
         'employer' => ['isSelf' => true],
-        'worker' => ['employmentId' => SALAXY_EMPLOYMENT_ID],
+        'worker' => ['employmentId' => $employmentId],
         'info' => ['payrollId' => $payrollId]
     ];
     
@@ -308,19 +309,20 @@ function getOrCreateCalculation(string $payrollId, ?string $existingCalcId): arr
  * - Käyttää olemassaolevaa laskelmaa jos sellainen on
  * - Lisää UUDEN tuntirivin (ei korvaa vanhoja)
  */
-function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalcId = null): array {
+function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalcId, string $employmentId): array {
     $description = buildDescription($entry);
     
     $response = [
         'debug' => [
             'hours_value' => $entry['hours'] ?? 'missing',
             'description' => $description,
-            'existingCalcId' => $existingCalcId
+            'existingCalcId' => $existingCalcId,
+            'employmentId' => $employmentId
         ]
     ];
     
     // Hae tai luo laskelma
-    $calcResult = getOrCreateCalculation($payrollId, $existingCalcId);
+    $calcResult = getOrCreateCalculation($payrollId, $existingCalcId, $employmentId);
     
     if (!$calcResult['success']) {
         $response['error'] = $calcResult['error'] ?? 'Failed to get/create calculation';
@@ -426,6 +428,7 @@ if (!$payload || !isset($payload['entries']) || !is_array($payload['entries'])) 
 }
 
 $entries = $payload['entries'];
+$employmentId = $payload['employmentId'] ?? SALAXY_EMPLOYMENT_ID;
 
 if (empty($entries)) {
     http_response_code(400);
@@ -434,7 +437,7 @@ if (empty($entries)) {
 }
 
 // Hae tai luo tämän päivän luonnos
-$draft = getOrCreateTodaysDraft();
+$draft = getOrCreateTodaysDraft($employmentId);
 
 if (!$draft) {
     http_response_code(500);
@@ -446,21 +449,22 @@ if (!$draft) {
 }
 
 $payrollId = $draft['payrollId'];
-$existingCalcId = $draft['calculationId'] ?? null;
+// Hae tämän työntekijän olemassaoleva laskelma-ID (jos on)
+$existingCalcId = $draft['calculations'][$employmentId] ?? null;
 $results = [];
 $errors = [];
 
 // Lisää jokainen tuntikirjaus palkkalistalle
 foreach ($entries as $entry) {
-    $response = addHourlyWageRow($payrollId, $entry, $existingCalcId);
+    $response = addHourlyWageRow($payrollId, $entry, $existingCalcId, $employmentId);
     
     // Päivitä calculationId jatkokäyttöä varten
     $calcId = $response['finalCalculationId'] ?? $response['calculationId'] ?? null;
     
-    // Jos tämä oli uusi laskelma, tallenna ID draft-tiedostoon
+    // Jos tämä oli uusi laskelma, tallenna ID draft-tiedostoon työntekijäkohtaisesti
     if ($calcId && !$existingCalcId) {
         $existingCalcId = $calcId;
-        $draft['calculationId'] = $calcId;
+        $draft['calculations'][$employmentId] = $calcId;
         file_put_contents(DRAFT_FILE, json_encode($draft, JSON_PRETTY_PRINT));
     }
     
