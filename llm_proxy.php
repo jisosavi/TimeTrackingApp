@@ -29,8 +29,19 @@ TULKINTAOHJEET:
 - Jos projektia tai kommenttia ei anneta, jätä tyhjäksi
 - TÄRKEÄÄ: Laske tunnit AINA kellonaikojen perusteella (loppu - alku)
 
+KILOMETRIKORVAUKSET:
+- Tunnista km-korvaukset syötteestä: 'km-korvaus 134km', 'kilometrikorvaus 145km', 'kilometrit 150', 'lisäksi 145 km', 'ajoin 80km'
+- Km-korvaus voi olla samassa syötteessä tuntien kanssa tai erikseen
+- Laita kilometrit mileage-kenttään (numero, ei tekstiä)
+- Jos ei km-korvausta, jätä mileage-kenttä pois tai arvoksi 0
+
 MILLOIN KIRJAUS ON VALMIS:
-Kirjaus on valmis kun voit määrittää päivämäärän JA kellonajat (alku+loppu). Kellonajat voi päätellä:
+Kirjaus on valmis kun:
+- Tuntikirjaus: päivämäärä JA kellonajat (alku+loppu) tiedossa
+- Km-korvaus: päivämäärä JA kilometrimäärä tiedossa
+- Molemmat voivat olla samassa kirjauksessa
+
+Kellonajat voi päätellä:
 - Suoraan annettu: '9-12' tai 'klo 9-12'
 - Alkuaika + tunnit: '9 alkaen 3h' -> 09:00-12:00
 - Loppuaika + tunnit: '12 asti 3h' -> 09:00-12:00
@@ -40,9 +51,10 @@ VASTAUSMUOTO:
 
 Yhteenveto:
 * Päivämäärä: [DD-MM-YYYY]
-* Aloitusaika: [HH:MM]
-* Lopetusaika: [HH:MM]
-* Tunnit: [X.X]
+* Aloitusaika: [HH:MM] (jos tunteja)
+* Lopetusaika: [HH:MM] (jos tunteja)
+* Tunnit: [X.X] (jos tunteja)
+* Kilometrit: [X] km (jos km-korvausta)
 * Projekti: [nimi tai tyhjä]
 * Kommentti: [teksti tai tyhjä]
 
@@ -50,8 +62,8 @@ Jos tulkitsin väärin, kerro mitä pitää korjata.
 Jos kaikki ok, voit jatkaa seuraavaan tai lopettaa.
 
 JSON-SÄÄNNÖT:
-- Lisää JSON-lohko AINA kun kirjaus on VALMIS (päivämäärä + kellonajat tiedossa)
-- ÄLÄ lisää JSON-lohkoa VAIN jos et voi päätellä kellonaikoja ja kysyt niitä
+- Lisää JSON-lohko AINA kun kirjaus on VALMIS
+- ÄLÄ lisää JSON-lohkoa VAIN jos et voi päätellä pakollisia tietoja ja kysyt niitä
 - ÄLÄ KOSKAAN kysy varmistuksia kuten 'Onko tämä oikein?', 'Onko muita muutoksia?', 'Haluatko muuttaa jotain?'
 - Kun käyttäjä antaa korjauksen, lisää HETI päivitetty JSON - käyttäjä voi aina korjata lisää jos haluaa
 
@@ -61,7 +73,7 @@ TÄRKEÄÄ - action-kenttä:
 
 JSON-muoto (käytä TARKALLEEN kolme backtick-merkkiä):
 " . '```json
-{"action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"project":"nimi","notes":"kommentti"}]}
+{"action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"}]}
 ```' . "
 ";
 

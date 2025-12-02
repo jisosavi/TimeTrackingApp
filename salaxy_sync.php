@@ -257,6 +257,31 @@ function buildDescription(array $entry): string {
 }
 
 /**
+ * Hae työntekijän nykyinen oletustuntipalkka Salaxystä
+ */
+function getEmployeeDefaultHourlyPrice(string $employmentId): ?float {
+    // Luo väliaikainen laskelma oletusriveillä (ei tallenneta)
+    $tempData = [
+        'workflow' => ['status' => 'PayrollDraft'],
+        'employer' => ['isSelf' => true],
+        'worker' => ['employmentId' => $employmentId]
+    ];
+    
+    // Käytä save=false jotta ei tallenneta turhaa laskelmaa
+    $response = salaxyRequest('POST', '/calculations/update-from-employment?save=false&updateRows=true', $tempData);
+    
+    if ($response['success'] && isset($response['data']['rows'])) {
+        foreach ($response['data']['rows'] as $row) {
+            if (isset($row['rowType']) && $row['rowType'] === 'hourlySalary' && isset($row['price'])) {
+                return floatval($row['price']);
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Hae olemassaoleva laskelma palkkalistalta tai luo uusi
  */
 function getOrCreateCalculation(string $payrollId, ?string $existingCalcId, string $employmentId): array {
@@ -340,6 +365,23 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
     $existingRows = $calcObject['rows'] ?? [];
     $response['debug_existing_rows'] = $existingRows;
     
+    // Hae AINA tuore oletustuntipalkka työntekijältä (voi muuttua Salaxyn puolella)
+    $freshDefaultPrice = getEmployeeDefaultHourlyPrice($employmentId);
+    $response['debug_fresh_default_price'] = $freshDefaultPrice;
+    
+    // Käytä tuoretta hintaa, tai laskelman olemassaolevaa hintaa, tai 0
+    $defaultHourlyPrice = $freshDefaultPrice;
+    if ($defaultHourlyPrice === null) {
+        // Fallback: käytä laskelman olemassaolevaa hintaa
+        foreach ($existingRows as $row) {
+            if (isset($row['rowType']) && $row['rowType'] === 'hourlySalary' && isset($row['price'])) {
+                $defaultHourlyPrice = $row['price'];
+                break;
+            }
+        }
+    }
+    $response['debug_default_hourly_price'] = $defaultHourlyPrice;
+    
     if ($isNewCalc) {
         // Uusi laskelma: muokkaa olemassaolevaa oletustuntiriviä
         $hourlyRowFound = false;
@@ -347,19 +389,20 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
             if (isset($row['rowType']) && $row['rowType'] === 'hourlySalary') {
                 $calcObject['rows'][$index]['count'] = floatval($entry['hours'] ?? 0);
                 $calcObject['rows'][$index]['message'] = $description;
+                // Säilytetään alkuperäinen hinta (työntekijän oletushinta)
                 $hourlyRowFound = true;
                 $response['debug_modified_row'] = $calcObject['rows'][$index];
                 break;
             }
         }
         
-        // Jos tuntiriviä ei ollut, lisää se
+        // Jos tuntiriviä ei ollut, lisää se (käytä oletushintaa tai 0)
         if (!$hourlyRowFound) {
             $calcObject['rows'][] = [
                 'rowIndex' => count($existingRows),
                 'rowType' => 'hourlySalary',
                 'count' => floatval($entry['hours'] ?? 0),
-                'price' => 20,
+                'price' => $defaultHourlyPrice ?? 0,
                 'unit' => 'hours',
                 'message' => $description,
                 'source' => 'undefined',
@@ -370,7 +413,7 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
             ];
         }
     } else {
-        // Olemassaoleva laskelma: LISÄÄ uusi tuntirivi
+        // Olemassaoleva laskelma: LISÄÄ uusi tuntirivi (käytä samaa hintaa kuin aiemmissa)
         $maxRowIndex = -1;
         foreach ($existingRows as $row) {
             if (isset($row['rowIndex']) && $row['rowIndex'] > $maxRowIndex) {
@@ -382,7 +425,7 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
             'rowIndex' => $maxRowIndex + 1,
             'rowType' => 'hourlySalary',
             'count' => floatval($entry['hours'] ?? 0),
-            'price' => 20,
+            'price' => $defaultHourlyPrice ?? 0,
             'unit' => 'hours',
             'message' => $description,
             'source' => 'undefined',
@@ -402,6 +445,92 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
     $finalCalcId = $saveResponse['data']['id'] ?? $calculationId;
     
     // VAIHE 5: Liitä palkkalistaan VAIN jos uusi laskelma
+    if ($isNewCalc) {
+        $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
+        $response['addCalcResponse'] = $addCalcResponse;
+    }
+    
+    $response['finalCalculationId'] = $finalCalcId;
+    $response['success'] = true;
+    
+    return $response;
+}
+
+/**
+ * Lisää kilometrikorvausrivi laskelmalle
+ * rowType: taxFreeKmAllowance (tulorekisterikoodi 311)
+ */
+function addMileageRow(string $payrollId, array $entry, ?string $existingCalcId, string $employmentId): array {
+    $mileage = floatval($entry['mileage'] ?? 0);
+    
+    if ($mileage <= 0) {
+        return ['success' => true, 'skipped' => true, 'reason' => 'No mileage'];
+    }
+    
+    $date = $entry['date'] ?? date('d-m-Y');
+    $project = $entry['project'] ?? '';
+    $description = $date . ($project ? ' | ' . $project : '') . ' | km-korvaus';
+    
+    $response = [
+        'debug' => [
+            'mileage_value' => $mileage,
+            'description' => $description,
+            'existingCalcId' => $existingCalcId,
+            'employmentId' => $employmentId
+        ]
+    ];
+    
+    // Hae tai luo laskelma (sama kuin tunneille)
+    $calcResult = getOrCreateCalculation($payrollId, $existingCalcId, $employmentId);
+    
+    if (!$calcResult['success']) {
+        $response['error'] = $calcResult['error'] ?? 'Failed to get/create calculation';
+        $response['success'] = false;
+        return $response;
+    }
+    
+    $calculationId = $calcResult['calculationId'];
+    $calcObject = $calcResult['calcObject'];
+    $isNewCalc = $calcResult['isNew'];
+    
+    $response['calculationId'] = $calculationId;
+    $response['isNewCalculation'] = $isNewCalc;
+    
+    $existingRows = $calcObject['rows'] ?? [];
+    
+    // Etsi suurin rowIndex
+    $maxRowIndex = -1;
+    foreach ($existingRows as $row) {
+        if (isset($row['rowIndex']) && $row['rowIndex'] > $maxRowIndex) {
+            $maxRowIndex = $row['rowIndex'];
+        }
+    }
+    
+    // Lisää kilometrikorvausrivi
+    // rowType: taxFreeKmAllowance = Oman auton käyttö (tulorekisterikoodi 311)
+    $calcObject['rows'][] = [
+        'rowIndex' => $maxRowIndex + 1,
+        'rowType' => 'taxFreeKmAllowance',
+        'count' => $mileage,
+        'price' => 0.25, // Verottajan kilometrikorvaus 2024, Salaxy voi ylikirjoittaa oletuksella
+        'unit' => 'km',
+        'message' => $description,
+        'source' => 'undefined',
+        'sourceId' => null,
+        'accounting' => ['vatPercent' => null, 'vatEntries' => null, 'dimensions' => [], 'entry' => null],
+        'period' => null,
+        'data' => new \stdClass()
+    ];
+    
+    $response['debug_added_mileage_row'] = true;
+    
+    // Tallenna muokattu laskelma
+    $saveResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=false', $calcObject);
+    $response['saveResponse'] = $saveResponse;
+    
+    $finalCalcId = $saveResponse['data']['id'] ?? $calculationId;
+    
+    // Liitä palkkalistaan VAIN jos uusi laskelma
     if ($isNewCalc) {
         $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
         $response['addCalcResponse'] = $addCalcResponse;
@@ -456,18 +585,43 @@ $errors = [];
 
 // Lisää jokainen tuntikirjaus palkkalistalle
 foreach ($entries as $entry) {
-    $response = addHourlyWageRow($payrollId, $entry, $existingCalcId, $employmentId);
+    $hours = floatval($entry['hours'] ?? 0);
+    $mileage = floatval($entry['mileage'] ?? 0);
     
-    // Päivitä calculationId jatkokäyttöä varten
-    $calcId = $response['finalCalculationId'] ?? $response['calculationId'] ?? null;
-    
-    // Jos tämä oli uusi laskelma, tallenna ID draft-tiedostoon työntekijäkohtaisesti
-    if ($calcId && !$existingCalcId) {
-        $existingCalcId = $calcId;
-        $draft['calculations'][$employmentId] = $calcId;
-        file_put_contents(DRAFT_FILE, json_encode($draft, JSON_PRETTY_PRINT));
+    // Lisää tuntirivi jos tunteja on
+    if ($hours > 0) {
+        $response = addHourlyWageRow($payrollId, $entry, $existingCalcId, $employmentId);
+        
+        // Päivitä calculationId jatkokäyttöä varten
+        $calcId = $response['finalCalculationId'] ?? $response['calculationId'] ?? null;
+        
+        // Jos tämä oli uusi laskelma, tallenna ID draft-tiedostoon työntekijäkohtaisesti
+        if ($calcId && !$existingCalcId) {
+            $existingCalcId = $calcId;
+            $draft['calculations'][$employmentId] = $calcId;
+            file_put_contents(DRAFT_FILE, json_encode($draft, JSON_PRETTY_PRINT));
+        }
+    } else {
+        $response = ['success' => true, 'skipped' => true, 'reason' => 'No hours'];
     }
     
+    // Lisää km-korvausrivi jos kilometrejä on
+    $mileageResponse = null;
+    if ($mileage > 0) {
+        $mileageResponse = addMileageRow($payrollId, $entry, $existingCalcId, $employmentId);
+        
+        // Päivitä calculationId jatkokäyttöä varten
+        $mileageCalcId = $mileageResponse['finalCalculationId'] ?? $mileageResponse['calculationId'] ?? null;
+        
+        if ($mileageCalcId && !$existingCalcId) {
+            $existingCalcId = $mileageCalcId;
+            $draft['calculations'][$employmentId] = $mileageCalcId;
+            file_put_contents(DRAFT_FILE, json_encode($draft, JSON_PRETTY_PRINT));
+        }
+    }
+    
+    $calcId = $response['finalCalculationId'] ?? $response['calculationId'] ?? 
+              ($mileageResponse['finalCalculationId'] ?? $mileageResponse['calculationId'] ?? null);
     $calculationCreated = $calcId !== null;
     
     // Debug: näytä mitä saimme
