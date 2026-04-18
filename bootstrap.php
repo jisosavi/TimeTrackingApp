@@ -35,6 +35,7 @@ function initializeDatabase(PDO $db): void
             name TEXT NOT NULL,
             slug TEXT UNIQUE,
             active INTEGER NOT NULL DEFAULT 1,
+            approvals_enabled INTEGER NOT NULL DEFAULT 0,
             salaxy_api_url TEXT,
             salaxy_username TEXT,
             salaxy_password TEXT,
@@ -62,6 +63,51 @@ function initializeDatabase(PDO $db): void
             active INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL DEFAULT (datetime(\'now\')),
             FOREIGN KEY(company_id) REFERENCES companies(id)
+        );
+        CREATE TABLE IF NOT EXISTS supervisors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            pin TEXT NOT NULL,
+            ssn TEXT,
+            salaxy_id TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime(\'now\')),
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        );
+        CREATE TABLE IF NOT EXISTS supervisor_employees (
+            supervisor_id INTEGER NOT NULL,
+            employee_id INTEGER NOT NULL,
+            PRIMARY KEY (supervisor_id, employee_id),
+            FOREIGN KEY(supervisor_id) REFERENCES supervisors(id),
+            FOREIGN KEY(employee_id) REFERENCES employees(id)
+        );
+        CREATE TABLE IF NOT EXISTS time_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER NOT NULL,
+            employee_id INTEGER NOT NULL,
+            entry_date TEXT NOT NULL,
+            start_time TEXT,
+            end_time TEXT,
+            hours REAL NOT NULL DEFAULT 0,
+            km REAL NOT NULL DEFAULT 0,
+            project TEXT,
+            comment TEXT,
+            status TEXT NOT NULL DEFAULT \'pending\',
+            submitted_at TEXT NOT NULL DEFAULT (datetime(\'now\')),
+            reviewed_by_type TEXT,
+            reviewed_by_id INTEGER,
+            reviewed_at TEXT,
+            rejection_note TEXT,
+            employee_clarification TEXT,
+            clarification_at TEXT,
+            exported_to_salaxy INTEGER NOT NULL DEFAULT 0,
+            exported_at TEXT,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(employee_id) REFERENCES employees(id)
         );'
     );
 
@@ -69,6 +115,9 @@ function initializeDatabase(PDO $db): void
     $cols = array_column($db->query('PRAGMA table_info(companies)')->fetchAll(), 'name');
     if (!in_array('active', $cols)) {
         $db->exec('ALTER TABLE companies ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
+    }
+    if (!in_array('approvals_enabled', $cols)) {
+        $db->exec('ALTER TABLE companies ADD COLUMN approvals_enabled INTEGER NOT NULL DEFAULT 0');
     }
 
     ensureDefaultCompany($db);

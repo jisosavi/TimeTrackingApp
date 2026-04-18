@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
+  <title>TimeTrackingApp – Hyväksyntä</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #EDE8E8; --card: #FFFFFF; --text: #283237; --text-muted: #5E7682;
+      --primary: #3C1EEB; --success: #0E9537; --border: #C4CFD4;
+      --input-bg: #FFFFFF; --muted: #F3F0F0; --radius: 6px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: var(--bg); color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif; font-size: 14px; line-height: 1.5;
+      display: flex; justify-content: center; align-items: flex-start; padding: 2.5rem 1.5rem; }
+    .card { width: min(820px, 100%); padding: 1.5rem; border-radius: 8px; background: var(--card);
+      border: 1px solid var(--border); box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+    h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+    h2 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.875rem; }
+    label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+    input[type="password"], input[type="text"] {
+      width: 100%; height: 2.25rem; padding: 0 0.75rem; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--input-bg); color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif; font-size: 0.875rem; outline: none; }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgb(60 30 235 / 0.12); }
+    button { cursor: pointer; font-family: 'Figtree', system-ui, sans-serif; font-size: 0.875rem;
+      font-weight: 500; height: 2.25rem; padding: 0 1rem; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--card); color: var(--text);
+      transition: background 0.15s; display: inline-flex; align-items: center;
+      justify-content: center; white-space: nowrap; gap: 0.375rem; }
+    button:hover { background: var(--muted); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: #2F18BC; border-color: #2F18BC; }
+    #loginBtn { width: 100%; height: 2.5rem; margin-top: 0.25rem;
+      background: var(--primary); color: #fff; border-color: var(--primary); }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 1rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--muted); }
+    th { text-align: left; padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border); }
+    td { padding: 0.625rem 0.75rem; font-size: 0.875rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--muted); }
+    .action-btn { height: 1.75rem; padding: 0 0.625rem; font-size: 0.75rem; font-weight: 500;
+      font-family: 'Figtree', system-ui, sans-serif; background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+      display: inline-flex; align-items: center; transition: background 0.15s; white-space: nowrap; }
+    .action-btn:hover { background: var(--muted); }
+    .modal { display: none; position: fixed; inset: 0; background: rgb(0 0 0 / 0.45);
+      z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal.visible { display: flex; }
+    .modal-content { background: var(--card); border-radius: 8px; border: 1px solid var(--border);
+      padding: 1.5rem; max-width: 820px; width: 100%; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+      max-height: 90vh; overflow-y: auto; }
+    .hidden { display: none !important; }
+    .status { margin-top: 0.75rem; min-height: 1.1rem; font-size: 0.8rem; color: var(--text-muted); }
+    .pin-input input { width: 100%; height: 2.5rem; padding: 0 0.875rem; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--input-bg); color: var(--text);
+      font-family: 'Figtree', monospace; font-size: 1.25rem; text-align: center;
+      letter-spacing: 0.4rem; font-weight: 600; outline: none; }
+    .pin-input input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgb(60 30 235 / 0.12); }
+  </style>
+</head>
+<body>
+<main class="card">
+
+  <!-- Login -->
+  <section id="loginSection">
+    <h1 style="margin-bottom:0.25rem;">Esihenkilökirjautuminen</h1>
+    <p style="font-size:0.875rem;color:#5E7682;margin-bottom:1rem;">Kirjaudu henkilökohtaisella PIN-koodillasi.</p>
+    <div class="pin-input" style="margin-bottom:0.875rem;">
+      <input type="password" inputmode="numeric" maxlength="6" autocomplete="one-time-code" id="pinInput" aria-label="PIN-koodi" />
+    </div>
+    <button id="loginBtn">Kirjaudu sisään</button>
+    <div class="status" id="loginStatus"></div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="hidden">
+    <div class="dashboard-header">
+      <div>
+        <h1>Tiimini kirjaukset</h1>
+        <p>Tarkastele ja hyväksy tiimisi tuntikirjaukset.</p>
+        <p style="font-size:0.9rem;color:#666;">Kirjautunut: <strong id="supervisorName"></strong></p>
+      </div>
+      <button id="logoutBtn">Kirjaudu ulos</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th>Työntekijä</th>
+          <th>Odottaa</th>
+          <th>Hyväksytty</th>
+          <th>Hylätty</th>
+          <th>Toiminnot</th>
+        </tr></thead>
+        <tbody id="teamTbody">
+          <tr><td colspan="5" style="color:#7D95A1;padding:1rem 0.75rem;">Ladataan...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="status" id="dashStatus"></div>
+  </section>
+</main>
+
+<!-- Entries modal (identical pattern to admin) -->
+<div id="entriesModal" class="modal">
+  <div class="modal-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h2 id="entriesModalTitle" style="margin:0;"></h2>
+      <button id="closeEntriesModal" style="flex-shrink:0;">✕ Sulje</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <label style="display:flex;align-items:center;gap:0.375rem;font-size:0.8rem;cursor:pointer;">
+        <input type="checkbox" id="selectAllEntries" style="accent-color:#3C1EEB;"> Valitse kaikki
+      </label>
+      <button id="approveSelectedBtn" class="action-btn" style="color:#0E9537;border-color:#A7E3B5;">✓ Hyväksy valitut</button>
+      <button id="rejectSelectedBtn"  class="action-btn" style="color:#E01541;border-color:#F5AABB;">✗ Hylkää valitut</button>
+      <select id="entriesGrouping" style="height:1.75rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.8rem;padding:0 0.5rem;background:#fff;">
+        <option value="day">Päivittäin</option>
+        <option value="week" selected>Viikoittain</option>
+        <option value="month">Kuukausittain</option>
+        <option value="year">Vuosittain</option>
+      </select>
+    </div>
+
+    <div id="rejectDialog" class="hidden" style="background:#FEF2F4;border:1px solid #F5AABB;border-radius:6px;padding:0.75rem;margin-bottom:0.75rem;">
+      <p style="font-size:0.8rem;margin-bottom:0.5rem;font-weight:500;">Hylkäyksen syy (vapaaehtoinen):</p>
+      <input type="text" id="rejectNoteInput" placeholder="Esim. Tuntimäärä ei täsmää..."
+        style="width:100%;height:2rem;padding:0 0.625rem;border-radius:6px;border:1px solid #F5AABB;font-family:inherit;font-size:0.8rem;background:#fff;" />
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button id="confirmRejectBtn" style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#E01541;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;">Hylkää</button>
+        <button id="cancelRejectBtn"  style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#fff;border:1px solid #C4CFD4;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;">Peruuta</button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th style="width:2rem;text-align:center;"></th>
+          <th>Päivä</th><th>Aika</th><th>Tunnit/km</th>
+          <th>Projekti</th><th>Tila</th><th>Toiminnot</th>
+        </tr></thead>
+        <tbody id="entriesTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const companySlug = window.location.pathname.split('/').filter(Boolean)[0] || '';
+  let currentEntriesEmployeeId = null;
+  let pendingRejectIds = [];
+
+  function escapeHtml(t) {
+    return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtDate(isoDate) {
+    if (!isoDate) return '';
+    const [y,m,d] = isoDate.split('-'); return `${d}.${m}.${y}`;
+  }
+  function fmtDateTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fi-FI',{day:'2-digit',month:'2-digit',year:'numeric'}) + ', klo ' +
+           d.toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'});
+  }
+  function showDashStatus(msg, isError = false) {
+    const el = document.getElementById('dashStatus');
+    el.textContent = msg; el.style.color = isError ? '#E01541' : '#5E7682';
+  }
+  function statusLabel(status) {
+    const map = {
+      pending:  '<span style="color:#7D95A1">Odottaa</span>',
+      approved: '<span style="color:#0E9537;font-weight:600">✓ Hyväksytty</span>',
+      rejected: '<span style="color:#E01541;font-weight:600">✗ Hylätty</span>',
+      clarified:'<span style="color:#F25A02;font-weight:600">↩ Selvitetty</span>',
+    };
+    return map[status] || status;
+  }
+
+  // ─── Login ────────────────────────────────────────────────────────────────
+  const loginBtn   = document.getElementById('loginBtn');
+  const pinInput   = document.getElementById('pinInput');
+
+  async function tryLogin() {
+    const pin = pinInput.value.trim();
+    if (!pin) { document.getElementById('loginStatus').textContent = 'Syötä PIN.'; return; }
+    loginBtn.disabled = true;
+    try {
+      const res    = await fetch('/api/supervisor_login.php', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ pin, slug: companySlug }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        document.getElementById('loginStatus').textContent = result.error || 'Kirjautuminen epäonnistui.';
+        return;
+      }
+      document.getElementById('supervisorName').textContent =
+        result.supervisor.first_name + ' ' + result.supervisor.last_name;
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      loadTeam();
+    } finally { loginBtn.disabled = false; }
+  }
+  loginBtn.addEventListener('click', tryLogin);
+  pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/logout.php');
+    window.location.reload();
+  });
+
+  // ─── Team list ────────────────────────────────────────────────────────────
+  async function loadTeam() {
+    const res    = await fetch('/api/time_entries.php');
+    // We fetch per-employee counts using a custom approach:
+    // Load the supervisor's own team via supervisor_team (GET without supervisor_id returns all for the team)
+    const tbody = document.getElementById('teamTbody');
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#7D95A1;padding:1rem">Ladataan...</td></tr>';
+    try {
+      // Get all entries for supervisor's team grouped by employee
+      const entriesRes    = await fetch('/api/time_entries.php');
+      const entriesResult = await entriesRes.json();
+      if (!entriesResult.success) { tbody.innerHTML = '<tr><td colspan="5">Virhe.</td></tr>'; return; }
+
+      const entries = entriesResult.entries || [];
+      const byEmp   = {};
+      entries.forEach(e => {
+        if (!byEmp[e.employee_id]) {
+          byEmp[e.employee_id] = { id: e.employee_id, name: e.employee_name, pending: 0, approved: 0, rejected: 0 };
+        }
+        if (e.status === 'pending' || e.status === 'clarified') byEmp[e.employee_id].pending++;
+        else if (e.status === 'approved') byEmp[e.employee_id].approved++;
+        else if (e.status === 'rejected') byEmp[e.employee_id].rejected++;
+      });
+
+      const employees = Object.values(byEmp);
+      if (!employees.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:#7D95A1;padding:1rem">Tiimissäsi ei ole kirjauksia.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = employees.map(emp => `
+        <tr>
+          <td>${escapeHtml(emp.name)}</td>
+          <td>${emp.pending > 0 ? `<span style="color:#F25A02;font-weight:600">${emp.pending}</span>` : `<span style="color:#C4CFD4">0</span>`}</td>
+          <td><span style="color:#0E9537;">${emp.approved}</span></td>
+          <td><span style="color:#E01541;">${emp.rejected}</span></td>
+          <td><button class="action-btn" onclick="openEntriesModal(${emp.id}, '${escapeHtml(emp.name)}')">Tarkastele →</button></td>
+        </tr>`).join('');
+    } catch { tbody.innerHTML = '<tr><td colspan="5" style="color:#E01541;">Palvelinvirhe.</td></tr>'; }
+  }
+
+  // ─── Entries modal ────────────────────────────────────────────────────────
+  const entriesModal      = document.getElementById('entriesModal');
+  const entriesModalTitle = document.getElementById('entriesModalTitle');
+  const entriesTbody      = document.getElementById('entriesTbody');
+  const entriesGrouping   = document.getElementById('entriesGrouping');
+  const selectAllEntries  = document.getElementById('selectAllEntries');
+  const approveSelectedBtn = document.getElementById('approveSelectedBtn');
+  const rejectSelectedBtn  = document.getElementById('rejectSelectedBtn');
+  const rejectDialog       = document.getElementById('rejectDialog');
+  const rejectNoteInput    = document.getElementById('rejectNoteInput');
+  const confirmRejectBtn   = document.getElementById('confirmRejectBtn');
+  const cancelRejectBtn    = document.getElementById('cancelRejectBtn');
+
+  function renderEntries(entries, grouping) {
+    if (!entries.length) {
+      entriesTbody.innerHTML = '<tr><td colspan="7" style="color:#7D95A1;padding:1rem">Ei kirjauksia.</td></tr>';
+      return;
+    }
+    const grouped = {};
+    entries.forEach(e => {
+      let key;
+      const d = e.entry_date;
+      if      (grouping === 'day')   key = d;
+      else if (grouping === 'week') {
+        const dt = new Date(d); const day = dt.getDay() || 7;
+        const mon = new Date(dt); mon.setDate(dt.getDate() - (day - 1));
+        key = 'Viikko ' + mon.toLocaleDateString('fi-FI',{day:'2-digit',month:'2-digit'});
+      }
+      else if (grouping === 'month') key = d.slice(0,7);
+      else                           key = d.slice(0,4);
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(e);
+    });
+    let html = '';
+    for (const [group, rows] of Object.entries(grouped)) {
+      const totH  = rows.reduce((s,r) => s + (parseFloat(r.hours)||0), 0);
+      const totKm = rows.reduce((s,r) => s + (parseFloat(r.km)||0),    0);
+      html += `<tr style="background:#F3F0F0;"><td colspan="7" style="padding:0.375rem 0.75rem;font-size:0.75rem;font-weight:600;color:#5E7682;letter-spacing:0.04em;text-transform:uppercase;">
+        ${escapeHtml(group)} — ${totH.toFixed(1)}h${totKm > 0 ? ' / ' + totKm + ' km' : ''}
+      </td></tr>`;
+      rows.forEach(e => {
+        const clarHtml = e.employee_clarification
+          ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#F25A02;border-left:2px solid #F25A02;padding-left:0.4rem">Selvitys: ${escapeHtml(e.employee_clarification)}</div>` : '';
+        const rejHtml  = e.rejection_note
+          ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#E01541;border-left:2px solid #E01541;padding-left:0.4rem">Syy: ${escapeHtml(e.rejection_note)}</div>` : '';
+        html += `<tr>
+          <td style="text-align:center;"><input type="checkbox" class="entry-checkbox" data-id="${e.id}" style="accent-color:#3C1EEB;width:1rem;height:1rem;"></td>
+          <td>${fmtDate(e.entry_date)}</td>
+          <td>${escapeHtml(e.start_time||'')}${e.end_time?'–'+escapeHtml(e.end_time):''}</td>
+          <td>${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km)>0?' / '+e.km+' km':''}</td>
+          <td>${escapeHtml(e.project||'')}${e.comment?'<br><span style="color:#7D95A1;font-size:0.75rem;">'+escapeHtml(e.comment)+'</span>':''}</td>
+          <td>${statusLabel(e.status)}${clarHtml}${rejHtml}</td>
+          <td>
+            <div style="display:flex;gap:0.25rem;">
+              <button class="action-btn approve-btn" data-id="${e.id}" style="color:#0E9537;border-color:#A7E3B5;">✓</button>
+              <button class="action-btn reject-btn"  data-id="${e.id}" style="color:#E01541;border-color:#F5AABB;">✗</button>
+            </div>
+          </td></tr>`;
+      });
+    }
+    entriesTbody.innerHTML = html;
+    entriesTbody.querySelectorAll('.approve-btn').forEach(btn =>
+      btn.addEventListener('click', () => reviewEntries([Number(btn.dataset.id)], 'approve'))
+    );
+    entriesTbody.querySelectorAll('.reject-btn').forEach(btn =>
+      btn.addEventListener('click', () => openRejectDialog([Number(btn.dataset.id)]))
+    );
+  }
+
+  async function openEntriesModal(employeeId, employeeName) {
+    currentEntriesEmployeeId = employeeId;
+    entriesModalTitle.textContent = `Kirjaukset – ${employeeName}`;
+    entriesTbody.innerHTML = '<tr><td colspan="7" style="color:#7D95A1;padding:1rem">Ladataan...</td></tr>';
+    entriesModal.classList.add('visible');
+    await refreshEntries();
+  }
+
+  async function refreshEntries() {
+    if (!currentEntriesEmployeeId) return;
+    try {
+      const res    = await fetch(`/api/time_entries.php?employee_id=${currentEntriesEmployeeId}`);
+      const result = await res.json();
+      if (!res.ok || !result.success) { entriesTbody.innerHTML = '<tr><td colspan="7">Virhe.</td></tr>'; return; }
+      renderEntries(result.entries || [], entriesGrouping.value);
+    } catch { entriesTbody.innerHTML = '<tr><td colspan="7">Virhe.</td></tr>'; }
+  }
+
+  async function reviewEntries(ids, action, rejectionNote = '') {
+    try {
+      const res    = await fetch('/api/review_entries.php', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ids, action, rejection_note: rejectionNote }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) { showDashStatus(result.error || 'Virhe.', true); return; }
+      await refreshEntries();
+      loadTeam();
+    } catch { showDashStatus('Palvelinvirhe.', true); }
+  }
+
+  function openRejectDialog(ids) {
+    pendingRejectIds = ids; rejectNoteInput.value = '';
+    rejectDialog.classList.remove('hidden'); rejectNoteInput.focus();
+  }
+  confirmRejectBtn.addEventListener('click', async () => {
+    rejectDialog.classList.add('hidden');
+    await reviewEntries(pendingRejectIds, 'reject', rejectNoteInput.value.trim());
+  });
+  cancelRejectBtn.addEventListener('click', () => rejectDialog.classList.add('hidden'));
+
+  selectAllEntries.addEventListener('change', () => {
+    document.querySelectorAll('.entry-checkbox').forEach(cb => cb.checked = selectAllEntries.checked);
+  });
+  approveSelectedBtn.addEventListener('click', async () => {
+    const ids = [...document.querySelectorAll('.entry-checkbox:checked')].map(cb => Number(cb.dataset.id));
+    if (!ids.length) return; await reviewEntries(ids, 'approve');
+  });
+  rejectSelectedBtn.addEventListener('click', () => {
+    const ids = [...document.querySelectorAll('.entry-checkbox:checked')].map(cb => Number(cb.dataset.id));
+    if (!ids.length) return; openRejectDialog(ids);
+  });
+  entriesGrouping.addEventListener('change', refreshEntries);
+  document.getElementById('closeEntriesModal').addEventListener('click', () => {
+    entriesModal.classList.remove('visible'); currentEntriesEmployeeId = null;
+  });
+</script>
+</body>
+</html>

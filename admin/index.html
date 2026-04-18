@@ -195,6 +195,7 @@
         <thead>
           <tr>
             <th style="width:2.5rem;text-align:center;">Kirjaus</th>
+            <th style="width:2.5rem;text-align:center;">Hyväks.</th>
             <th>Yritys</th>
             <th>Slug</th>
             <th>Työntekijät</th>
@@ -202,7 +203,7 @@
           </tr>
         </thead>
         <tbody id="companiesTbody">
-          <tr><td colspan="5" class="empty">Ladataan...</td></tr>
+          <tr><td colspan="6" class="empty">Ladataan...</td></tr>
         </tbody>
       </table>
     </div>
@@ -275,14 +276,20 @@
     function renderCompanies(companies) {
       currentCompanies = companies;
       if (companies.length === 0) {
-        companiesTbody.innerHTML = '<tr><td colspan="5" class="empty">Ei yrityksiä. Luo uusi yritys aloittaaksesi.</td></tr>';
+        companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">Ei yrityksiä. Luo uusi yritys aloittaaksesi.</td></tr>';
         return;
       }
       companiesTbody.innerHTML = companies.map(c => `
         <tr>
           <td style="text-align:center;">
-            <input type="checkbox" class="active-checkbox" data-id="${c.id}"
+            <input type="checkbox" class="active-checkbox" data-id="${c.id}" data-field="active"
               ${Number(c.active) ? 'checked' : ''}
+              style="width:1.1rem;height:1.1rem;accent-color:#3C1EEB;cursor:pointer;" />
+          </td>
+          <td style="text-align:center;">
+            <input type="checkbox" class="approvals-checkbox" data-id="${c.id}" data-field="approvals_enabled"
+              ${Number(c.approvals_enabled) ? 'checked' : ''}
+              ${!Number(c.active) ? 'disabled' : ''}
               style="width:1.1rem;height:1.1rem;accent-color:#3C1EEB;cursor:pointer;" />
           </td>
           <td><strong>${escapeHtml(c.name)}</strong></td>
@@ -296,33 +303,46 @@
         </tr>
       `).join('');
 
-      companiesTbody.querySelectorAll('.active-checkbox').forEach(cb => {
-        cb.addEventListener('change', async () => {
-          const id = Number(cb.getAttribute('data-id'));
-          const active = cb.checked ? 1 : 0;
-          cb.disabled = true;
-          try {
-            const res = await fetch('/api/companies.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id, active }),
-            });
-            const result = await res.json();
-            if (!res.ok || !result.success) {
-              showStatus(result.error || 'Tilan vaihto epäonnistui.', true);
-              cb.checked = !cb.checked;
-            } else {
-              const co = currentCompanies.find(c => c.id === id);
-              if (co) co.active = active;
-            }
-          } catch (e) {
-            console.error(e);
-            showStatus('Palvelinvirhe tilan vaihdossa.', true);
+      async function toggleCompanyField(cb, id, field) {
+        const value = cb.checked ? 1 : 0;
+        cb.disabled = true;
+        try {
+          const res = await fetch('/api/companies.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, [field]: value }),
+          });
+          const result = await res.json();
+          if (!res.ok || !result.success) {
+            showStatus(result.error || 'Tilan vaihto epäonnistui.', true);
             cb.checked = !cb.checked;
-          } finally {
-            cb.disabled = false;
+          } else {
+            const co = currentCompanies.find(c => c.id === id);
+            if (co) co[field] = value;
+            // Disable approvals checkbox if company deactivated
+            if (field === 'active' && !value) {
+              const approvalsCb = companiesTbody.querySelector(`.approvals-checkbox[data-id="${id}"]`);
+              if (approvalsCb) approvalsCb.disabled = true;
+            }
+            if (field === 'active' && value) {
+              const approvalsCb = companiesTbody.querySelector(`.approvals-checkbox[data-id="${id}"]`);
+              if (approvalsCb) approvalsCb.disabled = false;
+            }
           }
-        });
+        } catch (e) {
+          console.error(e);
+          showStatus('Palvelinvirhe.', true);
+          cb.checked = !cb.checked;
+        } finally {
+          cb.disabled = false;
+        }
+      }
+
+      companiesTbody.querySelectorAll('.active-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => toggleCompanyField(cb, Number(cb.dataset.id), 'active'));
+      });
+      companiesTbody.querySelectorAll('.approvals-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => toggleCompanyField(cb, Number(cb.dataset.id), 'approvals_enabled'));
       });
     }
 
@@ -332,7 +352,7 @@
         const result = await response.json();
         if (!response.ok || !result.success) {
           showStatus(result.error || 'Yritysten lataus epäonnistui.', true);
-          companiesTbody.innerHTML = '<tr><td colspan="5" class="empty">Virhe ladattaessa yrityksiä.</td></tr>';
+          companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">Virhe ladattaessa yrityksiä.</td></tr>';
           return;
         }
         renderCompanies(result.companies || []);

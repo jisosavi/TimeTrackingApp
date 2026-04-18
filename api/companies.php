@@ -10,7 +10,7 @@ try {
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $db->query(
-            'SELECT c.id, c.name, c.slug, c.active, COUNT(e.id) AS employee_count
+            'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, COUNT(e.id) AS employee_count
              FROM companies c
              LEFT JOIN employees e ON e.company_id = c.id
              GROUP BY c.id
@@ -21,20 +21,27 @@ try {
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $raw = file_get_contents('php://input');
+        $raw     = file_get_contents('php://input');
         $payload = json_decode($raw, true) ?? [];
 
-        $id     = isset($payload['id'])     ? (int) $payload['id']     : null;
-        $active = isset($payload['active']) ? (int) $payload['active'] : null;
+        $id                = isset($payload['id']) ? (int) $payload['id'] : null;
+        $active            = isset($payload['active']) ? (int) $payload['active'] : null;
+        $approvalsEnabled  = isset($payload['approvals_enabled']) ? (int) $payload['approvals_enabled'] : null;
 
-        if (!$id || $active === null) {
+        if (!$id || ($active === null && $approvalsEnabled === null)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'id and active are required']);
+            echo json_encode(['success' => false, 'error' => 'id and at least one field required']);
             exit;
         }
 
-        $db->prepare('UPDATE companies SET active = :active WHERE id = :id')
-           ->execute([':active' => $active, ':id' => $id]);
+        if ($active !== null) {
+            $db->prepare('UPDATE companies SET active = :active WHERE id = :id')
+               ->execute([':active' => $active, ':id' => $id]);
+        }
+        if ($approvalsEnabled !== null) {
+            $db->prepare('UPDATE companies SET approvals_enabled = :ae WHERE id = :id')
+               ->execute([':ae' => $approvalsEnabled, ':id' => $id]);
+        }
 
         echo json_encode(['success' => true]);
         exit;

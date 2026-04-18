@@ -41,13 +41,22 @@ try {
     $_SESSION['admin_role'] = $admin['role'];
     $_SESSION['company_id'] = $admin['company_id'];
 
+    // Fetch company settings
+    $compStmt = $db->prepare('SELECT active, approvals_enabled FROM companies WHERE id = :id');
+    $compStmt->execute([':id' => $admin['company_id']]);
+    $company = $compStmt->fetch() ?: [];
+
     echo json_encode([
         'success' => true,
         'admin' => [
-            'email' => $admin['email'],
-            'name' => $admin['name'],
-            'role' => $admin['role'],
+            'email'      => $admin['email'],
+            'name'       => $admin['name'],
+            'role'       => $admin['role'],
             'company_id' => $admin['company_id'],
+        ],
+        'company' => [
+            'active'             => (int) ($company['active'] ?? 1),
+            'approvals_enabled'  => (int) ($company['approvals_enabled'] ?? 0),
         ],
     ]);
 } catch (Throwable $e) {

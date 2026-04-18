@@ -201,6 +201,52 @@
       padding: 0.2rem 0.625rem;
       border-radius: 9999px;
     }
+    .nav-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--muted);
+    }
+    .nav-bar button {
+      flex: 1;
+      height: 2.5rem;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-bar button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--card);
+    }
+    .entries-screen { padding: 1rem; display: flex; flex-direction: column; gap: 0.625rem; }
+    .entry-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.625rem 0.75rem;
+      background: var(--card);
+      font-size: 0.875rem;
+    }
+    .entry-card.rejected { border-left: 3px solid #E01541; background: #FEF2F4; }
+    .entry-card.approved { border-left: 3px solid #0E9537; }
+    .entry-card.clarified { border-left: 3px solid #F25A02; }
+    .entry-meta { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .entry-status-badge { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 9999px; white-space: nowrap; }
+    .badge-pending   { background: #F3F0F0; color: #7D95A1; }
+    .badge-approved  { background: #F0FBF3; color: #0B6B2C; }
+    .badge-rejected  { background: #FEF2F4; color: #9B0F2E; }
+    .badge-clarified { background: #FFF8F0; color: #C04A00; }
+    .clarify-form { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.375rem; }
+    .clarify-form textarea { font-family: inherit; font-size: 0.8rem; border-radius: var(--radius); border: 1px solid var(--border); padding: 0.375rem 0.5rem; resize: none; min-height: 60px; outline: none; }
+    .clarify-form textarea:focus { border-color: var(--primary); }
+    .clarify-actions { display: flex; gap: 0.375rem; }
+    .clarify-actions button { height: 1.75rem; padding: 0 0.625rem; font-size: 0.75rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-family: inherit; font-weight: 500; }
+    .clarify-actions .btn-clarify { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .clarify-actions .btn-delete  { color: #E01541; border-color: #F5AABB; }
+    .entries-empty { color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 2rem 1rem; }
   </style>
 </head>
 <body>
@@ -227,6 +273,12 @@
       </div>
     </section>
 
+    <!-- Nav bar (shown after login) -->
+    <nav class="nav-bar hidden" id="navBar">
+      <button id="navChatBtn" class="active">Kirjaa tunteja</button>
+      <button id="navEntriesBtn">Tuntikirjaukset</button>
+    </nav>
+
     <section class="chat hidden" id="chatScreen">
       <div class="pill">Kirjattu sisään</div>
       <h1>Työtuntien kirjaus</h1>
@@ -241,10 +293,19 @@
       <div class="status" id="chatStatus">Valmis.</div>
       <button class="btn-salaxy" id="salaxyBtn" title="Lähetä tunnit Salaxyyn">📤 Lähetä Salaxyyn</button>
     </section>
+
+    <section class="entries-screen hidden" id="entriesScreen">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+        <strong style="font-size:0.9rem;">Omat kirjaukseni</strong>
+        <button id="refreshEntriesBtn" style="height:1.75rem;padding:0 0.625rem;font-size:0.75rem;border-radius:6px;border:1px solid #C4CFD4;background:#fff;cursor:pointer;font-family:inherit;">↺ Päivitä</button>
+      </div>
+      <div id="myEntriesList"><div class="entries-empty">Ladataan...</div></div>
+    </section>
   </main>
 
   <script>
-    const APP_KEY = "tT9#kL2$mN7@pQ4!23"; // muutettava malli tuotantoon, protolle ok
+    const APP_KEY     = "tT9#kL2$mN7@pQ4!23";
+    const companySlug = window.location.pathname.split('/').filter(Boolean)[0] || '';
     let currentEmployee = null;
 
     fetch('/api/debug_credentials.php')
@@ -392,20 +453,112 @@ ${info}<br>
 
     async function persistEntries(structuredData) {
       try {
-        const res = await fetch("save_hours.php", {
+        // Save to local DB for approval workflow
+        const res = await fetch("api/time_entries.php", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-App-Key": APP_KEY,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(structuredData),
         });
         const result = await res.json();
-        if (!res.ok) throw new Error(result.message || "Tallennus epäonnistui");
+        if (!res.ok) throw new Error(result.error || "Tallennus epäonnistui");
         showSuccess(chatStatus, "Tunnit tallennettu.");
       } catch (error) {
         showError(chatStatus, `Tallennusvirhe: ${error.message}`);
       }
+    }
+
+    // ─── My entries view ──────────────────────────────────────────────────────
+    const navBar          = document.getElementById("navBar");
+    const navChatBtn      = document.getElementById("navChatBtn");
+    const navEntriesBtn   = document.getElementById("navEntriesBtn");
+    const entriesScreen   = document.getElementById("entriesScreen");
+    const myEntriesList   = document.getElementById("myEntriesList");
+    const refreshEntriesBtn = document.getElementById("refreshEntriesBtn");
+
+    function switchTab(tab) {
+      chatScreen.classList.toggle("hidden",    tab !== "chat");
+      entriesScreen.classList.toggle("hidden", tab !== "entries");
+      navChatBtn.classList.toggle("active",    tab === "chat");
+      navEntriesBtn.classList.toggle("active", tab === "entries");
+      if (tab === "entries") loadMyEntries();
+    }
+    navChatBtn.addEventListener("click",    () => switchTab("chat"));
+    navEntriesBtn.addEventListener("click", () => switchTab("entries"));
+    refreshEntriesBtn.addEventListener("click", loadMyEntries);
+
+    function fmtDateFI(isoDate) {
+      if (!isoDate) return '';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}.${m}.${y}`;
+    }
+    function escapeHtml(t) {
+      return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function loadMyEntries() {
+      myEntriesList.innerHTML = '<div class="entries-empty">Ladataan...</div>';
+      try {
+        const res    = await fetch("api/time_entries.php?view=mine");
+        const result = await res.json();
+        if (!res.ok || !result.success) { myEntriesList.innerHTML = '<div class="entries-empty">Virhe ladattaessa.</div>'; return; }
+        renderMyEntries(result.entries || []);
+      } catch { myEntriesList.innerHTML = '<div class="entries-empty">Verkkovirhe.</div>'; }
+    }
+
+    function renderMyEntries(entries) {
+      if (!entries.length) { myEntriesList.innerHTML = '<div class="entries-empty">Ei kirjauksia.</div>'; return; }
+      myEntriesList.innerHTML = entries.map(e => {
+        const badgeClass = { pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected', clarified:'badge-clarified' }[e.status] || 'badge-pending';
+        const badgeText  = { pending:'Odottaa', approved:'✓ Hyväksytty', rejected:'✗ Hylätty', clarified:'↩ Selvitetty' }[e.status] || e.status;
+        const rejNote    = e.rejection_note ? `<div style="font-size:0.75rem;color:#9B0F2E;margin-top:0.25rem;border-left:2px solid #E01541;padding-left:0.4rem">Syy: ${escapeHtml(e.rejection_note)}</div>` : '';
+        const clarNote   = e.employee_clarification ? `<div style="font-size:0.75rem;color:#C04A00;margin-top:0.25rem;border-left:2px solid #F25A02;padding-left:0.4rem">Selvitys: ${escapeHtml(e.employee_clarification)}</div>` : '';
+        const clarifyBtn = e.status === 'rejected' ? `
+          <div class="clarify-form" id="clarifyForm_${e.id}" style="display:none;">
+            <textarea id="clarifyText_${e.id}" placeholder="Kirjoita selvitys..."></textarea>
+            <div class="clarify-actions">
+              <button class="btn-clarify" onclick="submitClarification(${e.id})">Lähetä selvitys</button>
+              <button class="btn-delete"  onclick="deleteEntry(${e.id})">Poista kirjaus</button>
+              <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='none'">Peruuta</button>
+            </div>
+          </div>
+          <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='flex'" style="margin-top:0.375rem;height:1.5rem;padding:0 0.5rem;font-size:0.7rem;font-weight:600;border-radius:4px;border:1px solid #E01541;background:#FEF2F4;color:#E01541;cursor:pointer;font-family:inherit;">⚠ Lisäselvitys!</button>` : '';
+        return `<div class="entry-card ${e.status}">
+          <div class="entry-meta">
+            <span>${fmtDateFI(e.entry_date)}${e.start_time ? ' ' + e.start_time : ''}${e.end_time ? '–' + e.end_time : ''} · ${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km)>0?' / '+e.km+'km':''}</span>
+            <span class="entry-status-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          ${e.project ? `<div style="color:#5E7682;font-size:0.8rem;margin-top:0.125rem;">${escapeHtml(e.project)}</div>` : ''}
+          ${e.comment ? `<div style="color:#7D95A1;font-size:0.75rem;">${escapeHtml(e.comment)}</div>` : ''}
+          ${rejNote}${clarNote}${clarifyBtn}
+        </div>`;
+      }).join('');
+    }
+
+    async function submitClarification(id) {
+      const text = document.getElementById(`clarifyText_${id}`)?.value?.trim();
+      if (!text) return;
+      try {
+        const res    = await fetch("api/clarify_entry.php", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, action: "clarify", clarification: text }),
+        });
+        const result = await res.json();
+        if (result.success) loadMyEntries();
+        else alert(result.error || 'Virhe.');
+      } catch { alert('Verkkovirhe.'); }
+    }
+
+    async function deleteEntry(id) {
+      if (!confirm('Poistetaanko kirjaus?')) return;
+      try {
+        const res    = await fetch("api/clarify_entry.php", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, action: "delete" }),
+        });
+        const result = await res.json();
+        if (result.success) loadMyEntries();
+        else alert(result.error || 'Virhe.');
+      } catch { alert('Verkkovirhe.'); }
     }
 
     async function sendMessage() {
@@ -511,13 +664,14 @@ ${info}<br>
         const res = await fetch("validate_pin.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pin }),
+          body: JSON.stringify({ pin, slug: companySlug }),
         });
         const data = await res.json();
-        
+
         if (data.valid) {
           currentEmployee = data;
           loginScreen.classList.add("hidden");
+          navBar.classList.remove("hidden");
           chatScreen.classList.remove("hidden");
           showSuccess(chatStatus, "Tervetuloa, " + data.name + "!");
           appendBubble(

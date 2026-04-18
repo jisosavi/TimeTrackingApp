@@ -72,6 +72,17 @@ if (preg_match('~^/company/([a-z0-9-]+)/admin(/.*)?$~', $request_path, $matches)
     exit("Company not found: $slug");
 }
 
+// Handle /{slug}/approval/* routes - supervisor portal
+if (preg_match('~^/([a-z0-9-]+)/approval(/.*)?$~', $request_path, $matches)) {
+    $slug = $matches[1];
+    if (is_dir(__DIR__ . "/company/$slug")) {
+        include __DIR__ . '/approval.html';
+        exit;
+    }
+    http_response_code(404);
+    exit("Company not found: $slug");
+}
+
 // Handle /{slug}/ employee routes - serve root index.html
 if (preg_match('~^/([a-z0-9-]+)/?$~', $request_path, $matches)) {
     $slug = $matches[1];
