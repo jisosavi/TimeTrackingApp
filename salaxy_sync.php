@@ -300,18 +300,24 @@ function getOrCreateCalculation(string $payrollId, ?string $existingCalcId, stri
         }
     }
     
-    // Luo uusi calculation oletusriveillä
+    // Luo uusi calculation oletusriveillä (payroll-linkitys tehdään erikseen add-calc-kutsulla)
     $createData = [
         'workflow' => ['status' => 'PayrollDraft'],
         'employer' => ['isSelf' => true],
         'worker' => ['employmentId' => $employmentId],
-        'info' => ['payrollId' => $payrollId]
     ];
     
     $createResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=true', $createData);
     
     if (!$createResponse['success'] || !isset($createResponse['data']['id'])) {
-        return ['success' => false, 'error' => 'Create calculation failed', 'response' => $createResponse];
+        return [
+            'success'          => false,
+            'error'            => 'Create calculation failed',
+            'createHttpCode'   => $createResponse['httpCode'] ?? null,
+            'createData'       => $createResponse['data'] ?? null,
+            'createRaw'        => $createResponse['raw'] ?? null,
+            'response'         => $createResponse,
+        ];
     }
     
     $calculationId = $createResponse['data']['id'];
@@ -350,13 +356,16 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
     
     // Hae tai luo laskelma
     $calcResult = getOrCreateCalculation($payrollId, $existingCalcId, $employmentId);
-    
+
     if (!$calcResult['success']) {
-        $response['error'] = $calcResult['error'] ?? 'Failed to get/create calculation';
+        $response['error']          = $calcResult['error'] ?? 'Failed to get/create calculation';
+        $response['createHttpCode'] = $calcResult['createHttpCode'] ?? null;
+        $response['createData']     = $calcResult['createData'] ?? null;
+        $response['createRaw']      = $calcResult['createRaw'] ?? null;
         $response['success'] = false;
         return $response;
     }
-    
+
     $calculationId = $calcResult['calculationId'];
     $calcObject = $calcResult['calcObject'];
     $isNewCalc = $calcResult['isNew'];

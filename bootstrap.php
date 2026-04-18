@@ -108,6 +108,23 @@ function initializeDatabase(PDO $db): void
             exported_at TEXT,
             FOREIGN KEY(company_id) REFERENCES companies(id),
             FOREIGN KEY(employee_id) REFERENCES employees(id)
+        );
+        CREATE TABLE IF NOT EXISTS payroll_exports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER NOT NULL,
+            period_start TEXT NOT NULL,
+            period_end TEXT NOT NULL,
+            salaxy_payroll_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime(\'now\')),
+            UNIQUE(company_id, period_start, period_end),
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        );
+        CREATE TABLE IF NOT EXISTS payroll_export_calculations (
+            payroll_export_id INTEGER NOT NULL,
+            salaxy_employment_id TEXT NOT NULL,
+            salaxy_calculation_id TEXT NOT NULL,
+            PRIMARY KEY (payroll_export_id, salaxy_employment_id),
+            FOREIGN KEY(payroll_export_id) REFERENCES payroll_exports(id)
         );'
     );
 

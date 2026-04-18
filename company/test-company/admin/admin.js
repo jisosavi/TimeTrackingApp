@@ -589,28 +589,37 @@ payrollPreviewBtn.addEventListener('click', async () => {
     const result = await res.json();
     if (!res.ok || !result.success) { payrollPreview.innerHTML = `<div style="color:#E01541">${result.error || 'Virhe.'}</div>`; return; }
 
-    payrollPreviewData = result.employees || [];
-    if (!payrollPreviewData.length) {
+    const periods = result.periods || [];
+    if (!periods.length) {
       payrollPreview.innerHTML = '<div style="color:#7D95A1;padding:0.5rem">Ei hyväksyttyjä kirjauksia valitulle ajanjaksolle.</div>';
       return;
     }
+    // Collect all unique employee IDs across periods for the checkboxes
+    payrollPreviewData = periods.flatMap(p => p.employees);
 
-    payrollPreview.innerHTML = payrollPreviewData.map(emp => `
-      <div style="margin-bottom:0.875rem;border:1px solid #C4CFD4;border-radius:6px;overflow:hidden;">
-        <div style="background:#F3F0F0;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.625rem;">
-          <input type="checkbox" class="export-emp-cb" data-id="${emp.employee_id}" checked
-            style="accent-color:#3C1EEB;width:1rem;height:1rem;">
-          <strong>${escapeHtml(emp.employee_name)}</strong>
-          <span style="color:#7D95A1;font-size:0.8rem;">${emp.total_hours.toFixed(1)}h${emp.total_km > 0 ? ' / ' + emp.total_km + ' km' : ''}</span>
+    payrollPreview.innerHTML = periods.map(period => `
+      <div style="margin-bottom:1rem;">
+        <div style="font-weight:600;font-size:0.85rem;color:#3C1EEB;padding:0.4rem 0.25rem 0.3rem;">
+          ${escapeHtml(period.period_label)}
+          ${period.existing_payroll_id ? `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ olemassa oleva palkkalista</span>` : '<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ luodaan uusi palkkalista</span>'}
         </div>
-        <table style="width:100%;border-collapse:collapse;">
-          ${emp.entries.map(e => `
-          <tr>
-            <td style="padding:0.375rem 0.75rem;font-size:0.8rem;color:#5E7682;border-bottom:1px solid #F3F0F0;">${fmtDate(e.entry_date)}</td>
-            <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${escapeHtml(e.project || '')}</td>
-            <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
-          </tr>`).join('')}
-        </table>
+        ${period.employees.map(emp => `
+        <div style="margin-bottom:0.5rem;border:1px solid #C4CFD4;border-radius:6px;overflow:hidden;">
+          <div style="background:#F3F0F0;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.625rem;">
+            <input type="checkbox" class="export-emp-cb" data-id="${emp.employee_id}" checked
+              style="accent-color:#3C1EEB;width:1rem;height:1rem;">
+            <strong>${escapeHtml(emp.employee_name)}</strong>
+            <span style="color:#7D95A1;font-size:0.8rem;">${emp.total_hours.toFixed(1)}h${emp.total_km > 0 ? ' / ' + emp.total_km + ' km' : ''}</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;">
+            ${emp.entries.map(e => `
+            <tr>
+              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;color:#5E7682;border-bottom:1px solid #F3F0F0;">${fmtDate(e.entry_date)}</td>
+              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${escapeHtml(e.project || '')}</td>
+              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
+            </tr>`).join('')}
+          </table>
+        </div>`).join('')}
       </div>`).join('');
 
     exportToSalaxy.classList.remove('hidden');
@@ -638,7 +647,8 @@ exportToSalaxy.addEventListener('click', async () => {
       showStatus(`Varoitus: ${result.total_sent} kirjausta viety, ${result.errors} epäonnistui. Tarkista konsoli.`, true);
       return;
     }
-    showStatus(`Viety Salaxyyn! ${result.total_sent} kirjausta. Palkkalista: ${result.payroll_id}`);
+    const payrollLinks = (result.payrolls || []).map(p => `<a href="${p.url}" target="_blank">jakso ${p.period_start}</a>`).join(', ');
+    showStatus(`Viety Salaxyyn! ${result.total_sent} kirjausta — ${payrollLinks || 'ok'}`);
     payrollModal.classList.remove('visible');
   } catch { showStatus('Palvelinvirhe.', true); }
   finally { exportToSalaxy.disabled = false; }
