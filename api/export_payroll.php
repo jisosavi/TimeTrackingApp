@@ -137,28 +137,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($entries as $entry) {
             if ((float) $entry['hours'] > 0) {
                 $r = addHourlyWageRow($payrollId, $entry, $existingCalcId, $employmentId);
-                if ($r['success'] ?? false) {
+                $funcOk    = $r['success'] ?? false;
+                $saveOk    = $r['saveResponse']['success'] ?? false;
+                $isNew     = $r['isNewCalculation'] ?? false;
+                $addCalcOk = !$isNew || ($r['addCalcResponse']['success'] ?? false);
+
+                if ($funcOk && $saveOk && $addCalcOk) {
                     $totalSent++;
                     $calcId = $r['finalCalculationId'] ?? $r['calculationId'] ?? null;
                     if ($calcId) $calculations[$employmentId] = $calcId;
                     $existingCalcId = $calculations[$employmentId] ?? null;
                 } else {
-                    $errors[] = $entry;
-                }
-            }
-            if ((float) $entry['mileage'] > 0) {
-                $r = addMileageRow($payrollId, $entry, $existingCalcId, $employmentId);
-                if ($r['success'] ?? false) {
+                    $detail = [
+                        'entry'            => $entry,
+                        'funcOk'           => $funcOk,
+                        'saveOk'           => $saveOk,
+                        'addCalcOk'        => $addCalcOk,
+                        'funcError'        => $r['error'] ?? null,
+                        'saveHttpCode'     => $r['saveResponse']['httpCode'] ?? null,
+                        'saveData'         => $r['saveResponse']['data'] ?? null,
+                        'addCalcHttpCode'  => $r['addCalcResponse']['httpCode'] ?? null,
+                        'addCalcData'      => $r['addCalcResponse']['data'] ?? null,
+                    ];
+                    error_log('export_payroll hours error: ' . json_encode($detail));
+                    $errors[] = $detail;
+                    // Still capture calcId so mileage row can reuse it
                     $calcId = $r['finalCalculationId'] ?? $r['calculationId'] ?? null;
                     if ($calcId) $calculations[$employmentId] = $calcId;
                     $existingCalcId = $calculations[$employmentId] ?? null;
                 }
             }
+            if ((float) $entry['mileage'] > 0) {
+                $r = addMileageRow($payrollId, $entry, $existingCalcId, $employmentId);
+                $saveOk    = $r['saveResponse']['success'] ?? false;
+                $isNew     = $r['isNewCalculation'] ?? false;
+                $addCalcOk = !$isNew || ($r['addCalcResponse']['success'] ?? false);
+                if (($r['success'] ?? false) && $saveOk && $addCalcOk) {
+                    $calcId = $r['finalCalculationId'] ?? $r['calculationId'] ?? null;
+                    if ($calcId) $calculations[$employmentId] = $calcId;
+                    $existingCalcId = $calculations[$employmentId] ?? null;
+                } else {
+                    error_log('export_payroll mileage error: ' . json_encode([
+                        'entry' => $entry, 'saveOk' => $saveOk, 'addCalcOk' => $addCalcOk,
+                        'saveHttpCode' => $r['saveResponse']['httpCode'] ?? null,
+                        'addCalcHttpCode' => $r['addCalcResponse']['httpCode'] ?? null,
+                    ]));
+                }
+            }
         }
     }
 
-    // Mark entries as exported
-    if (!empty($entryIds)) {
+    // Mark entries as exported only when at least something was sent
+    if ($totalSent > 0 && !empty($entryIds)) {
         $ph  = implode(',', array_fill(0, count($entryIds), '?'));
         $now = gmdate('c');
         $db->prepare("UPDATE time_entries SET exported_to_salaxy = 1, exported_at = ?, status = 'approved' WHERE id IN ($ph)")
@@ -166,11 +196,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     sendJson([
-        'success'    => true,
-        'payroll_id' => $payrollId,
-        'payroll_url'=> 'https://test.salaxy.fi/payroll/' . $payrollId,
-        'total_sent' => $totalSent,
-        'errors'     => count($errors),
+        'success'       => true,
+        'payroll_id'    => $payrollId,
+        'payroll_url'   => 'https://test.salaxy.fi/payroll/' . $payrollId,
+        'total_sent'    => $totalSent,
+        'errors'        => count($errors),
+        'errors_detail' => $errors,
     ]);
 }
 

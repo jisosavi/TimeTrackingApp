@@ -631,8 +631,14 @@ exportToSalaxy.addEventListener('click', async () => {
       body: JSON.stringify({ date_from: from, date_to: to, employee_ids: ids }),
     });
     const result = await res.json();
+    console.log('Export result:', result);
     if (!res.ok || !result.success) { showStatus(result.error || 'Vienti epäonnistui.', true); return; }
-    showStatus(`Viety Salaxyyn! Palkkalista: ${result.payroll_id}`);
+    if (result.errors > 0 || result.total_sent === 0) {
+      console.warn('Export had errors:', result.errors_detail);
+      showStatus(`Varoitus: ${result.total_sent} kirjausta viety, ${result.errors} epäonnistui. Tarkista konsoli.`, true);
+      return;
+    }
+    showStatus(`Viety Salaxyyn! ${result.total_sent} kirjausta. Palkkalista: ${result.payroll_id}`);
     payrollModal.classList.remove('visible');
   } catch { showStatus('Palvelinvirhe.', true); }
   finally { exportToSalaxy.disabled = false; }
