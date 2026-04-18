@@ -300,40 +300,34 @@ function getOrCreateCalculation(string $payrollId, ?string $existingCalcId, stri
         }
     }
     
-    // Luo uusi calculation oletusriveillä (payroll-linkitys tehdään erikseen add-calc-kutsulla)
-    $createData = [
+    // Hae oletusrivit ilman tallennusta (save=false toimii, save=true&updateRows=true ei toimi API v03:ssa)
+    // Tallentaminen tehdään myöhemmin addHourlyWageRow/addMileageRow-funktiossa save=true&updateRows=false
+    $templateData = [
         'workflow' => ['status' => 'PayrollDraft'],
         'employer' => ['isSelf' => true],
         'worker' => ['employmentId' => $employmentId],
     ];
-    
-    $createResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=true', $createData);
-    
-    if (!$createResponse['success'] || !isset($createResponse['data']['id'])) {
+
+    $templateResp = salaxyRequest('POST', '/calculations/update-from-employment?save=false&updateRows=true', $templateData);
+
+    if (!$templateResp['success'] || !isset($templateResp['data'])) {
         return [
             'success'          => false,
-            'error'            => 'Create calculation failed',
-            'createHttpCode'   => $createResponse['httpCode'] ?? null,
-            'createData'       => $createResponse['data'] ?? null,
-            'createRaw'        => $createResponse['raw'] ?? null,
-            'response'         => $createResponse,
+            'error'            => 'Get calculation template failed',
+            'createHttpCode'   => $templateResp['httpCode'] ?? null,
+            'createData'       => $templateResp['data'] ?? null,
+            'createRaw'        => $templateResp['raw'] ?? null,
+            'response'         => $templateResp,
         ];
     }
-    
-    $calculationId = $createResponse['data']['id'];
-    
-    // Hae luotu calculation
-    $getResponse = salaxyRequest('GET', '/calculations/' . $calculationId);
-    
-    if (!$getResponse['success'] || !isset($getResponse['data'])) {
-        return ['success' => false, 'error' => 'GET new calculation failed'];
-    }
-    
+
+    // Palauta malli tallentamatta — kutsuja (addHourlyWageRow/addMileageRow) lisää rivit
+    // ja tallentaa kerralla info.payrollId:n kanssa
     return [
-        'success' => true,
-        'calculationId' => $calculationId,
-        'calcObject' => $getResponse['data'],
-        'isNew' => true
+        'success'       => true,
+        'calculationId' => null,  // Ei vielä tallennettu
+        'calcObject'    => $templateResp['data'],
+        'isNew'         => true,
     ];
 }
 
@@ -448,22 +442,32 @@ function addHourlyWageRow(string $payrollId, array $entry, ?string $existingCalc
         $response['debug_added_new_hourly_row'] = true;
     }
     
-    // VAIHE 4: Tallenna muokattu laskelma (updateRows=false säilyttää rivit)
+    // VAIHE 4: Uudelle laskelmalle injektoi payrollId jotta Salaxy linkittää sen palkkalistaan tallennuksessa
+    if ($isNewCalc) {
+        $calcObject['info'] = array_merge($calcObject['info'] ?? [], ['payrollId' => $payrollId]);
+    }
+
+    // VAIHE 5: Tallenna muokattu laskelma (updateRows=false säilyttää rivit)
     $saveResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=false', $calcObject);
     $response['saveResponse'] = $saveResponse;
-    
-    // Käytä tallennettua ID:tä (voi olla sama tai uusi)
-    $finalCalcId = $saveResponse['data']['id'] ?? $calculationId;
-    
-    // VAIHE 5: Liitä palkkalistaan VAIN jos uusi laskelma
+
+    if (!$saveResponse['success'] || !isset($saveResponse['data']['id'])) {
+        $response['success'] = false;
+        $response['error']   = 'Save calculation failed';
+        return $response;
+    }
+
+    $finalCalcId = $saveResponse['data']['id'];
+
+    // VAIHE 6: Liitä palkkalistaan myös add-calc-kutsulla (varmistaa linkityksen)
     if ($isNewCalc) {
         $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
         $response['addCalcResponse'] = $addCalcResponse;
     }
-    
+
     $response['finalCalculationId'] = $finalCalcId;
     $response['success'] = true;
-    
+
     return $response;
 }
 
@@ -534,19 +538,30 @@ function addMileageRow(string $payrollId, array $entry, ?string $existingCalcId,
     ];
     
     $response['debug_added_mileage_row'] = true;
-    
+
+    // Uudelle laskelmalle injektoi payrollId
+    if ($isNewCalc) {
+        $calcObject['info'] = array_merge($calcObject['info'] ?? [], ['payrollId' => $payrollId]);
+    }
+
     // Tallenna muokattu laskelma
     $saveResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=false', $calcObject);
     $response['saveResponse'] = $saveResponse;
-    
-    $finalCalcId = $saveResponse['data']['id'] ?? $calculationId;
-    
+
+    if (!$saveResponse['success'] || !isset($saveResponse['data']['id'])) {
+        $response['success'] = false;
+        $response['error']   = 'Save mileage calculation failed';
+        return $response;
+    }
+
+    $finalCalcId = $saveResponse['data']['id'];
+
     // Liitä palkkalistaan VAIN jos uusi laskelma
     if ($isNewCalc) {
         $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
         $response['addCalcResponse'] = $addCalcResponse;
     }
-    
+
     $response['finalCalculationId'] = $finalCalcId;
     $response['success'] = true;
     
