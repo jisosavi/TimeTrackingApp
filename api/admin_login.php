@@ -1,0 +1,58 @@
+<?php
+declare(strict_types=1);
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+header('Content-Type: application/json; charset=utf-8');
+
+require_once __DIR__ . '/../bootstrap.php';
+
+$raw = file_get_contents('php://input');
+$payload = json_decode($raw, true);
+
+if (!$payload || !isset($payload['email'], $payload['password'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Email and password are required']);
+    exit;
+}
+
+$email = trim($payload['email']);
+$password = $payload['password'];
+
+try {
+    $db = getDb();
+    $stmt = $db->prepare('SELECT * FROM company_admins WHERE email = :email AND active = 1');
+    $stmt->execute([':email' => $email]);
+    $admin = $stmt->fetch();
+
+    if (!$admin || !verifyPassword($password, $admin['password_hash'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Invalid credentials']);
+        exit;
+    }
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $_SESSION['admin_id'] = $admin['id'];
+    $_SESSION['admin_email'] = $admin['email'];
+    $_SESSION['admin_name'] = $admin['name'];
+    $_SESSION['admin_role'] = $admin['role'];
+    $_SESSION['company_id'] = $admin['company_id'];
+
+    echo json_encode([
+        'success' => true,
+        'admin' => [
+            'email' => $admin['email'],
+            'name' => $admin['name'],
+            'role' => $admin['role'],
+            'company_id' => $admin['company_id'],
+        ],
+    ]);
+} catch (Throwable $e) {
+    error_log('Admin login error: ' . $e->getMessage());
+    error_log($e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}

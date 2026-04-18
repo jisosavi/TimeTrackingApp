@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TimeTrackingApp – Ylläpito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #EDE8E8;
+      --card: #FFFFFF;
+      --text: #283237;
+      --text-muted: #5E7682;
+      --primary: #3C1EEB;
+      --success: #0E9537;
+      --destructive: #E01541;
+      --border: #C4CFD4;
+      --input-bg: #FFFFFF;
+      --muted: #F3F0F0;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 2.5rem 1.5rem;
+    }
+    .container { max-width: 860px; margin: 0 auto; }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+    .page-header p { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.125rem; }
+    .header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--muted);
+    }
+    button {
+      cursor: pointer;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      height: 2.25rem;
+      padding: 0 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      transition: background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      gap: 0.375rem;
+    }
+    button:hover { background: var(--muted); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover { background: #2F18BC; border-color: #2F18BC; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--card); color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover { background: var(--muted); }
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--muted); }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--muted); }
+    .action-btn {
+      height: 1.75rem;
+      padding: 0 0.625rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-family: 'Figtree', system-ui, sans-serif;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .action-btn:hover { background: var(--muted); }
+    /* Forms */
+    .form-group { margin-bottom: 0.875rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; color: var(--text); }
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%;
+      height: 2.25rem;
+      padding: 0 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgb(60 30 235 / 0.12); }
+    small { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block; }
+    /* Status */
+    .status { font-size: 0.8rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); display: none; margin-bottom: 0.875rem; }
+    .status.visible { display: block; }
+    .status.success { background: #F0FBF3; border: 1px solid #A7E3B5; color: #0B6B2C; }
+    .status.error { background: #FEF2F4; border: 1px solid #F5AABB; color: #9B0F2E; }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgb(0 0 0 / 0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.visible { display: flex; }
+    .modal-content {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      max-width: 440px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+    }
+    .modal h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .modal-footer { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
+    .modal-footer button { flex: 1; }
+    .empty { color: var(--text-muted); font-size: 0.875rem; padding: 1rem 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="page-header">
+      <div>
+        <h1>TimeTrackingApp – Ylläpito</h1>
+        <p>Hallinnoi yrityksiä ja niiden admin-käyttäjiä</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary" id="newCompanyBtn">+ Uusi yritys</button>
+        <button class="btn-secondary" id="logoutBtn">Kirjaudu ulos</button>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="card">
+      <table id="companiesTable">
+        <thead>
+          <tr>
+            <th style="width:2.5rem;text-align:center;">Kirjaus</th>
+            <th>Yritys</th>
+            <th>Slug</th>
+            <th>Työntekijät</th>
+            <th>Toiminnot</th>
+          </tr>
+        </thead>
+        <tbody id="companiesTbody">
+          <tr><td colspan="5" class="empty">Ladataan...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="modal" id="newCompanyModal">
+    <div class="modal-content">
+      <h2>Uusi yritys</h2>
+      <div class="status" id="modalStatus"></div>
+
+      <div class="form-group">
+        <label for="companyName">Yrityksen nimi</label>
+        <input id="companyName" type="text" placeholder="Esim. Acme Corp" />
+      </div>
+      <div class="form-group">
+        <label for="companySlug">URL-tunniste (slug)</label>
+        <input id="companySlug" type="text" placeholder="esim. acme-corp" />
+        <small>Tulee URLiin: /<strong id="slugPreview">slug</strong>/admin/</small>
+      </div>
+      <div class="form-group">
+        <label for="adminEmail">Admin-sähköposti</label>
+        <input id="adminEmail" type="email" placeholder="admin@example.com" />
+      </div>
+      <div class="form-group">
+        <label for="adminPassword">Admin-salasana</label>
+        <input id="adminPassword" type="password" placeholder="Turvallinen salasana" />
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" id="createCompanyBtn">Luo yritys</button>
+        <button class="btn-secondary" id="closeModalBtn">Peruuta</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const companiesTbody = document.getElementById('companiesTbody');
+    const statusEl = document.getElementById('status');
+    const newCompanyBtn = document.getElementById('newCompanyBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const newCompanyModal = document.getElementById('newCompanyModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const createCompanyBtn = document.getElementById('createCompanyBtn');
+    const companyNameInput = document.getElementById('companyName');
+    const companySlugInput = document.getElementById('companySlug');
+    const adminEmailInput = document.getElementById('adminEmail');
+    const adminPasswordInput = document.getElementById('adminPassword');
+    const slugPreview = document.getElementById('slugPreview');
+    const modalStatus = document.getElementById('modalStatus');
+
+    let currentCompanies = [];
+
+    function showStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = `status visible ${isError ? 'error' : 'success'}`;
+    }
+
+    function showModalStatus(message, isError = false) {
+      modalStatus.textContent = message;
+      modalStatus.className = `status visible ${isError ? 'error' : 'success'}`;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function renderCompanies(companies) {
+      currentCompanies = companies;
+      if (companies.length === 0) {
+        companiesTbody.innerHTML = '<tr><td colspan="5" class="empty">Ei yrityksiä. Luo uusi yritys aloittaaksesi.</td></tr>';
+        return;
+      }
+      companiesTbody.innerHTML = companies.map(c => `
+        <tr>
+          <td style="text-align:center;">
+            <input type="checkbox" class="active-checkbox" data-id="${c.id}"
+              ${Number(c.active) ? 'checked' : ''}
+              style="width:1.1rem;height:1.1rem;accent-color:#3C1EEB;cursor:pointer;" />
+          </td>
+          <td><strong>${escapeHtml(c.name)}</strong></td>
+          <td><code style="font-family:'Courier New',monospace;font-size:0.8rem;background:var(--muted);border:1px solid var(--border);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(c.slug || '')}</code></td>
+          <td>${c.employee_count || 0}</td>
+          <td>
+            <div style="display:flex;gap:0.375rem;">
+              <button class="action-btn" onclick="window.location.href='/${escapeHtml(c.slug)}/admin/'">Hallinnoi →</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      companiesTbody.querySelectorAll('.active-checkbox').forEach(cb => {
+        cb.addEventListener('change', async () => {
+          const id = Number(cb.getAttribute('data-id'));
+          const active = cb.checked ? 1 : 0;
+          cb.disabled = true;
+          try {
+            const res = await fetch('/api/companies.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, active }),
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+              showStatus(result.error || 'Tilan vaihto epäonnistui.', true);
+              cb.checked = !cb.checked;
+            } else {
+              const co = currentCompanies.find(c => c.id === id);
+              if (co) co.active = active;
+            }
+          } catch (e) {
+            console.error(e);
+            showStatus('Palvelinvirhe tilan vaihdossa.', true);
+            cb.checked = !cb.checked;
+          } finally {
+            cb.disabled = false;
+          }
+        });
+      });
+    }
+
+    async function loadCompanies() {
+      try {
+        const response = await fetch('/api/companies.php');
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          showStatus(result.error || 'Yritysten lataus epäonnistui.', true);
+          companiesTbody.innerHTML = '<tr><td colspan="5" class="empty">Virhe ladattaessa yrityksiä.</td></tr>';
+          return;
+        }
+        renderCompanies(result.companies || []);
+      } catch (error) {
+        console.error(error);
+        showStatus('Palvelinvirhe yritysten haussa.', true);
+      }
+    }
+
+    newCompanyBtn.addEventListener('click', () => {
+      newCompanyModal.classList.add('visible');
+      companyNameInput.focus();
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      newCompanyModal.classList.remove('visible');
+      resetForm();
+    });
+
+    companyNameInput.addEventListener('input', () => {
+      const slug = companyNameInput.value.toLowerCase().trim()
+        .replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      if (slug) { companySlugInput.value = slug; slugPreview.textContent = slug; }
+    });
+
+    function resetForm() {
+      companyNameInput.value = '';
+      companySlugInput.value = '';
+      adminEmailInput.value = '';
+      adminPasswordInput.value = '';
+      slugPreview.textContent = 'slug';
+      modalStatus.className = 'status';
+    }
+
+    createCompanyBtn.addEventListener('click', async () => {
+      const name = companyNameInput.value.trim();
+      const slug = companySlugInput.value.trim();
+      const email = adminEmailInput.value.trim();
+      const password = adminPasswordInput.value;
+
+      if (!name || !slug || !email || !password) {
+        showModalStatus('Täytä kaikki kentät.', true);
+        return;
+      }
+
+      createCompanyBtn.disabled = true;
+      showModalStatus('Luodaan yritystä...');
+
+      try {
+        const response = await fetch('/api/create_company.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, slug, email, password }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          showModalStatus(result.error || 'Yrityksen luominen epäonnistui.', true);
+          createCompanyBtn.disabled = false;
+          return;
+        }
+        showStatus(`Yritys "${name}" luotu onnistuneesti.`);
+        newCompanyModal.classList.remove('visible');
+        resetForm();
+        await loadCompanies();
+      } catch (error) {
+        console.error(error);
+        showModalStatus('Palvelinvirhe.', true);
+        createCompanyBtn.disabled = false;
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/api/logout.php');
+      window.location.href = '/';
+    });
+
+    loadCompanies();
+  </script>
+</body>
+</html>

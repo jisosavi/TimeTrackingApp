@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TimeTrackingApp Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #EDE8E8;
+      --card: #FFFFFF;
+      --text: #283237;
+      --text-muted: #5E7682;
+      --primary: #3C1EEB;
+      --success: #0E9537;
+      --border: #C4CFD4;
+      --input-bg: #FFFFFF;
+      --muted: #F3F0F0;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2.5rem 1.5rem;
+    }
+    .card {
+      width: min(720px, 100%);
+      padding: 1.5rem;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+    h2 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.75rem; }
+    p { font-size: 0.875rem; color: var(--text-muted); }
+    .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.875rem; }
+    label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      height: 2.25rem;
+      padding: 0 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgb(60 30 235 / 0.12);
+    }
+    button {
+      cursor: pointer;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      height: 2.25rem;
+      padding: 0 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      transition: background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--muted); }
+    #loginBtn {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      height: 2.5rem;
+      margin-top: 0.25rem;
+    }
+    #loginBtn:hover { background: #2F18BC; border-color: #2F18BC; }
+    .primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      width: auto;
+    }
+    .primary:hover { background: #2F18BC; border-color: #2F18BC; }
+    .secondary { width: auto; }
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dashboard-header > div { display: flex; flex-direction: column; gap: 0.25rem; }
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--muted); }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--muted); }
+    .employee-form {
+      margin-top: 1.25rem;
+      padding: 1rem;
+      border-radius: var(--radius);
+      background: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .employee-form.hidden { display: none; }
+    .active-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      margin-bottom: 1rem;
+    }
+    .active-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .active-toggle input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+    input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--primary); }
+    .form-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .form-buttons button { flex: 1; min-width: 100px; }
+    .action-buttons { display: flex; gap: 0.375rem; flex-wrap: wrap; }
+    .action-btn {
+      height: 1.75rem;
+      padding: 0 0.625rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-family: 'Figtree', system-ui, sans-serif;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .action-btn:hover { background: var(--muted); }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgb(0 0 0 / 0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.visible { display: flex; }
+    .modal-content {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+    }
+    .modal h2 { font-size: 1rem; margin-bottom: 0.625rem; }
+    .modal p { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.375rem; }
+    .modal-buttons { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+    .modal-buttons button { flex: 1; }
+    #copyPinBtn { background: var(--primary); color: #fff; border-color: var(--primary); }
+    #copyPinBtn:hover { background: #2F18BC; }
+    .status { margin-top: 0.75rem; min-height: 1.1rem; font-size: 0.8rem; color: var(--text-muted); }
+    .hidden { display: none !important; }
+    .dashboard { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section id="loginSection">
+      <h1>Admin-kirjautuminen</h1>
+      <div class="field">
+        <label for="email">Sähköposti</label>
+        <input id="email" type="email" placeholder="admin@example.com" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Salasana</label>
+        <input id="password" type="password" placeholder="Salasana" autocomplete="current-password" />
+      </div>
+      <button id="loginBtn">Kirjaudu sisään</button>
+      <div class="status" id="status"></div>
+
+      <div style="margin-top:0.875rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
+        <strong style="display:block;margin-bottom:0.375rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
+        <div id="debugContent" style="color:#5E7682;">Ladataan...</div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="dashboard-header">
+        <div>
+          <h1>Yrityksen työntekijät</h1>
+          <p>Hallinnoi työntekijöitä ja PIN-koodeja.</p>
+          <p style="font-size: 0.9rem; color: #666;">Kirjautunut: <strong id="adminName"></strong></p>
+        </div>
+        <button id="logoutBtn" class="secondary">Kirjaudu ulos</button>
+      </div>
+
+      <div class="dashboard">
+        <div style="margin-bottom:1.25rem;display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;">
+          <button id="syncSalaxyBtn" class="primary">Synkronoi työntekijät Salaxystä</button>
+          <span id="lastSyncInfo" style="font-size:0.8rem;color:#7D95A1;"></span>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="employeesTable">
+            <thead>
+              <tr>
+                <th style="width:2.5rem;text-align:center;">Kirjanpito</th>
+                <th>Nimi</th>
+                <th>PIN</th>
+                <th>Personal ID / SSN</th>
+                <th>Salaxy employment ID</th>
+                <th>Toiminnot</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <form id="employeeForm" class="employee-form hidden">
+          <h2 id="formTitle">Lisää työntekijä</h2>
+          <div class="field">
+            <label for="employeeName">Nimi</label>
+            <input id="employeeName" type="text" />
+          </div>
+          <div class="field">
+            <label for="employeePin">PIN</label>
+            <input id="employeePin" type="text" maxlength="6" />
+          </div>
+          <div class="field">
+            <label for="employeeSsn">Personal ID / SSN</label>
+            <input id="employeeSsn" type="text" />
+          </div>
+          <div class="field">
+            <label for="employeeEmploymentId">Salaxy employment ID</label>
+            <input id="employeeEmploymentId" type="text" />
+          </div>
+          <div class="form-buttons">
+            <button id="saveEmployeeBtn" type="button">Tallenna</button>
+            <button id="cancelEmployeeBtn" type="button" class="secondary">Peruuta</button>
+          </div>
+        </form>
+
+        <div style="margin-top:1.5rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;">
+          <strong style="display:block;margin-bottom:0.25rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
+          <p style="font-size:0.8rem;color:#5E7682;margin-bottom:0.625rem;">Työntekijät luodaan Salaxyssä ja tuodaan synkronoinnilla. Tämä toiminto on tarkoitettu vain testaukseen.</p>
+          <button id="newEmployeeBtn" style="height:2rem;padding:0 0.75rem;font-size:0.8rem;border-radius:6px;border:1px solid #F25A02;background:#FFF8F0;color:#C04A00;font-family:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;">Lisää työntekijä manuaalisesti</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="pinResetModal" class="modal">
+    <div class="modal-content">
+      <h2>PIN-koodi vaihdettu</h2>
+      <p>Työntekijä: <strong id="resetEmployeeName"></strong></p>
+      <p>Uusi PIN: <strong id="newPin" style="font-size: 1.2em; color: #0f4c81;"></strong></p>
+      <p>Tämä PIN on asetettu järjestelmään. Varmista, että työntekijä saa tiedon uudesta PIN-koodista.</p>
+      <div class="modal-buttons">
+        <button id="copyPinBtn" class="primary">Kopioi PIN</button>
+        <button id="closePinModalBtn" class="secondary">Sulje</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const slug = window.location.pathname.split('/').filter(Boolean)[0];
+    fetch('/api/debug_credentials.php')
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('debugContent');
+        const admins = (data.admins || []).filter(a => a.slug === slug);
+        const employees = (data.employees || []).filter(e => e.slug === slug);
+        let html = '';
+        if (admins.length) {
+          html += '<strong>Admin-tunnus:</strong><br>' +
+            admins.map(a => `${a.email}${a.email === 'admin@timeapp.local' ? ' / <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">Admin123!</code> (bootstrap-oletus)' : ' — salasana asetettu luonnin yhteydessä'}`).join('<br>');
+        }
+        if (employees.length) {
+          html += (html ? '<br><br>' : '') + '<strong>Työntekijä-PINit:</strong><br>' +
+            employees.map(e => `${e.name}: <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">${e.pin}</code>`).join('<br>');
+        }
+        el.innerHTML = html || 'Ei tunnuksia tietokannassa.';
+      })
+      .catch(() => {
+        document.getElementById('debugContent').textContent = 'Debug-tietoja ei saatu.';
+      });
+  </script>
+  <script src="admin.js"></script>
+</body>
+</html>
