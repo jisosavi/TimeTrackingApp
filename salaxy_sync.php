@@ -9,11 +9,13 @@ require_once __DIR__ . '/config.php';
 const DRAFT_FILE = __DIR__ . '/data/salaxy_draft.json';
 const TOKEN_FILE = __DIR__ . '/data/salaxy_token.json';
 
-// Tarkista APP_KEY
-if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
-    http_response_code(401);
-    echo json_encode(['message' => 'Luvaton pyyntö']);
-    exit;
+// When included as a library (e.g. from export_payroll.php) skip standalone execution
+if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
+    if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
+        http_response_code(401);
+        echo json_encode(['message' => 'Luvaton pyyntö']);
+        exit;
+    }
 }
 
 /**
@@ -543,8 +545,9 @@ function addMileageRow(string $payrollId, array $entry, ?string $existingCalcId,
 }
 
 // ============================================================
-// PÄÄLOGIIKKA
+// PÄÄLOGIIKKA — skipped when included as a library
 // ============================================================
+if (defined('SALAXY_SYNC_AS_LIBRARY')) { return; }
 
 // Lue lähetettävät tunnit
 $raw = file_get_contents('php://input');

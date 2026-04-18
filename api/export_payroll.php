@@ -108,6 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Call Salaxy via salaxy_sync.php logic (reuse token + request helpers)
+    if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
+        define('SALAXY_SYNC_AS_LIBRARY', true);
+    }
     require_once __DIR__ . '/../salaxy_sync.php';
 
     // salaxy_sync.php defines getSalaxyAccessToken, salaxyRequest etc.
