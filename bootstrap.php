@@ -145,6 +145,24 @@ function initializeDatabase(PDO $db): void
     if (!in_array('payday_2', $cols)) {
         $db->exec('ALTER TABLE companies ADD COLUMN payday_2 INTEGER NOT NULL DEFAULT 0');
     }
+    if (!in_array('ui_language', $cols)) {
+        $db->exec("ALTER TABLE companies ADD COLUMN ui_language TEXT NOT NULL DEFAULT 'en'");
+    }
+
+    $empCols = array_column($db->query('PRAGMA table_info(employees)')->fetchAll(), 'name');
+    if (!in_array('ui_language', $empCols)) {
+        $db->exec('ALTER TABLE employees ADD COLUMN ui_language TEXT');
+    }
+
+    $supCols = array_column($db->query('PRAGMA table_info(supervisors)')->fetchAll(), 'name');
+    if (!in_array('ui_language', $supCols)) {
+        $db->exec('ALTER TABLE supervisors ADD COLUMN ui_language TEXT');
+    }
+
+    $admCols = array_column($db->query('PRAGMA table_info(company_admins)')->fetchAll(), 'name');
+    if (!in_array('ui_language', $admCols)) {
+        $db->exec('ALTER TABLE company_admins ADD COLUMN ui_language TEXT');
+    }
 
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);

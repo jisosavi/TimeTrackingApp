@@ -40,6 +40,14 @@ if (!$supervisor) {
 $_SESSION['supervisor_id']         = (int) $supervisor['id'];
 $_SESSION['supervisor_company_id'] = (int) $supervisor['company_id'];
 
+// Resolve effective language: supervisor personal → company default → 'en'
+$compLangStmt = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
+$compLangStmt->execute([':id' => (int) $supervisor['company_id']]);
+$compRow      = $compLangStmt->fetch();
+$companyLang  = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';
+$supLang      = $supervisor['ui_language'] ?? null;
+$effectiveLang = $supLang ?: $companyLang;
+
 sendJson([
     'success' => true,
     'supervisor' => [
@@ -48,4 +56,5 @@ sendJson([
         'last_name'  => $supervisor['last_name'],
         'email'      => $supervisor['email'],
     ],
+    'ui_language' => $effectiveLang,
 ]);

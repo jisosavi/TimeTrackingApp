@@ -8,7 +8,7 @@ $db = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active,
+        "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
            COALESCE((
              SELECT ROUND(SUM(te.hours), 1)
              FROM time_entries te
@@ -32,7 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pin = trim((string) ($payload['pin'] ?? ''));
     $ssn = trim((string) ($payload['ssn'] ?? ''));
     $employmentId = trim((string) ($payload['employmentId'] ?? ''));
-    $active = isset($payload['active']) ? (int) $payload['active'] : 1;
+    $active          = isset($payload['active']) ? (int) $payload['active'] : 1;
+    $langProvided    = array_key_exists('ui_language', $payload);
+    $uiLanguage      = $langProvided ? trim((string) $payload['ui_language']) : null;
+    if ($uiLanguage !== null && $uiLanguage !== '' && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk'], true)) {
+        $uiLanguage = null; $langProvided = false;
+    }
+    if ($uiLanguage === '') $uiLanguage = null; // empty = clear override
 
     // If updating an existing employee with only PIN, fetch current data
     if ($id && $name === '' && $pin !== '') {
@@ -76,10 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($id) {
+        $uiLangExpr = $langProvided ? ':ui_language' : 'COALESCE(:ui_language, ui_language)';
         $stmt = $db->prepare(
-            'UPDATE employees
-             SET name = :name, pin = :pin, ssn = :ssn, salaxy_employment_id = :employmentId, active = :active
-             WHERE id = :id AND company_id = :company_id'
+            "UPDATE employees
+             SET name = :name, pin = :pin, ssn = :ssn, salaxy_employment_id = :employmentId,
+                 active = :active, ui_language = {$uiLangExpr}
+             WHERE id = :id AND company_id = :company_id"
         );
         $stmt->execute([
             ':name' => $name,
@@ -87,13 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':ssn' => $ssn,
             ':employmentId' => $employmentId,
             ':active' => $active,
+            ':ui_language' => $uiLanguage,
             ':id' => $id,
             ':company_id' => $admin['company_id'],
         ]);
     } else {
         $stmt = $db->prepare(
-            'INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active)
-             VALUES (:company_id, :pin, :name, :ssn, :employmentId, :role, :active)'
+            'INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active, ui_language)
+             VALUES (:company_id, :pin, :name, :ssn, :employmentId, :role, :active, :ui_language)'
         );
         $stmt->execute([
             ':company_id' => $admin['company_id'],
@@ -103,12 +112,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':employmentId' => $employmentId,
             ':role' => 'employee',
             ':active' => $active,
+            ':ui_language' => $uiLanguage,
         ]);
         $id = (int) $db->lastInsertId();
     }
 
     $stmt = $db->prepare(
-        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active
+        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active, ui_language
          FROM employees
          WHERE id = :id AND company_id = :company_id'
     );

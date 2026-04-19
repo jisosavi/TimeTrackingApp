@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -85,6 +85,9 @@
       margin: 1.5rem 0 0.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
     @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+    #langBar { display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;
+      margin-top: 0.375rem; font-size: 0.8rem; color: var(--text-muted); }
+    #langBar > div { display: flex; align-items: center; gap: 0.375rem; }
   </style>
 </head>
 <body>
@@ -96,16 +99,20 @@
 
   <!-- Login -->
   <section id="loginSection">
-    <h1>Admin-kirjautuminen</h1>
-    <div class="field"><label for="email">Sähköposti</label>
-      <input id="email" type="email" placeholder="admin@example.com" autocomplete="username" /></div>
-    <div class="field"><label for="password">Salasana</label>
-      <input id="password" type="password" placeholder="Salasana" autocomplete="current-password" /></div>
-    <button id="loginBtn">Kirjaudu sisään</button>
+    <h1 data-i18n="admin.login_title"></h1>
+    <div class="field">
+      <label for="email" data-i18n="login.email_label"></label>
+      <input id="email" type="email" placeholder="admin@example.com" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="password" data-i18n="login.password_label"></label>
+      <input id="password" type="password" data-i18n-placeholder="login.password_label" autocomplete="current-password" />
+    </div>
+    <button id="loginBtn" data-i18n="login.sign_in_button"></button>
     <div class="status" id="status"></div>
     <div style="margin-top:0.875rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
       <strong style="display:block;margin-bottom:0.375rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
-      <div id="debugContent" style="color:#5E7682;">Ladataan...</div>
+      <div id="debugContent" style="color:#5E7682;" data-i18n="common.loading"></div>
     </div>
   </section>
 
@@ -113,23 +120,33 @@
   <section id="dashboard" class="hidden">
     <div class="dashboard-header">
       <div>
-        <h1>Yrityksen työntekijät</h1>
-        <p>Hallinnoi työntekijöitä ja PIN-koodeja.</p>
-        <p style="font-size:0.9rem;color:#666;">Kirjautunut: <strong id="adminName"></strong></p>
+        <h1 data-i18n="admin.employees_title"></h1>
+        <p data-i18n="admin.employees_subtitle"></p>
+        <p style="font-size:0.9rem;color:#666;"><span data-i18n="common.logged_in_as"></span> <strong id="adminName"></strong></p>
+        <div id="langBar" class="hidden">
+          <div>
+            <span data-i18n="language.company_language_label"></span>
+            <span id="companyLangContainer"></span>
+          </div>
+          <div>
+            <span data-i18n="language.personal_language_label"></span>
+            <span id="adminLangContainer"></span>
+          </div>
+        </div>
       </div>
       <div class="header-actions">
-        <button id="logoutBtn" class="secondary">Kirjaudu ulos</button>
+        <button id="logoutBtn" class="secondary" data-i18n="common.logout"></button>
       </div>
     </div>
 
     <!-- Action bar -->
     <div style="margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
       <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-        <button id="exportPayrollBtn" class="btn-primary hidden">Vie tunnit Salaxyyn</button>
-        <button id="payrollSettingsBtn">⚙ Palkkakaudet</button>
+        <button id="exportPayrollBtn" class="btn-primary hidden" data-i18n="admin.export_payroll"></button>
+        <button id="payrollSettingsBtn" data-i18n="admin.payroll_settings"></button>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.25rem;">
-        <button id="syncSalaxyBtn" class="btn-primary">Synkronoi työntekijät Salaxystä</button>
+        <button id="syncSalaxyBtn" class="btn-primary" data-i18n="admin.sync_from_salaxy"></button>
         <span id="lastSyncInfo" style="font-size:0.8rem;color:#7D95A1;"></span>
       </div>
     </div>
@@ -139,9 +156,12 @@
       <table id="employeesTable">
         <thead>
           <tr>
-            <th style="width:2.5rem;text-align:center;">Kirjanpito</th>
-            <th>Nimi</th><th>PIN</th><th>Personal ID / SSN</th>
-            <th>Salaxy employment ID</th><th>Toiminnot</th>
+            <th style="width:2.5rem;text-align:center;" data-i18n="admin.col_active"></th>
+            <th data-i18n="admin.col_name"></th>
+            <th data-i18n="admin.col_pin"></th>
+            <th data-i18n="admin.col_ssn"></th>
+            <th data-i18n="admin.col_employment_id"></th>
+            <th data-i18n="admin.col_actions"></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -150,27 +170,42 @@
 
     <!-- Employee form -->
     <form id="employeeForm" class="employee-form hidden">
-      <h2 id="formTitle">Lisää työntekijä</h2>
-      <div class="field"><label for="employeeName">Nimi</label><input id="employeeName" type="text" /></div>
-      <div class="field"><label for="employeePin">PIN</label><input id="employeePin" type="text" maxlength="6" /></div>
-      <div class="field"><label for="employeeSsn">Personal ID / SSN</label><input id="employeeSsn" type="text" /></div>
-      <div class="field"><label for="employeeEmploymentId">Salaxy employment ID</label><input id="employeeEmploymentId" type="text" /></div>
+      <h2 id="formTitle" data-i18n="admin.add_employee_title"></h2>
+      <div class="field"><label for="employeeName" data-i18n="admin.col_name"></label><input id="employeeName" type="text" /></div>
+      <div class="field"><label for="employeePin" data-i18n="admin.col_pin"></label><input id="employeePin" type="text" maxlength="6" /></div>
+      <div class="field"><label for="employeeSsn" data-i18n="admin.col_ssn"></label><input id="employeeSsn" type="text" /></div>
+      <div class="field"><label for="employeeEmploymentId" data-i18n="admin.col_employment_id"></label><input id="employeeEmploymentId" type="text" /></div>
+      <div class="field">
+        <label for="employeeLang" data-i18n="admin.language_label"></label>
+        <select id="employeeLang" style="height:2.25rem;border-radius:var(--radius);border:1px solid var(--border);font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;width:100%;">
+          <option value="" data-i18n="common.lang_default"></option>
+          <option value="en">English</option>
+          <option value="fi">Suomi</option>
+          <option value="sv">Svenska</option>
+          <option value="et">Eesti</option>
+          <option value="uk">Українська</option>
+        </select>
+      </div>
       <div class="form-buttons">
-        <button id="saveEmployeeBtn" type="button" class="btn-primary">Tallenna</button>
-        <button id="cancelEmployeeBtn" type="button" class="secondary">Peruuta</button>
+        <button id="saveEmployeeBtn" type="button" class="btn-primary" data-i18n="common.save"></button>
+        <button id="cancelEmployeeBtn" type="button" class="secondary" data-i18n="common.cancel"></button>
       </div>
     </form>
 
     <!-- Supervisors section (shown only if approvals_enabled) -->
     <div id="supervisorsSection" class="hidden">
       <div class="section-header">
-        <h2 style="margin:0;">Esihenkilöt</h2>
-        <button id="addSupervisorBtn" class="btn-primary">+ Lisää esihenkilö</button>
+        <h2 style="margin:0;" data-i18n="admin.supervisors_title"></h2>
+        <button id="addSupervisorBtn" class="btn-primary" data-i18n="admin.add_supervisor"></button>
       </div>
       <div class="table-wrapper">
         <table>
           <thead><tr>
-            <th>Nimi</th><th>Email</th><th>Puhelin</th><th>PIN</th><th>Toiminnot</th>
+            <th data-i18n="supervisor.col_name"></th>
+            <th data-i18n="supervisor.col_email"></th>
+            <th data-i18n="supervisor.col_phone"></th>
+            <th data-i18n="supervisor.col_pin"></th>
+            <th data-i18n="supervisor.col_actions"></th>
           </tr></thead>
           <tbody id="supervisorsTbody"></tbody>
         </table>
@@ -180,8 +215,8 @@
     <!-- Debug: manual add -->
     <div style="margin-top:1.5rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;">
       <strong style="display:block;margin-bottom:0.25rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
-      <p style="font-size:0.8rem;color:#5E7682;margin-bottom:0.625rem;">Työntekijät luodaan Salaxyssä ja tuodaan synkronoinnilla.</p>
-      <button id="newEmployeeBtn" style="height:2rem;padding:0 0.75rem;font-size:0.8rem;border-radius:6px;border:1px solid #F25A02;background:#FFF8F0;color:#C04A00;font-family:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;">Lisää työntekijä manuaalisesti</button>
+      <p id="debugManualNote" style="font-size:0.8rem;color:#5E7682;margin-bottom:0.625rem;" data-i18n="admin.employees_subtitle"></p>
+      <button id="newEmployeeBtn" style="height:2rem;padding:0 0.75rem;font-size:0.8rem;border-radius:6px;border:1px solid #F25A02;background:#FFF8F0;color:#C04A00;font-family:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;" data-i18n="admin.add_employee"></button>
     </div>
   </section>
 </main>
@@ -189,13 +224,13 @@
 <!-- PIN reset modal -->
 <div id="pinResetModal" class="modal">
   <div class="modal-content sm">
-    <h2>PIN-koodi vaihdettu</h2>
-    <p>Työntekijä: <strong id="resetEmployeeName"></strong></p>
-    <p>Uusi PIN: <strong id="newPin" style="font-size:1.2em;color:#0f4c81;"></strong></p>
-    <p>Varmista, että työntekijä saa tiedon uudesta PIN-koodista.</p>
+    <h2 data-i18n="admin.pin_reset_title"></h2>
+    <p><span data-i18n="admin.employee_label"></span> <strong id="resetEmployeeName"></strong></p>
+    <p><span data-i18n="admin.new_pin_label"></span> <strong id="newPin" style="font-size:1.2em;color:#0f4c81;"></strong></p>
+    <p data-i18n="admin.pin_reset_note"></p>
     <div class="modal-buttons">
-      <button id="copyPinBtn">Kopioi PIN</button>
-      <button id="closePinModalBtn" class="secondary">Sulje</button>
+      <button id="copyPinBtn" data-i18n="admin.copy_pin"></button>
+      <button id="closePinModalBtn" class="secondary" data-i18n="common.close"></button>
     </div>
   </div>
 </div>
@@ -205,31 +240,31 @@
   <div class="modal-content lg">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <h2 id="entriesModalTitle" style="margin:0;"></h2>
-      <button id="closeEntriesModal" class="secondary" style="flex-shrink:0;">✕ Sulje</button>
+      <button id="closeEntriesModal" class="secondary" style="flex-shrink:0;">✕ <span data-i18n="common.close"></span></button>
     </div>
 
     <!-- Bulk actions bar -->
     <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
       <label style="display:flex;align-items:center;gap:0.375rem;font-size:0.8rem;cursor:pointer;">
-        <input type="checkbox" id="selectAllEntries" style="accent-color:#3C1EEB;"> Valitse kaikki
+        <input type="checkbox" id="selectAllEntries" style="accent-color:#3C1EEB;"> <span data-i18n="entries.select_all"></span>
       </label>
-      <button id="approveSelectedBtn" class="action-btn" style="color:#0E9537;border-color:#A7E3B5;">✓ Hyväksy valitut</button>
-      <button id="rejectSelectedBtn"  class="action-btn" style="color:#E01541;border-color:#F5AABB;">✗ Hylkää valitut</button>
+      <button id="approveSelectedBtn" class="action-btn" style="color:#0E9537;border-color:#A7E3B5;" data-i18n="entries.approve_selected"></button>
+      <button id="rejectSelectedBtn"  class="action-btn" style="color:#E01541;border-color:#F5AABB;" data-i18n="entries.reject_selected"></button>
       <select id="entriesGrouping" style="height:1.75rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.8rem;padding:0 0.5rem;background:#fff;">
-        <option value="day">Päivittäin</option>
-        <option value="week" selected>Viikoittain</option>
-        <option value="month">Kuukausittain</option>
-        <option value="year">Vuosittain</option>
+        <option value="day" data-i18n="grouping.day"></option>
+        <option value="week" selected data-i18n="grouping.week"></option>
+        <option value="month" data-i18n="grouping.month"></option>
+        <option value="year" data-i18n="grouping.year"></option>
       </select>
     </div>
 
     <!-- Reject reason dialog (inline) -->
     <div id="rejectDialog" class="hidden" style="background:#FEF2F4;border:1px solid #F5AABB;border-radius:6px;padding:0.75rem;margin-bottom:0.75rem;">
-      <p style="font-size:0.8rem;margin-bottom:0.5rem;font-weight:500;">Hylkäyksen syy (vapaaehtoinen):</p>
-      <input type="text" id="rejectNoteInput" placeholder="Esim. Tuntimäärä ei täsmää..." style="width:100%;height:2rem;padding:0 0.625rem;border-radius:6px;border:1px solid #F5AABB;font-family:inherit;font-size:0.8rem;background:#fff;" />
+      <p style="font-size:0.8rem;margin-bottom:0.5rem;font-weight:500;" data-i18n="entries.rejection_reason_prompt"></p>
+      <input type="text" id="rejectNoteInput" data-i18n-placeholder="entries.rejection_placeholder" style="width:100%;height:2rem;padding:0 0.625rem;border-radius:6px;border:1px solid #F5AABB;font-family:inherit;font-size:0.8rem;background:#fff;" />
       <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-        <button id="confirmRejectBtn" style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#E01541;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;">Hylkää</button>
-        <button id="cancelRejectBtn"  style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#fff;border:1px solid #C4CFD4;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;">Peruuta</button>
+        <button id="confirmRejectBtn" style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#E01541;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;" data-i18n="entries.reject"></button>
+        <button id="cancelRejectBtn"  style="height:1.75rem;padding:0 0.75rem;font-size:0.8rem;background:#fff;border:1px solid #C4CFD4;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;" data-i18n="common.cancel"></button>
       </div>
     </div>
 
@@ -237,8 +272,12 @@
       <table>
         <thead><tr>
           <th style="width:2rem;text-align:center;"></th>
-          <th>Päivä</th><th>Aika</th><th>Tunnit/km</th>
-          <th>Projekti</th><th>Tila</th><th>Toiminnot</th>
+          <th data-i18n="entries.col_date"></th>
+          <th data-i18n="entries.col_time"></th>
+          <th data-i18n="entries.col_hours"></th>
+          <th data-i18n="entries.col_project"></th>
+          <th data-i18n="entries.col_status"></th>
+          <th data-i18n="admin.col_actions"></th>
         </tr></thead>
         <tbody id="entriesTbody"></tbody>
       </table>
@@ -249,23 +288,34 @@
 <!-- Supervisor modal -->
 <div id="supervisorModal" class="modal">
   <div class="modal-content md">
-    <h2 id="supModalTitle">Lisää esihenkilö</h2>
+    <h2 id="supModalTitle" data-i18n="admin.add_supervisor_title"></h2>
     <div class="form-row">
-      <div class="field"><label>Etunimi *</label><input id="supFirstName" type="text" /></div>
-      <div class="field"><label>Sukunimi *</label><input id="supLastName" type="text" /></div>
+      <div class="field"><label data-i18n="supervisor.first_name_label"></label><input id="supFirstName" type="text" /></div>
+      <div class="field"><label data-i18n="supervisor.last_name_label"></label><input id="supLastName" type="text" /></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Email *</label><input id="supEmail" type="text" /></div>
-      <div class="field"><label>Puhelin *</label><input id="supPhone" type="text" /></div>
+      <div class="field"><label data-i18n="supervisor.email_label"></label><input id="supEmail" type="text" /></div>
+      <div class="field"><label data-i18n="supervisor.phone_label"></label><input id="supPhone" type="text" /></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>PIN * (3–6 numeroa)</label><input id="supPin" type="text" maxlength="6" /></div>
-      <div class="field"><label>Personal ID / SSN</label><input id="supSsn" type="text" /></div>
+      <div class="field"><label data-i18n="supervisor.pin_label"></label><input id="supPin" type="text" maxlength="6" /></div>
+      <div class="field"><label data-i18n="supervisor.ssn_label"></label><input id="supSsn" type="text" /></div>
     </div>
-    <div class="field"><label>Salaxy ID</label><input id="supSalaxyId" type="text" /></div>
+    <div class="field"><label data-i18n="supervisor.salaxy_id_label"></label><input id="supSalaxyId" type="text" /></div>
+    <div class="field">
+      <label for="supLang" data-i18n="admin.language_label"></label>
+      <select id="supLang" style="height:2.25rem;border-radius:var(--radius);border:1px solid var(--border);font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;width:100%;">
+        <option value="" data-i18n="common.lang_default"></option>
+        <option value="en">English</option>
+        <option value="fi">Suomi</option>
+        <option value="sv">Svenska</option>
+        <option value="et">Eesti</option>
+        <option value="uk">Українська</option>
+      </select>
+    </div>
     <div class="modal-buttons">
-      <button id="saveSupervisorBtn" class="btn-primary">Tallenna</button>
-      <button id="closeSupervisorModal" class="secondary">Peruuta</button>
+      <button id="saveSupervisorBtn" class="btn-primary" data-i18n="common.save"></button>
+      <button id="closeSupervisorModal" class="secondary" data-i18n="common.cancel"></button>
     </div>
   </div>
 </div>
@@ -273,12 +323,12 @@
 <!-- Team modal -->
 <div id="teamModal" class="modal">
   <div class="modal-content md">
-    <h2 id="teamModalTitle">Tiimi</h2>
-    <p style="font-size:0.8rem;color:#7D95A1;margin-bottom:0.875rem;">Valitse tähän esihenkilöön kuuluvat työntekijät.</p>
+    <h2 id="teamModalTitle"></h2>
+    <p id="teamModalSubtitle" style="font-size:0.8rem;color:#7D95A1;margin-bottom:0.875rem;" data-i18n="admin.team_modal_subtitle"></p>
     <div id="teamList" style="max-height:340px;overflow-y:auto;"></div>
     <div class="modal-buttons">
-      <button id="saveTeamBtn" class="btn-primary">Tallenna tiimi</button>
-      <button id="closeTeamModal" class="secondary">Peruuta</button>
+      <button id="saveTeamBtn" class="btn-primary" data-i18n="admin.save_team"></button>
+      <button id="closeTeamModal" class="secondary" data-i18n="common.cancel"></button>
     </div>
   </div>
 </div>
@@ -286,41 +336,41 @@
 <!-- Payroll settings modal -->
 <div id="payrollSettingsModal" class="modal">
   <div class="modal-content sm">
-    <h2>Palkkakaudet</h2>
+    <h2 data-i18n="payroll.title"></h2>
 
     <div class="field">
-      <label>Palkkakausi</label>
+      <label data-i18n="payroll.period_label"></label>
       <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.25rem;">
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:400;font-size:0.875rem;">
-          <input type="radio" name="payrollPeriod" value="monthly" id="periodMonthly" style="accent-color:var(--primary);"> Kerran kuussa
+          <input type="radio" name="payrollPeriod" value="monthly" id="periodMonthly" style="accent-color:var(--primary);"> <span data-i18n="payroll.monthly"></span>
         </label>
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:400;font-size:0.875rem;">
-          <input type="radio" name="payrollPeriod" value="biweekly" id="periodBiweekly" style="accent-color:var(--primary);"> 2 vkon välein
+          <input type="radio" name="payrollPeriod" value="biweekly" id="periodBiweekly" style="accent-color:var(--primary);"> <span data-i18n="payroll.biweekly"></span>
         </label>
       </div>
     </div>
 
     <div id="settingsMonthly">
       <div class="field">
-        <label for="monthlyPayday">Palkkapäivä</label>
+        <label for="monthlyPayday" data-i18n="payroll.payday_label"></label>
         <select id="monthlyPayday" style="height:2.25rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;width:100%;"></select>
       </div>
     </div>
 
     <div id="settingsBiweekly" class="hidden">
       <div class="field">
-        <label for="biweeklyPayday1">Palkkapäivä 1 <span style="font-weight:400;color:#7D95A1;font-size:0.8rem;">(jakso 1.–15.)</span></label>
+        <label for="biweeklyPayday1"><span data-i18n="payroll.payday1_label"></span> <span style="font-weight:400;color:#7D95A1;font-size:0.8rem;" data-i18n="payroll.payday1_hint"></span></label>
         <select id="biweeklyPayday1" style="height:2.25rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;width:100%;"></select>
       </div>
       <div class="field">
-        <label for="biweeklyPayday2">Palkkapäivä 2 <span style="font-weight:400;color:#7D95A1;font-size:0.8rem;">(jakso 16.–kk. loppu)</span></label>
+        <label for="biweeklyPayday2"><span data-i18n="payroll.payday2_label"></span> <span style="font-weight:400;color:#7D95A1;font-size:0.8rem;" data-i18n="payroll.payday2_hint"></span></label>
         <select id="biweeklyPayday2" style="height:2.25rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;width:100%;"></select>
       </div>
     </div>
 
     <div class="modal-buttons">
-      <button id="closePayrollSettingsModal" class="secondary">Peruuta</button>
-      <button id="savePayrollSettingsBtn" class="btn-primary">Tallenna</button>
+      <button id="closePayrollSettingsModal" class="secondary" data-i18n="common.cancel"></button>
+      <button id="savePayrollSettingsBtn" class="btn-primary" data-i18n="common.save"></button>
     </div>
   </div>
 </div>
@@ -328,31 +378,34 @@
 <!-- Payroll export modal -->
 <div id="payrollModal" class="modal">
   <div class="modal-content lg">
-    <h2>Vie palkkalistalle</h2>
+    <h2 data-i18n="payroll.export_title"></h2>
     <div style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
       <div class="field" style="margin:0;flex:1;min-width:130px;">
-        <label>Alku</label>
+        <label data-i18n="payroll.date_from"></label>
         <input type="date" id="payrollDateFrom" style="height:2.25rem;padding:0 0.625rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;width:100%;" />
       </div>
       <div class="field" style="margin:0;flex:1;min-width:130px;">
-        <label>Loppu</label>
+        <label data-i18n="payroll.date_to"></label>
         <input type="date" id="payrollDateTo" style="height:2.25rem;padding:0 0.625rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;width:100%;" />
       </div>
-      <button id="payrollPreviewBtn" class="btn-primary" style="flex-shrink:0;">Hae hyväksytyt</button>
+      <button id="payrollPreviewBtn" class="btn-primary" style="flex-shrink:0;" data-i18n="payroll.fetch_approved"></button>
     </div>
     <div id="payrollPreview"></div>
     <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
-      <button id="exportToSalaxy" class="btn-primary hidden" style="background:#0E9537;border-color:#0E9537;">🚀 Vie Salaxyyn palkkalistaksi</button>
-      <button id="forceExportToSalaxy" class="btn-primary hidden" style="background:#E07B00;border-color:#E07B00;">🔄 Vie uudelleen Salaxyyn</button>
+      <button id="exportToSalaxy" class="btn-primary hidden" style="background:#0E9537;border-color:#0E9537;" data-i18n="payroll.export_to_salaxy"></button>
+      <button id="forceExportToSalaxy" class="btn-primary hidden" style="background:#E07B00;border-color:#E07B00;" data-i18n="payroll.re_export_to_salaxy"></button>
     </div>
     <div style="margin-top:0.875rem;">
-      <button id="closePayrollModal" class="secondary">Sulje</button>
+      <button id="closePayrollModal" class="secondary" data-i18n="payroll.close"></button>
     </div>
   </div>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script>
-  const slug = window.location.pathname.split('/').filter(Boolean)[0];
+  const slug = window.location.pathname.split('/').filter(Boolean)[0] || '';
+  initPageLang(slug);
+
   fetch('/api/debug_credentials.php')
     .then(r => r.json())
     .then(data => {
@@ -361,16 +414,17 @@
       const employees = (data.employees || []).filter(e => e.slug === slug);
       let html = '';
       if (admins.length) {
-        html += '<strong>Admin-tunnus:</strong><br>' +
-          admins.map(a => `${a.email}${a.email === 'admin@timeapp.local' ? ' / <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">Admin123!</code> (bootstrap-oletus)' : ' — salasana asetettu luonnin yhteydessä'}`).join('<br>');
+        html += `<strong>${i18n.t('admin.debug_employees_label').replace('PIN', 'Admin-tunnus:').replace(/PIN.*/, '')}</strong>`;
+        html = `<strong>Admin:</strong><br>` +
+          admins.map(a => `${a.email}${a.email === 'admin@timeapp.local' ? ' / <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">Admin123!</code>' : ''}`).join('<br>');
       }
       if (employees.length) {
-        html += (html ? '<br><br>' : '') + '<strong>Työntekijä-PINit:</strong><br>' +
+        html += (html ? '<br><br>' : '') + `<strong>${i18n.t('admin.debug_employees_label')}</strong><br>` +
           employees.map(e => `${e.name}: <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">${e.pin}</code>`).join('<br>');
       }
-      el.innerHTML = html || 'Ei tunnuksia.';
+      el.innerHTML = html || i18n.t('admin.debug_no_data');
     })
-    .catch(() => { document.getElementById('debugContent').textContent = 'Debug-tietoja ei saatu.'; });
+    .catch(() => { document.getElementById('debugContent').textContent = i18n.t('admin.debug_no_data'); });
 </script>
 <script src="admin.js"></script>
 </body>

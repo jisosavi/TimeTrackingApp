@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="/" />
-  <title>TimeTrackingApp</title>
+  <title data-i18n="page.employee_title">TimeTrackingApp – Employee Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -247,61 +247,66 @@
     .clarify-actions .btn-clarify { background: var(--primary); color: #fff; border-color: var(--primary); }
     .clarify-actions .btn-delete  { color: #E01541; border-color: #F5AABB; }
     .entries-empty { color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 2rem 1rem; }
+    .lang-bar { display:flex; align-items:center; gap:0.5rem; margin-top:0.375rem; font-size:0.75rem; color:var(--text-muted); }
   </style>
 </head>
 <body>
   <main class="card">
     <section class="login" id="loginScreen" aria-live="polite">
-      <h1>TimeTrackingApp</h1>
-      <p>Kirjaudu henkilökohtaisella PIN-koodillasi.</p>
+      <h1 data-i18n="page.employee_title">TimeTrackingApp – Employee Login</h1>
+      <p data-i18n="login.subtitle"></p>
       <div class="pin-input">
         <input
           type="password"
           inputmode="numeric"
           maxlength="6"
           autocomplete="one-time-code"
-          aria-label="PIN-koodi"
+          data-i18n-aria-label="login.pin_label"
           id="pinInput"
         />
       </div>
-      <button class="btn-primary" id="pinBtn">Kirjaudu</button>
+      <button class="btn-primary" id="pinBtn" data-i18n="login.button"></button>
       <div class="status" id="pinStatus"></div>
 
       <div id="debugBox" style="margin-top:0.875rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
         <strong style="display:block;margin-bottom:0.375rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
-        <div id="debugContent" style="color:#5E7682;">Ladataan...</div>
+        <div id="debugContent" style="color:#5E7682;">Loading...</div>
       </div>
     </section>
 
     <!-- Nav bar (shown after login) -->
     <nav class="nav-bar hidden" id="navBar">
-      <button id="navChatBtn" class="active">Kirjaa tunteja</button>
-      <button id="navEntriesBtn">Tuntikirjaukset <span id="entriesAlertBadge" style="display:none;background:#E01541;color:#fff;border-radius:9999px;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;margin-left:0.25rem;vertical-align:middle;line-height:1.5;"></span></button>
+      <button id="navChatBtn" class="active" data-i18n="nav.log_hours"></button>
+      <button id="navEntriesBtn"><span data-i18n="nav.my_entries"></span> <span id="entriesAlertBadge" style="display:none;background:#E01541;color:#fff;border-radius:9999px;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;margin-left:0.25rem;vertical-align:middle;line-height:1.5;"></span></button>
     </nav>
 
     <section class="chat hidden" id="chatScreen">
       <div style="align-self:stretch;padding-bottom:0.625rem;border-bottom:2px solid var(--primary);margin-bottom:0.25rem;">
         <span id="employeeNameLabel" style="font-size:1rem;font-weight:700;color:#283237;letter-spacing:-0.01em;"></span>
-      </div>
-      <h1>Työtuntien kirjaus</h1>
-      <div class="chat-area" id="chatArea"></div>
-      <div class="composer">
-        <textarea id="chatInput" placeholder="Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa."></textarea>
-        <div class="buttons">
-          <button id="micBtn" title="Sanelu">🎙 Sanele / nauhoita</button>
-          <button class="btn-primary" id="sendBtn" title="Lähetä">➤ Lähetä</button>
+        <div class="lang-bar hidden" id="langBar">
+          <span data-i18n="language.personal_language_label"></span>
+          <div id="langSelectWrapper"></div>
         </div>
       </div>
-      <div class="status" id="chatStatus">Valmis.</div>
+      <h1 data-i18n="chat.title"></h1>
+      <div class="chat-area" id="chatArea"></div>
+      <div class="composer">
+        <textarea id="chatInput" data-i18n-placeholder="chat.placeholder"></textarea>
+        <div class="buttons">
+          <button id="micBtn" data-i18n="chat.record_button" data-i18n-title="chat.record_button"></button>
+          <button class="btn-primary" id="sendBtn" data-i18n="chat.send_button"></button>
+        </div>
+      </div>
+      <div class="status" id="chatStatus"></div>
     </section>
 
     <section class="entries-screen hidden" id="entriesScreen">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
-        <strong style="font-size:0.9rem;">Omat kirjaukseni</strong>
-        <button id="refreshEntriesBtn" style="height:1.75rem;padding:0 0.625rem;font-size:0.75rem;border-radius:6px;border:1px solid #C4CFD4;background:#fff;cursor:pointer;font-family:inherit;">↺ Päivitä</button>
+        <strong style="font-size:0.9rem;" data-i18n="entries.my_entries_title"></strong>
+        <button id="refreshEntriesBtn" style="height:1.75rem;padding:0 0.625rem;font-size:0.75rem;border-radius:6px;border:1px solid #C4CFD4;background:#fff;cursor:pointer;font-family:inherit;" data-i18n="entries.refresh_button"></button>
       </div>
       <div id="entriesNotice" style="display:none;margin-bottom:0.75rem;"></div>
-      <div id="myEntriesList"><div class="entries-empty">Ladataan...</div></div>
+      <div id="myEntriesList"><div class="entries-empty" data-i18n="common.loading"></div></div>
     </section>
 
     <div id="salaxyBrand" class="hidden" style="margin-top:1.5rem;display:flex;justify-content:center;padding-top:1rem;border-top:1px solid #E8E4E4;">
@@ -310,99 +315,101 @@
 
     <div id="loggedInDebugBox" class="hidden" style="margin-top:1rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
       <strong style="display:block;margin-bottom:0.5rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
-      <button class="btn-salaxy" id="salaxyBtn" title="Lähetä tunnit Salaxyyn">📤 Lähetä Salaxyyn</button>
+      <button class="btn-salaxy" id="salaxyBtn">📤 <span data-i18n="salaxy.sending" style="display:none"></span><span id="salaxyBtnLabel">Lähetä Salaxyyn</span></button>
     </div>
   </main>
 
+  <script src="/js/i18n.js"></script>
   <script>
     const APP_KEY     = "tT9#kL2$mN7@pQ4!23";
     const companySlug = window.location.pathname.split('/').filter(Boolean)[0] || '';
     let currentEmployee = null;
+
+    // Init i18n from cache immediately, refresh from server
+    initPageLang(companySlug);
 
     fetch('/api/debug_credentials.php')
       .then(r => r.json())
       .then(data => {
         const el = document.getElementById('debugContent');
         if (!data.employees || data.employees.length === 0) {
-          el.textContent = 'Ei työntekijöitä tietokannassa.';
+          el.textContent = i18n.t('admin.debug_no_employees');
           return;
         }
-        el.innerHTML = '<strong>Työntekijä-PINit:</strong><br>' +
+        el.innerHTML = '<strong>' + i18n.t('admin.debug_employees_label') + '</strong><br>' +
           data.employees.map(e =>
             `${e.name} (${e.company}): <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">${e.pin}</code>`
           ).join('<br>');
       })
       .catch(() => {
-        document.getElementById('debugContent').textContent = 'Debug-tietoja ei saatu.';
+        document.getElementById('debugContent').textContent = i18n.t('admin.debug_no_data');
       });
 
     const loginScreen = document.getElementById("loginScreen");
-    const chatScreen = document.getElementById("chatScreen");
-    const pinInput = document.getElementById("pinInput");
-    const pinBtn = document.getElementById("pinBtn");
-    const pinStatus = document.getElementById("pinStatus");
+    const chatScreen  = document.getElementById("chatScreen");
+    const pinInput    = document.getElementById("pinInput");
+    const pinBtn      = document.getElementById("pinBtn");
+    const pinStatus   = document.getElementById("pinStatus");
+    const chatArea    = document.getElementById("chatArea");
+    const chatInput   = document.getElementById("chatInput");
+    const sendBtn     = document.getElementById("sendBtn");
+    const chatStatus  = document.getElementById("chatStatus");
+    const micBtn      = document.getElementById("micBtn");
+    const salaxyBtn   = document.getElementById("salaxyBtn");
+    const langBar     = document.getElementById("langBar");
 
-    const chatArea = document.getElementById("chatArea");
-    const chatInput = document.getElementById("chatInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const chatStatus = document.getElementById("chatStatus");
-    
-    // Salaxy-lähetystä varten
     let pendingEntries = [];
-    const micBtn = document.getElementById("micBtn");
-    const salaxyBtn = document.getElementById("salaxyBtn");
-
-    let conversationHistory = [
-      {
-        role: "system",
-        content:
-          "Olet TimeTrackingApp tuntikirjausassistentti. Keskustele suomeksi. Pyydä käyttäjää tarkentamaan tarvittavat tiedot ja muodosta lopuksi JSON, joka sisältää päivämäärän, kellonajat, projektin ja tuntimäärän. Esimerkki: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Projekti Alfa\",\"notes\":\"Asennus\"}]}",
-      },
-    ];
+    let conversationHistory = [];
     let recognition;
 
-    function showError(el, msg) {
-      el.textContent = msg;
-      el.style.color = "var(--warning)";
+    function resetConversation() {
+      conversationHistory = [{ role: "system", content: i18n.t('chat.ai_system_prompt') }];
     }
-    function showSuccess(el, msg) {
-      el.textContent = msg;
-      el.style.color = "var(--success)";
+    resetConversation();
+
+    function fmtDateFI(isoDate) {
+      if (!isoDate) return '';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}.${m}.${y}`;
     }
+    function fmtDateTime(iso) {
+      const d   = new Date(iso);
+      const loc = i18n.t('locale.date_locale');
+      return d.toLocaleDateString(loc, {day:'2-digit',month:'2-digit',year:'numeric'}) +
+             ', ' + i18n.t('time.at') + ' ' +
+             d.toLocaleTimeString(loc, {hour:'2-digit',minute:'2-digit'});
+    }
+    function escapeHtml(t) {
+      return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showError(el, msg)   { el.textContent = msg; el.style.color = "#E01541"; }
+    function showSuccess(el, msg) { el.textContent = msg; el.style.color = "var(--success)"; }
 
     function appendBubble(text, role = "assistant") {
       const div = document.createElement("div");
       div.className = `bubble ${role}`;
-      
-      // Piilota JSON toggle-elementin taakse assistant-viesteissä
-      // Tue eri backtick-muotoja
       const jsonPattern = /(`{3}|\\`\\`\\`)json\s*([\s\S]*?)\s*(`{3}|\\`\\`\\`)/;
       const hasJson = jsonPattern.test(text);
-      
       if (role === "assistant" && hasJson) {
-        const parts = text.split(jsonPattern);
+        const parts    = text.split(jsonPattern);
         const jsonMatch = text.match(jsonPattern);
-        
         const textSpan = document.createElement("span");
         textSpan.textContent = parts[0].trim();
         div.appendChild(textSpan);
-        
         if (jsonMatch) {
           const toggleLink = document.createElement("span");
           toggleLink.className = "json-toggle";
-          toggleLink.textContent = "📋 Avaa JSON";
-          
+          toggleLink.textContent = i18n.t('chat.show_json');
           const jsonContent = document.createElement("pre");
           jsonContent.className = "json-content";
           jsonContent.textContent = jsonMatch[2].trim();
-          
           toggleLink.addEventListener("click", () => {
             jsonContent.classList.toggle("visible");
-            toggleLink.textContent = jsonContent.classList.contains("visible") 
-              ? "📋 Piilota JSON" 
-              : "📋 Avaa JSON";
+            toggleLink.textContent = jsonContent.classList.contains("visible")
+              ? i18n.t('chat.hide_json')
+              : i18n.t('chat.show_json');
           });
-          
           div.appendChild(document.createElement("br"));
           div.appendChild(toggleLink);
           div.appendChild(jsonContent);
@@ -410,53 +417,39 @@
       } else {
         div.textContent = text;
       }
-      
       chatArea.appendChild(div);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
     function appendSalaxySuccess(result, partial = false) {
-      const div = document.createElement("div");
+      const div   = document.createElement("div");
       div.className = "bubble assistant";
-      
-      const title = partial 
-        ? "Salaxy-synkronointi osittain onnistui!" 
-        : "Salaxy-synkronointi onnistui!";
-      
-      const info = partial
-        ? `Onnistui: ${result.totalSent}, Epäonnistui: ${result.totalFailed}`
-        : `${result.totalSent} tuntikirjausta lisätty palkkalistalle.`;
-      
-      div.innerHTML = `<strong>${title}</strong><br>
-${info}<br>
-<strong>Palkkalista:</strong> ${result.payrollName || 'TimeTrackingApp'} (${result.draftDate})<br>
-<a href="${result.payrollUrl}" target="_blank" style="color: #0066cc; text-decoration: underline;">DEBUG: Palkkalistan linkki Salaxyssä</a>`;
-      
+      const title = partial ? i18n.t('salaxy.sync_partial') : i18n.t('salaxy.sync_success');
+      const info  = partial
+        ? i18n.t('salaxy.partial_info', { sent: result.totalSent, failed: result.totalFailed })
+        : i18n.t('salaxy.entries_added', { count: result.totalSent });
+      div.innerHTML = `<strong>${title}</strong><br>${info}<br>
+<strong>${i18n.t('salaxy.payroll_label')}</strong> ${result.payrollName || 'TimeTrackingApp'} (${result.draftDate})<br>
+<a href="${result.payrollUrl}" target="_blank" style="color:#0066cc;text-decoration:underline;">${i18n.t('salaxy.debug_link')}</a>`;
       chatArea.appendChild(div);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    function toggleLoading(isLoading, message = "") {
-      chatStatus.textContent = message || (isLoading ? "Työstetään..." : "Valmis.");
+    function toggleLoading(isLoading, message) {
+      chatStatus.textContent = message || (isLoading ? i18n.t('chat.processing') : i18n.t('chat.ready'));
       sendBtn.disabled = isLoading;
     }
 
     function parseJSONFromText(text) {
-      // Tue eri backtick-muotoja (normaali, escaped, unicode)
       const patterns = [
         /```json\s*([\s\S]*?)\s*```/,
         /`{3}json\s*([\s\S]*?)\s*`{3}/,
         /\\`\\`\\`json\s*([\s\S]*?)\s*\\`\\`\\`/,
       ];
-      
       for (const pattern of patterns) {
         const match = text.match(pattern);
         if (match) {
-          try {
-            return JSON.parse(match[1].trim());
-          } catch (e) {
-            console.warn("JSON-parsaus epäonnistui", e, match[1]);
-          }
+          try { return JSON.parse(match[1].trim()); } catch {}
         }
       }
       return null;
@@ -464,21 +457,20 @@ ${info}<br>
 
     async function persistEntries(structuredData) {
       try {
-        // Save to local DB for approval workflow
-        const res = await fetch("api/time_entries.php", {
+        const res    = await fetch("api/time_entries.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(structuredData),
         });
         const result = await res.json();
-        if (!res.ok) throw new Error(result.error || "Tallennus epäonnistui");
-        showSuccess(chatStatus, "Tunnit tallennettu.");
+        if (!res.ok) throw new Error(result.error || i18n.t('common.save_failed'));
+        showSuccess(chatStatus, i18n.t('chat.hours_saved'));
       } catch (error) {
-        showError(chatStatus, `Tallennusvirhe: ${error.message}`);
+        showError(chatStatus, i18n.t('chat.save_error') + ' ' + error.message);
       }
     }
 
-    // ─── My entries view ──────────────────────────────────────────────────────
+    // ─── My entries ───────────────────────────────────────────────────────────
     const navBar          = document.getElementById("navBar");
     const navChatBtn      = document.getElementById("navChatBtn");
     const navEntriesBtn   = document.getElementById("navEntriesBtn");
@@ -497,35 +489,25 @@ ${info}<br>
     navEntriesBtn.addEventListener("click", () => switchTab("entries"));
     refreshEntriesBtn.addEventListener("click", loadMyEntries);
 
-    function fmtDateFI(isoDate) {
-      if (!isoDate) return '';
-      const [y, m, d] = isoDate.split('-');
-      return `${d}.${m}.${y}`;
-    }
-    function fmtDateTime(iso) {
-      const d = new Date(iso);
-      return d.toLocaleDateString('fi-FI',{day:'2-digit',month:'2-digit',year:'numeric'}) + ', klo ' +
-             d.toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'});
-    }
-    function escapeHtml(t) {
-      return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
     async function loadMyEntries() {
-      myEntriesList.innerHTML = '<div class="entries-empty">Ladataan...</div>';
+      myEntriesList.innerHTML = `<div class="entries-empty">${i18n.t('common.loading')}</div>`;
       try {
         const res    = await fetch("api/time_entries.php?view=mine");
         const result = await res.json();
-        if (!res.ok || !result.success) { myEntriesList.innerHTML = '<div class="entries-empty">Virhe ladattaessa.</div>'; return; }
+        if (!res.ok || !result.success) {
+          myEntriesList.innerHTML = `<div class="entries-empty">${i18n.t('common.load_failed')}</div>`;
+          return;
+        }
         renderMyEntries(result.entries || []);
-      } catch { myEntriesList.innerHTML = '<div class="entries-empty">Verkkovirhe.</div>'; }
+      } catch {
+        myEntriesList.innerHTML = `<div class="entries-empty">${i18n.t('common.network_error')}</div>`;
+      }
     }
 
     function updateEntriesAlert(entries) {
       const rejected  = entries.filter(e => e.status === 'rejected').length;
       const clarified = entries.filter(e => e.status === 'clarified').length;
 
-      // Nav badge — shows count of entries requiring action
       const badge = document.getElementById('entriesAlertBadge');
       if (rejected > 0) {
         badge.textContent = rejected;
@@ -534,15 +516,15 @@ ${info}<br>
         badge.style.display = 'none';
       }
 
-      // Notice banner inside entries screen
       const notice = document.getElementById('entriesNotice');
-      const lines = [];
-      if (rejected > 0)  lines.push(`<strong>${rejected} kirjaus${rejected  > 1 ? 'ta' : ''} hylätty</strong> — tarkista ja lähetä lisäselvitys`);
-      if (clarified > 0) lines.push(`${clarified} selvitys${clarified > 1 ? 'tä' : ''} odottaa käsittelyä`);
+      const lines  = [];
+      if (rejected > 0)  lines.push('<strong>' + i18n.t(rejected > 1 ? 'entries.rejected_notice_plural' : 'entries.rejected_notice', { count: rejected }) + '</strong>');
+      if (clarified > 0) lines.push(i18n.t(clarified > 1 ? 'entries.clarified_notice_plural' : 'entries.clarified_notice', { count: clarified }));
 
       if (lines.length) {
-        const color = rejected > 0 ? { bg:'#FEF2F4', border:'#F5AABB', text:'#9B0F2E', icon:'⚠' }
-                                   : { bg:'#FFF8F0', border:'#F5C08A', text:'#7A3800', icon:'ℹ' };
+        const color = rejected > 0
+          ? { bg:'#FEF2F4', border:'#F5AABB', text:'#9B0F2E', icon:'⚠' }
+          : { bg:'#FFF8F0', border:'#F5C08A', text:'#7A3800', icon:'ℹ' };
         notice.innerHTML = `<div style="background:${color.bg};border:1px solid ${color.border};border-radius:8px;padding:0.625rem 0.875rem;font-size:0.8rem;color:${color.text};line-height:1.5;">${color.icon} ${lines.join(' &bull; ')}</div>`;
         notice.style.display = 'block';
       } else {
@@ -552,22 +534,31 @@ ${info}<br>
 
     function renderMyEntries(entries) {
       updateEntriesAlert(entries);
-      if (!entries.length) { myEntriesList.innerHTML = '<div class="entries-empty">Ei kirjauksia.</div>'; return; }
+      if (!entries.length) {
+        myEntriesList.innerHTML = `<div class="entries-empty">${i18n.t('entries.empty')}</div>`;
+        return;
+      }
+      const statusKeys = {
+        pending:   'status.pending',
+        approved:  'status.approved',
+        rejected:  'status.rejected',
+        clarified: 'status.clarified',
+      };
       myEntriesList.innerHTML = entries.map(e => {
         const badgeClass = { pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected', clarified:'badge-clarified' }[e.status] || 'badge-pending';
-        const badgeText  = { pending:'Odottaa', approved:'✓ Hyväksytty', rejected:'✗ Hylätty', clarified:'↩ Selvitetty' }[e.status] || e.status;
-        const rejNote    = e.rejection_note ? `<div style="font-size:0.75rem;color:#9B0F2E;margin-top:0.25rem;border-left:2px solid #E01541;padding-left:0.4rem">Syy: ${escapeHtml(e.rejection_note)}</div>` : '';
-        const clarNote   = e.employee_clarification ? `<div style="font-size:0.75rem;color:#C04A00;margin-top:0.25rem;border-left:2px solid #F25A02;padding-left:0.4rem">Selvitys: ${escapeHtml(e.employee_clarification)}</div>` : '';
+        const badgeText  = i18n.t(statusKeys[e.status] || 'status.pending');
+        const rejNote    = e.rejection_note ? `<div style="font-size:0.75rem;color:#9B0F2E;margin-top:0.25rem;border-left:2px solid #E01541;padding-left:0.4rem">${i18n.t('entries.rejection_reason_label')} ${escapeHtml(e.rejection_note)}</div>` : '';
+        const clarNote   = e.employee_clarification ? `<div style="font-size:0.75rem;color:#C04A00;margin-top:0.25rem;border-left:2px solid #F25A02;padding-left:0.4rem">${i18n.t('entries.clarification_label')} ${escapeHtml(e.employee_clarification)}</div>` : '';
         const clarifyBtn = e.status === 'rejected' ? `
           <div class="clarify-form" id="clarifyForm_${e.id}" style="display:none;">
-            <textarea id="clarifyText_${e.id}" placeholder="Kirjoita selvitys..."></textarea>
+            <textarea id="clarifyText_${e.id}" placeholder="${escapeHtml(i18n.t('entries.clarification_placeholder'))}"></textarea>
             <div class="clarify-actions">
-              <button class="btn-clarify" onclick="submitClarification(${e.id})">Lähetä selvitys</button>
-              <button class="btn-delete"  onclick="deleteEntry(${e.id})">Poista kirjaus</button>
-              <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='none'">Peruuta</button>
+              <button class="btn-clarify" onclick="submitClarification(${e.id})">${i18n.t('entries.submit_clarification')}</button>
+              <button class="btn-delete"  onclick="deleteEntry(${e.id})">${i18n.t('entries.delete_entry')}</button>
+              <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='none'">${i18n.t('common.cancel')}</button>
             </div>
           </div>
-          <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='flex'" style="margin-top:0.375rem;height:1.5rem;padding:0 0.5rem;font-size:0.7rem;font-weight:600;border-radius:4px;border:1px solid #E01541;background:#FEF2F4;color:#E01541;cursor:pointer;font-family:inherit;">⚠ Lisäselvitys!</button>` : '';
+          <button onclick="document.getElementById('clarifyForm_${e.id}').style.display='flex'" style="margin-top:0.375rem;height:1.5rem;padding:0 0.5rem;font-size:0.7rem;font-weight:600;border-radius:4px;border:1px solid #E01541;background:#FEF2F4;color:#E01541;cursor:pointer;font-family:inherit;">${i18n.t('entries.add_clarification')}</button>` : '';
         return `<div class="entry-card ${e.status}">
           <div class="entry-meta">
             <span>${fmtDateFI(e.entry_date)}${e.start_time ? ' ' + e.start_time : ''}${e.end_time ? '–' + e.end_time : ''} · ${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km)>0?' / '+e.km+'km':''}</span>
@@ -576,7 +567,7 @@ ${info}<br>
           ${e.project ? `<div style="color:#5E7682;font-size:0.8rem;margin-top:0.125rem;">${escapeHtml(e.project)}</div>` : ''}
           ${e.comment ? `<div style="color:#7D95A1;font-size:0.75rem;">${escapeHtml(e.comment)}</div>` : ''}
           ${rejNote}${clarNote}${clarifyBtn}
-          ${e.exported_to_salaxy ? `<div style="font-size:0.72rem;color:#3C1EEB;margin-top:0.25rem;">Viety palkkalistalle ${fmtDateTime(e.exported_at)}</div>` : ''}
+          ${e.exported_to_salaxy ? `<div style="font-size:0.72rem;color:#3C1EEB;margin-top:0.25rem;">${i18n.t('entries.exported_on')} ${fmtDateTime(e.exported_at)}</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -591,12 +582,12 @@ ${info}<br>
         });
         const result = await res.json();
         if (result.success) loadMyEntries();
-        else alert(result.error || 'Virhe.');
-      } catch { alert('Verkkovirhe.'); }
+        else alert(result.error || i18n.t('common.error'));
+      } catch { alert(i18n.t('common.network_error')); }
     }
 
     async function deleteEntry(id) {
-      if (!confirm('Poistetaanko kirjaus?')) return;
+      if (!confirm(i18n.t('entries.confirm_delete'))) return;
       try {
         const res    = await fetch("api/clarify_entry.php", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -604,8 +595,8 @@ ${info}<br>
         });
         const result = await res.json();
         if (result.success) loadMyEntries();
-        else alert(result.error || 'Virhe.');
-      } catch { alert('Verkkovirhe.'); }
+        else alert(result.error || i18n.t('common.error'));
+      } catch { alert(i18n.t('common.network_error')); }
     }
 
     async function sendMessage() {
@@ -614,48 +605,39 @@ ${info}<br>
       appendBubble(text, "user");
       conversationHistory.push({ role: "user", content: text });
       chatInput.value = "";
-      toggleLoading(true, "Kysytään assistentilta...");
+      toggleLoading(true, i18n.t('chat.processing'));
 
       try {
-        const res = await fetch("llm_proxy.php", {
+        const res  = await fetch("llm_proxy.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ history: conversationHistory.slice(-12) }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "LLM-virhe");
-        const reply = data.reply || "En saanut vastausta.";
+        if (!res.ok) throw new Error(data.error || "LLM error");
+        const reply = data.reply || i18n.t('common.error');
         appendBubble(reply, "assistant");
         conversationHistory.push({ role: "assistant", content: reply });
 
         const structured = parseJSONFromText(reply);
         if (structured?.entries?.length) {
           const action = structured.action || "new";
-          
           if (action === "update" && pendingEntries.length > 0) {
-            // Korjaus: korvaa viimeisin kirjaus
             pendingEntries.pop();
             pendingEntries = pendingEntries.concat(structured.entries);
-            console.log("Päivitetty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
-            showSuccess(chatStatus, "Kirjaus päivitetty.");
+            showSuccess(chatStatus, i18n.t('chat.entry_updated'));
           } else {
-            // Uusi kirjaus
             pendingEntries = pendingEntries.concat(structured.entries);
-            console.log("Lisätty pendingEntries:", structured.entries, "Yhteensä:", pendingEntries.length);
-            showSuccess(chatStatus, `${structured.entries.length} tuntikirjaus(ta) tallennettu.`);
+            showSuccess(chatStatus, i18n.t('chat.entries_saved', { count: structured.entries.length }));
           }
-          
-          // Tallenna myös paikallisesti (aina uutena, historia säilyy)
           await persistEntries(structured);
         } else {
-          // Ei JSON-lohkoa = assistentti kysyy tarkennusta, ei virhettä
-          showSuccess(chatStatus, "Odottaa tarkennusta...");
+          showSuccess(chatStatus, i18n.t('chat.waiting_clarification'));
         }
       } catch (error) {
-        console.error(error);
-        showError(chatStatus, `Virhe: ${error.message}`);
-        sendBtn.disabled = false; // Palauta nappi käyttöön ilman "Valmis"-tekstiä
-        return; // Älä ylikirjoita virheviestiä
+        showError(chatStatus, i18n.t('common.error_prefix') + ' ' + error.message);
+        sendBtn.disabled = false;
+        return;
       }
       toggleLoading(false);
     }
@@ -664,147 +646,137 @@ ${info}<br>
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         micBtn.disabled = true;
-        micBtn.title = "Selain ei tue sanelua";
         return;
       }
       recognition = new SpeechRecognition();
-      recognition.lang = "fi-FI";
       recognition.continuous = false;
       recognition.interimResults = false;
 
+      function updateRecognitionLang() {
+        recognition.lang = i18n.t('chat.speech_recognition_lang');
+      }
+      updateRecognitionLang();
+
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        chatInput.value = chatInput.value
-          ? `${chatInput.value.trim()} ${transcript}`
-          : transcript;
+        chatInput.value  = chatInput.value ? `${chatInput.value.trim()} ${transcript}` : transcript;
       };
-      recognition.onerror = () => {
-        showError(chatStatus, "Sanelu epäonnistui.");
-      };
-      recognition.onend = () => {
-        micBtn.textContent = "🎙️";
-      };
+      recognition.onerror = () => { showError(chatStatus, i18n.t('chat.speech_failed')); };
+      recognition.onend   = () => { micBtn.textContent = "🎙️"; };
 
       micBtn.addEventListener("click", () => {
-        if (micBtn.textContent === "⏹️") {
-          recognition.stop();
-          return;
-        }
+        if (micBtn.textContent === "⏹️") { recognition.stop(); return; }
+        updateRecognitionLang();
         recognition.start();
         micBtn.textContent = "⏹️";
-        showSuccess(chatStatus, "Kuunnellaan...");
+        showSuccess(chatStatus, i18n.t('chat.listening'));
       });
     }
 
+    // ─── Language selector (employee self-service) ────────────────────────────
+    function renderLangSelector(employeeId, currentLang) {
+      const wrapper = document.getElementById('langSelectWrapper');
+      wrapper.innerHTML = i18n.buildLangSelect(currentLang, 'employee', employeeId);
+      wrapper.querySelector('select').addEventListener('change', async function () {
+        const newLang = this.value;
+        const ok = await switchUserLang(newLang, 'employee', employeeId);
+        if (!ok) { showError(chatStatus, i18n.t('language.save_failed')); }
+        else {
+          resetConversation();
+          i18n.applyToDOM();
+          chatArea.innerHTML = '';
+          appendBubble(i18n.t('chat.welcome_message'));
+          renderMyEntries([]);
+          loadMyEntries();
+        }
+      });
+    }
+
+    // ─── Login ────────────────────────────────────────────────────────────────
     pinBtn.addEventListener("click", async () => {
       const pin = pinInput.value.trim();
-      if (!pin) {
-        showError(pinStatus, "Syötä PIN-koodi.");
-        pinInput.focus();
-        return;
-      }
-      
+      if (!pin) { showError(pinStatus, i18n.t('login.error_enter_pin')); pinInput.focus(); return; }
       pinBtn.disabled = true;
-      showSuccess(pinStatus, "Tarkistetaan...");
-      
+      showSuccess(pinStatus, i18n.t('login.checking'));
       try {
-        const res = await fetch("validate_pin.php", {
+        const res  = await fetch("validate_pin.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pin, slug: companySlug }),
         });
         const data = await res.json();
-
         if (data.valid) {
           currentEmployee = data;
+          // Switch to user's personal language
+          if (data.ui_language && data.ui_language !== i18n.getLang()) {
+            await i18n.load(data.ui_language);
+            const sk = 'company_lang_' + companySlug;
+            localStorage.setItem(sk, data.ui_language);
+          }
+          resetConversation();
           loginScreen.classList.add("hidden");
           navBar.classList.remove("hidden");
+          langBar.classList.remove("hidden");
           chatScreen.classList.remove("hidden");
           document.getElementById('loggedInDebugBox').classList.remove('hidden');
           document.getElementById('salaxyBrand').classList.remove('hidden');
           chatStatus.textContent = '';
           document.getElementById('employeeNameLabel').textContent = data.name;
-          loadMyEntries(); // silently populate the entries badge in the background
-          appendBubble(
-            "Kerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9-12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8-12 projekti Bravo kommentti: Meni ennakoitua pidempään'"
-          );
+          document.getElementById('salaxyBtnLabel').textContent = 'Lähetä Salaxyyn';
+          renderLangSelector(data.id, data.ui_language || i18n.getLang());
+          i18n.applyToDOM();
+          loadMyEntries();
+          appendBubble(i18n.t('chat.welcome_message'));
         } else {
-          showError(pinStatus, data.error || "Väärä PIN. Yritä uudelleen.");
+          showError(pinStatus, data.error || i18n.t('login.error_wrong_pin'));
           pinInput.focus();
         }
-      } catch (error) {
-        console.error("PIN validation error:", error);
-        showError(pinStatus, "Virhe kirjautumisessa. Yritä uudelleen.");
+      } catch {
+        showError(pinStatus, i18n.t('login.error_general'));
       } finally {
         pinBtn.disabled = false;
       }
     });
 
-    // Lisää tämä - Enter-näppäin PIN-kentässä
-    pinInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        pinBtn.click();
-      }
-    });
-
+    pinInput.addEventListener("keydown", e => { if (e.key === "Enter") pinBtn.click(); });
     sendBtn.addEventListener("click", sendMessage);
-    chatInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
+    chatInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    // Salaxy sync -toiminto
+    // ─── Salaxy sync ──────────────────────────────────────────────────────────
     async function syncToSalaxy() {
       if (pendingEntries.length === 0) {
-        showError(chatStatus, "Ei lähetettäviä tunteja. Kirjaa ensin tunteja.");
+        showError(chatStatus, i18n.t('salaxy.no_entries'));
         return;
       }
-      
       salaxyBtn.disabled = true;
-      showSuccess(chatStatus, "Lähetetään Salaxyyn...");
-      
+      showSuccess(chatStatus, i18n.t('salaxy.sending'));
       try {
-        const res = await fetch("salaxy_sync.php", {
+        const res    = await fetch("salaxy_sync.php", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-App-Key": APP_KEY,
-          },
-          body: JSON.stringify({ 
-            entries: pendingEntries,
-            employmentId: currentEmployee?.employmentId || null
-          }),
+          headers: { "Content-Type": "application/json", "X-App-Key": APP_KEY },
+          body: JSON.stringify({ entries: pendingEntries, employmentId: currentEmployee?.employmentId || null }),
         });
         const result = await res.json();
-        
         if (res.ok && result.totalFailed === 0) {
-          showSuccess(chatStatus, `✅ ${result.totalSent} tuntikirjausta lisätty palkkalistalle!`);
+          showSuccess(chatStatus, i18n.t('salaxy.success', { count: result.totalSent }));
           appendSalaxySuccess(result);
-          pendingEntries = []; // Tyhjennä lähetetyt
+          pendingEntries = [];
         } else if (result.totalSent > 0) {
-          showError(chatStatus, `⚠️ ${result.totalSent} onnistui, ${result.totalFailed} epäonnistui`);
+          showError(chatStatus, i18n.t('salaxy.partial', { sent: result.totalSent, failed: result.totalFailed }));
           appendSalaxySuccess(result, true);
         } else {
-          const err = new Error(result.errors?.[0]?.error || result.message || "Lähetys epäonnistui");
-          err.debug = result.debug;
-          throw err;
+          throw new Error(result.errors?.[0]?.error || result.message || i18n.t('common.save_failed'));
         }
       } catch (error) {
-        console.error("Salaxy sync error:", error);
-        showError(chatStatus, `Salaxy-virhe: ${error.message}`);
-        // Näytä debug-tiedot konsolissa
-        if (error.debug) {
-          console.error("Salaxy API debug:", error.debug);
-        }
+        showError(chatStatus, i18n.t('salaxy.error_prefix') + ' ' + error.message);
       } finally {
         salaxyBtn.disabled = false;
       }
     }
-    
-    salaxyBtn.addEventListener("click", syncToSalaxy);
 
+    salaxyBtn.addEventListener("click", syncToSalaxy);
     document.addEventListener("DOMContentLoaded", initSpeech);
   </script>
 </body>

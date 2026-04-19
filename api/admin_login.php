@@ -42,22 +42,31 @@ try {
     $_SESSION['company_id'] = $admin['company_id'];
 
     // Fetch company settings
-    $compStmt = $db->prepare('SELECT active, approvals_enabled FROM companies WHERE id = :id');
+    $compStmt = $db->prepare('SELECT active, approvals_enabled, ui_language FROM companies WHERE id = :id');
     $compStmt->execute([':id' => $admin['company_id']]);
     $company = $compStmt->fetch() ?: [];
+
+    // Resolve effective language: admin personal → company default → 'en'
+    $companyLang  = $company['ui_language'] ?? 'en';
+    $adminLang    = $admin['ui_language'] ?? null;
+    $effectiveLang = $adminLang ?: $companyLang ?: 'en';
 
     echo json_encode([
         'success' => true,
         'admin' => [
+            'id'         => (int) $admin['id'],
             'email'      => $admin['email'],
             'name'       => $admin['name'],
             'role'       => $admin['role'],
-            'company_id' => $admin['company_id'],
+            'company_id' => (int) $admin['company_id'],
+            'ui_language'=> $effectiveLang,
         ],
         'company' => [
             'active'             => (int) ($company['active'] ?? 1),
             'approvals_enabled'  => (int) ($company['approvals_enabled'] ?? 0),
+            'ui_language'        => $companyLang,
         ],
+        'ui_language' => $effectiveLang,
     ]);
 } catch (Throwable $e) {
     error_log('Admin login error: ' . $e->getMessage());

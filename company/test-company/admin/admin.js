@@ -17,6 +17,7 @@ const employeeSsn       = document.getElementById('employeeSsn');
 const employeeEmploymentId = document.getElementById('employeeEmploymentId');
 const saveEmployeeBtn   = document.getElementById('saveEmployeeBtn');
 const cancelEmployeeBtn = document.getElementById('cancelEmployeeBtn');
+const employeeLang      = document.getElementById('employeeLang');
 const pinResetModal     = document.getElementById('pinResetModal');
 const closePinModalBtn  = document.getElementById('closePinModalBtn');
 const copyPinBtn        = document.getElementById('copyPinBtn');
@@ -31,16 +32,19 @@ let editingEmployeeId = null;
 let currentEmployees  = [];
 let currentSupervisors = [];
 let approvalsEnabled  = false;
+let currentAdminId    = null;
 
 const syncSlug       = window.location.pathname.split('/').filter(Boolean)[0] || 'default';
 const syncStorageKey = `lastSync_${syncSlug}`;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDateTime(iso) {
-  const d    = new Date(iso);
-  const date = d.toLocaleDateString('fi-FI', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const time = d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' });
-  return `${date}, klo ${time}`;
+  const d      = new Date(iso);
+  const locale = i18n.t('locale.date_locale');
+  const at     = i18n.t('time.at');
+  return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+    ', ' + at + ' ' +
+    d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDate(isoDate) {
@@ -64,20 +68,44 @@ function generateRandomPin() {
   return String(Math.floor(Math.random() * 1000000)).padStart(4, '0');
 }
 
+// ─── Language bar ─────────────────────────────────────────────────────────────
+function renderAdminLangBar(adminId, adminEffectiveLang, companyLang) {
+  const langBar = document.getElementById('langBar');
+  const companyContainer = document.getElementById('companyLangContainer');
+  const adminContainer   = document.getElementById('adminLangContainer');
+
+  companyContainer.innerHTML = i18n.buildLangSelect(companyLang, 'company', null);
+  adminContainer.innerHTML   = i18n.buildLangSelect(adminEffectiveLang, 'admin', adminId);
+
+  langBar.classList.remove('hidden');
+
+  companyContainer.querySelector('select').addEventListener('change', async (e) => {
+    const ok = await switchUserLang(e.target.value, 'company', null);
+    if (ok) { i18n.applyToDOM(); renderEmployees(currentEmployees); renderSupervisors(currentSupervisors); }
+  });
+
+  adminContainer.querySelector('select').addEventListener('change', async (e) => {
+    const ok = await switchUserLang(e.target.value, 'admin', adminId);
+    if (ok) { i18n.applyToDOM(); renderEmployees(currentEmployees); renderSupervisors(currentSupervisors); }
+  });
+}
+
 // ─── Sync status ─────────────────────────────────────────────────────────────
 function renderSyncInfo(data) {
   const el = document.getElementById('lastSyncInfo');
-  if (!data) { el.textContent = 'Ei vielä synkattu Salaxystä'; return; }
+  if (!data) { el.textContent = i18n.t('admin.no_sync_yet'); return; }
   if (!data.success) {
-    el.textContent = `Synkronointi ei onnistunut ${fmtDateTime(data.timestamp)}, syy: ${data.error}`;
+    el.textContent = i18n.t('admin.sync_failed') + ' ' + fmtDateTime(data.timestamp);
     return;
   }
   const parts = [];
-  if (data.added   > 0) parts.push(`tuotu ${data.added} uusi${data.added === 1 ? '' : 'a'} työntekijä${data.added === 1 ? '' : 'ä'}`);
-  if (data.updated > 0) parts.push(`muokattu ${data.updated} työntekijän tiedot`);
-  if (parts.length === 0) parts.push('ei muutoksia');
-  const summary = parts.map((p, i) => i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join(' ja ');
-  el.textContent = `Synkronoitu: ${fmtDateTime(data.timestamp)}. ${summary}.`;
+  if (data.added   > 0) parts.push(i18n.t('admin.sync_added',   { count: data.added }));
+  if (data.updated > 0) parts.push(i18n.t('admin.sync_updated', { count: data.updated }));
+  if (parts.length === 0) parts.push(i18n.t('admin.sync_no_changes'));
+  const summary = parts.length > 1
+    ? parts[0] + ' ' + i18n.t('admin.sync_and') + ' ' + parts[1]
+    : parts[0];
+  el.textContent = i18n.t('admin.sync_status', { date: fmtDateTime(data.timestamp), summary });
 }
 function loadSyncStatus() {
   try { renderSyncInfo(JSON.parse(localStorage.getItem(syncStorageKey))); } catch { renderSyncInfo(null); }
@@ -96,7 +124,7 @@ function renderEmployees(employees) {
   employeesTableBody.innerHTML = '';
   currentEmployees = employees;
   if (employees.length === 0) {
-    employeesTableBody.innerHTML = '<tr><td colspan="6">Ei työntekijöitä.</td></tr>';
+    employeesTableBody.innerHTML = `<tr><td colspan="6">${i18n.t('admin.no_employees')}</td></tr>`;
     return;
   }
   for (const emp of employees) {
@@ -109,16 +137,16 @@ function renderEmployees(employees) {
       </td>
       <td>
         ${escapeHtml(emp.name)}
-        ${parseFloat(emp.pending_hours) > 0 ? `<span style="margin-left:0.5rem;background:#FEF0E0;color:#C45800;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:600;white-space:nowrap;">▲ ${parseFloat(emp.pending_hours).toFixed(1)}h odottaa</span>` : ''}
+        ${parseFloat(emp.pending_hours) > 0 ? `<span style="margin-left:0.5rem;background:#FEF0E0;color:#C45800;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:600;white-space:nowrap;">▲ ${parseFloat(emp.pending_hours).toFixed(1)}h ${i18n.t('admin.hours_pending')}</span>` : ''}
       </td>
       <td><code>${escapeHtml(emp.pin)}</code></td>
       <td>${escapeHtml(emp.ssn || '')}</td>
       <td>${escapeHtml(emp.employmentId || '')}</td>
       <td>
         <div class="action-buttons">
-          <button class="action-btn edit-btn" data-id="${emp.id}">Muokkaa</button>
-          <button class="action-btn reset-pin-btn" data-id="${emp.id}" data-name="${escapeHtml(emp.name)}">Vaihda PIN</button>
-          <button class="action-btn entries-btn" data-id="${emp.id}" data-name="${escapeHtml(emp.name)}">Kirjaukset →</button>
+          <button class="action-btn edit-btn" data-id="${emp.id}">${i18n.t('common.edit')}</button>
+          <button class="action-btn reset-pin-btn" data-id="${emp.id}" data-name="${escapeHtml(emp.name)}">${i18n.t('admin.reset_pin')}</button>
+          <button class="action-btn entries-btn" data-id="${emp.id}" data-name="${escapeHtml(emp.name)}">${i18n.t('admin.view_entries')}</button>
         </div>
       </td>`;
     employeesTableBody.appendChild(row);
@@ -139,9 +167,9 @@ function attachEmployeeActions() {
             ssn: emp.ssn || '', employmentId: emp.employmentId || '', active: cb.checked ? 1 : 0 }),
         });
         const result = await res.json();
-        if (!res.ok || !result.success) { showStatus(result.error || 'Tilan vaihto epäonnistui.', true); cb.checked = !cb.checked; }
+        if (!res.ok || !result.success) { showStatus(result.error || i18n.t('admin.error_status_change'), true); cb.checked = !cb.checked; }
         else emp.active = cb.checked ? 1 : 0;
-      } catch { showStatus('Palvelinvirhe.', true); cb.checked = !cb.checked; }
+      } catch { showStatus(i18n.t('common.server_error'), true); cb.checked = !cb.checked; }
       finally { cb.disabled = false; }
     });
   });
@@ -164,12 +192,12 @@ function attachEmployeeActions() {
           body: JSON.stringify({ id: employeeId, pin: newPin }),
         });
         const result = await res.json();
-        if (!res.ok || !result.success) { showStatus(result.error || 'PIN-vaihto epäonnistui.', true); return; }
+        if (!res.ok || !result.success) { showStatus(result.error || i18n.t('admin.error_pin_reset_failed'), true); return; }
         resetEmployeeName.textContent = employeeName;
         newPinDisplay.textContent     = newPin;
         pinResetModal.classList.add('visible');
         await loadEmployees();
-      } catch { showStatus('Palvelinvirhe PIN-vaihdossa.', true); }
+      } catch { showStatus(i18n.t('admin.error_pin_reset_server'), true); }
     });
   });
 
@@ -178,24 +206,27 @@ function attachEmployeeActions() {
       openEntriesModal(Number(btn.getAttribute('data-id')), btn.getAttribute('data-name'));
     });
   });
+
 }
 
 function resetForm() {
   editingEmployeeId = null;
-  formTitle.textContent = 'Lisää työntekijä';
+  formTitle.textContent = i18n.t('admin.add_employee_title');
   employeeName.value = ''; employeePin.value = '';
   employeeSsn.value = ''; employeeEmploymentId.value = '';
+  employeeLang.value = '';
   employeeForm.classList.add('hidden');
 }
 
 function openEmployeeForm(emp = null) {
   if (emp) {
-    editingEmployeeId = emp.id;
-    formTitle.textContent  = 'Muokkaa työntekijää';
+    editingEmployeeId      = emp.id;
+    formTitle.textContent  = i18n.t('admin.edit_employee_title');
     employeeName.value     = emp.name;
     employeePin.value      = emp.pin;
     employeeSsn.value      = emp.ssn || '';
     employeeEmploymentId.value = emp.employmentId || '';
+    employeeLang.value     = emp.ui_language || '';
   } else {
     resetForm();
   }
@@ -206,9 +237,9 @@ async function loadEmployees() {
   try {
     const res    = await fetch('/api/employees.php');
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Lataus epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('common.load_failed'), true); return; }
     renderEmployees(result.employees || []);
-  } catch { showStatus('Palvelinvirhe.', true); }
+  } catch { showStatus(i18n.t('common.server_error'), true); }
 }
 
 async function saveEmployee() {
@@ -216,7 +247,7 @@ async function saveEmployee() {
   const pin          = employeePin.value.trim();
   const ssn          = employeeSsn.value.trim();
   const employmentId = employeeEmploymentId.value.trim();
-  if (!name || !pin) { showStatus('Nimi ja PIN ovat pakollisia.', true); return; }
+  if (!name || !pin) { showStatus(i18n.t('admin.error_name_pin_required'), true); return; }
 
   const existing = editingEmployeeId
     ? currentEmployees.find(e => String(e.id) === String(editingEmployeeId))
@@ -224,20 +255,20 @@ async function saveEmployee() {
   const active = existing ? (existing.active ? 1 : 0) : 1;
 
   saveEmployeeBtn.disabled = true;
-  showStatus('Tallennetaan...');
+  showStatus(i18n.t('common.saving'));
   try {
-    const payload = { name, pin, ssn, employmentId, active };
+    const payload = { name, pin, ssn, employmentId, active, ui_language: employeeLang.value };
     if (editingEmployeeId) payload.id = editingEmployeeId;
     const res    = await fetch('/api/employees.php', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Tallennus epäonnistui.', true); return; }
-    showStatus('Tallennettu.');
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('common.save_failed'), true); return; }
+    showStatus(i18n.t('common.saved'));
     resetForm();
     await loadEmployees();
-  } catch { showStatus('Palvelinvirhe.', true); }
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { saveEmployeeBtn.disabled = false; }
 }
 
@@ -253,30 +284,29 @@ let   currentEntriesEmployeeId = null;
 
 function statusLabel(status) {
   const map = {
-    pending:   '<span style="color:#7D95A1">Odottaa</span>',
-    approved:  '<span style="color:#0E9537;font-weight:600">✓ Hyväksytty</span>',
-    rejected:  '<span style="color:#E01541;font-weight:600">✗ Hylätty</span>',
-    clarified: '<span style="color:#F25A02;font-weight:600">↩ Selvitetty</span>',
+    pending:   `<span style="color:#7D95A1">${i18n.t('status.pending')}</span>`,
+    approved:  `<span style="color:#0E9537;font-weight:600">${i18n.t('status.approved')}</span>`,
+    rejected:  `<span style="color:#E01541;font-weight:600">${i18n.t('status.rejected')}</span>`,
+    clarified: `<span style="color:#F25A02;font-weight:600">${i18n.t('status.clarified')}</span>`,
   };
   return map[status] || status;
 }
 
 function renderEntries(entries, grouping) {
   if (!entries.length) {
-    entriesTbody.innerHTML = '<tr><td colspan="7" style="color:#7D95A1;padding:1rem 0.75rem">Ei kirjauksia.</td></tr>';
+    entriesTbody.innerHTML = `<tr><td colspan="7" style="color:#7D95A1;padding:1rem 0.75rem">${i18n.t('common.no_entries')}</td></tr>`;
     return;
   }
 
-  // Group entries
   const grouped = {};
   entries.forEach(e => {
     let key;
-    const d = e.entry_date; // YYYY-MM-DD
+    const d = e.entry_date;
     if      (grouping === 'day')   key = d;
     else if (grouping === 'week') {
       const dt = new Date(d); const day = dt.getDay() || 7;
       const mon = new Date(dt); mon.setDate(dt.getDate() - (day - 1));
-      key = 'Viikko ' + mon.toLocaleDateString('fi-FI', { day: '2-digit', month: '2-digit' });
+      key = i18n.t('time.week_label') + ' ' + mon.toLocaleDateString(i18n.t('locale.date_locale'), { day: '2-digit', month: '2-digit' });
     }
     else if (grouping === 'month') key = d.slice(0, 7);
     else                           key = d.slice(0, 4);
@@ -294,10 +324,10 @@ function renderEntries(entries, grouping) {
       </td></tr>`;
     rows.forEach(e => {
       const clarHtml = e.employee_clarification
-        ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#F25A02;border-left:2px solid #F25A02;padding-left:0.4rem">Selvitys: ${escapeHtml(e.employee_clarification)}</div>`
+        ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#F25A02;border-left:2px solid #F25A02;padding-left:0.4rem">${i18n.t('entries.clarification_label')} ${escapeHtml(e.employee_clarification)}</div>`
         : '';
       const rejHtml = e.rejection_note
-        ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#E01541;border-left:2px solid #E01541;padding-left:0.4rem">Syy: ${escapeHtml(e.rejection_note)}</div>`
+        ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:#E01541;border-left:2px solid #E01541;padding-left:0.4rem">${i18n.t('entries.rejection_reason_label')} ${escapeHtml(e.rejection_note)}</div>`
         : '';
       html += `<tr data-entry-id="${e.id}">
         <td style="text-align:center;"><input type="checkbox" class="entry-checkbox" data-id="${e.id}" style="accent-color:#3C1EEB;width:1rem;height:1rem;"></td>
@@ -305,7 +335,7 @@ function renderEntries(entries, grouping) {
         <td>${escapeHtml(e.start_time || '')}${e.end_time ? '–' + escapeHtml(e.end_time) : ''}</td>
         <td>${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
         <td>${escapeHtml(e.project || '')}${e.comment ? '<br><span style="color:#7D95A1;font-size:0.75rem">' + escapeHtml(e.comment) + '</span>' : ''}</td>
-        <td>${statusLabel(e.status)}${clarHtml}${rejHtml}${e.exported_to_salaxy ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:#3C1EEB;">Viety palkkalistalle ${fmtDateTime(e.exported_at)}</div>` : ''}</td>
+        <td>${statusLabel(e.status)}${clarHtml}${rejHtml}${e.exported_to_salaxy ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:#3C1EEB;">${i18n.t('entries.exported_on')} ${fmtDateTime(e.exported_at)}</div>` : ''}</td>
         <td>
           <div style="display:flex;gap:0.25rem;">
             <button class="action-btn approve-btn" data-id="${e.id}" style="color:#0E9537;border-color:#A7E3B5;">✓</button>
@@ -316,7 +346,6 @@ function renderEntries(entries, grouping) {
   }
   entriesTbody.innerHTML = html;
 
-  // Single approve/reject
   entriesTbody.querySelectorAll('.approve-btn').forEach(btn => {
     btn.addEventListener('click', () => reviewEntries([Number(btn.dataset.id)], 'approve'));
   });
@@ -325,10 +354,10 @@ function renderEntries(entries, grouping) {
   });
 }
 
-async function openEntriesModal(employeeId, employeeName) {
-  currentEntriesEmployeeId        = employeeId;
-  entriesModalTitle.textContent   = `Kirjaukset – ${employeeName}`;
-  entriesTbody.innerHTML          = '<tr><td colspan="7" style="color:#7D95A1;padding:1rem">Ladataan...</td></tr>';
+async function openEntriesModal(employeeId, empName) {
+  currentEntriesEmployeeId      = employeeId;
+  entriesModalTitle.textContent = i18n.t('entries.modal_title', { name: empName });
+  entriesTbody.innerHTML        = `<tr><td colspan="7" style="color:#7D95A1;padding:1rem">${i18n.t('common.loading')}</td></tr>`;
   entriesModal.classList.add('visible');
   await refreshEntries();
 }
@@ -338,9 +367,9 @@ async function refreshEntries() {
   try {
     const res    = await fetch(`/api/time_entries.php?employee_id=${currentEntriesEmployeeId}`);
     const result = await res.json();
-    if (!res.ok || !result.success) { entriesTbody.innerHTML = '<tr><td colspan="7">Virhe.</td></tr>'; return; }
+    if (!res.ok || !result.success) { entriesTbody.innerHTML = `<tr><td colspan="7">${i18n.t('common.error')}</td></tr>`; return; }
     renderEntries(result.entries || [], entriesGrouping.value);
-  } catch { entriesTbody.innerHTML = '<tr><td colspan="7">Virhe.</td></tr>'; }
+  } catch { entriesTbody.innerHTML = `<tr><td colspan="7">${i18n.t('common.error')}</td></tr>`; }
 }
 
 async function reviewEntries(ids, action, rejectionNote = '') {
@@ -350,14 +379,14 @@ async function reviewEntries(ids, action, rejectionNote = '') {
       body: JSON.stringify({ ids, action, rejection_note: rejectionNote }),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Virhe.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('common.error'), true); return; }
     await refreshEntries();
-  } catch { showStatus('Palvelinvirhe.', true); }
+  } catch { showStatus(i18n.t('common.server_error'), true); }
 }
 
 // Reject dialog (inline)
-const rejectDialog = document.getElementById('rejectDialog');
-const rejectNoteInput = document.getElementById('rejectNoteInput');
+const rejectDialog     = document.getElementById('rejectDialog');
+const rejectNoteInput  = document.getElementById('rejectNoteInput');
 const confirmRejectBtn = document.getElementById('confirmRejectBtn');
 const cancelRejectBtn  = document.getElementById('cancelRejectBtn');
 let pendingRejectIds = [];
@@ -402,7 +431,7 @@ document.getElementById('closeEntriesModal').addEventListener('click', () => {
 function renderSupervisors(supervisors) {
   currentSupervisors = supervisors;
   if (!supervisors.length) {
-    supervisorsTbody.innerHTML = '<tr><td colspan="5" style="color:#7D95A1;padding:1rem 0.75rem">Ei esihenkilöitä.</td></tr>';
+    supervisorsTbody.innerHTML = `<tr><td colspan="5" style="color:#7D95A1;padding:1rem 0.75rem">${i18n.t('admin.no_supervisors')}</td></tr>`;
     return;
   }
   supervisorsTbody.innerHTML = supervisors.map(s => `
@@ -414,10 +443,10 @@ function renderSupervisors(supervisors) {
       <td>
         <div style="display:flex;gap:0.375rem;">
           <button class="action-btn sup-team-btn" data-id="${s.id}" data-name="${escapeHtml(s.first_name + ' ' + s.last_name)}">
-            Tiimi (${s.team_size})
+            ${i18n.t('supervisor.team_button', { count: s.team_size })}
           </button>
-          <button class="action-btn sup-edit-btn" data-id="${s.id}">Muokkaa</button>
-          <button class="action-btn sup-del-btn" data-id="${s.id}" style="color:#E01541;border-color:#F5AABB;">Poista</button>
+          <button class="action-btn sup-edit-btn" data-id="${s.id}">${i18n.t('common.edit')}</button>
+          <button class="action-btn sup-del-btn" data-id="${s.id}" style="color:#E01541;border-color:#F5AABB;">${i18n.t('common.delete')}</button>
         </div>
       </td>
     </tr>`).join('');
@@ -433,16 +462,17 @@ function renderSupervisors(supervisors) {
   });
   supervisorsTbody.querySelectorAll('.sup-del-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Poistetaanko esihenkilö?')) return;
+      if (!confirm(i18n.t('admin.confirm_delete_supervisor'))) return;
       const res = await fetch('/api/supervisors.php', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: Number(btn.dataset.id) }),
       });
       const result = await res.json();
       if (result.success) await loadSupervisors();
-      else showStatus(result.error || 'Poisto epäonnistui.', true);
+      else showStatus(result.error || i18n.t('admin.delete_failed'), true);
     });
   });
+
 }
 
 async function loadSupervisors() {
@@ -454,29 +484,31 @@ async function loadSupervisors() {
 }
 
 // Supervisor modal
-const supervisorModal  = document.getElementById('supervisorModal');
-const supModalTitle    = document.getElementById('supModalTitle');
-const supFirstName     = document.getElementById('supFirstName');
-const supLastName      = document.getElementById('supLastName');
-const supEmail         = document.getElementById('supEmail');
-const supPhone         = document.getElementById('supPhone');
-const supPin           = document.getElementById('supPin');
-const supSsn           = document.getElementById('supSsn');
-const supSalaxyId      = document.getElementById('supSalaxyId');
-const saveSupervisorBtn = document.getElementById('saveSupervisorBtn');
+const supervisorModal      = document.getElementById('supervisorModal');
+const supModalTitle        = document.getElementById('supModalTitle');
+const supFirstName         = document.getElementById('supFirstName');
+const supLastName          = document.getElementById('supLastName');
+const supEmail             = document.getElementById('supEmail');
+const supPhone             = document.getElementById('supPhone');
+const supPin               = document.getElementById('supPin');
+const supSsn               = document.getElementById('supSsn');
+const supSalaxyId          = document.getElementById('supSalaxyId');
+const supLang              = document.getElementById('supLang');
+const saveSupervisorBtn    = document.getElementById('saveSupervisorBtn');
 const closeSupervisorModal = document.getElementById('closeSupervisorModal');
 let editingSupervisorId = null;
 
 function openSupervisorModal(sup = null) {
-  editingSupervisorId = sup ? sup.id : null;
-  supModalTitle.textContent = sup ? 'Muokkaa esihenkilöä' : 'Lisää esihenkilö';
-  supFirstName.value = sup?.first_name || '';
-  supLastName.value  = sup?.last_name  || '';
-  supEmail.value     = sup?.email      || '';
-  supPhone.value     = sup?.phone      || '';
-  supPin.value       = sup?.pin        || '';
-  supSsn.value       = sup?.ssn        || '';
-  supSalaxyId.value  = sup?.salaxy_id  || '';
+  editingSupervisorId    = sup ? sup.id : null;
+  supModalTitle.textContent = sup ? i18n.t('admin.edit_supervisor_title') : i18n.t('admin.add_supervisor_title');
+  supFirstName.value = sup?.first_name  || '';
+  supLastName.value  = sup?.last_name   || '';
+  supEmail.value     = sup?.email       || '';
+  supPhone.value     = sup?.phone       || '';
+  supPin.value       = sup?.pin         || '';
+  supSsn.value       = sup?.ssn         || '';
+  supSalaxyId.value  = sup?.salaxy_id   || '';
+  supLang.value      = sup?.ui_language || '';
   supervisorModal.classList.add('visible');
   supFirstName.focus();
 }
@@ -485,13 +517,14 @@ closeSupervisorModal.addEventListener('click', () => supervisorModal.classList.r
 
 saveSupervisorBtn.addEventListener('click', async () => {
   const payload = {
-    first_name: supFirstName.value.trim(),
-    last_name:  supLastName.value.trim(),
-    email:      supEmail.value.trim(),
-    phone:      supPhone.value.trim(),
-    pin:        supPin.value.trim(),
-    ssn:        supSsn.value.trim(),
-    salaxy_id:  supSalaxyId.value.trim(),
+    first_name:  supFirstName.value.trim(),
+    last_name:   supLastName.value.trim(),
+    email:       supEmail.value.trim(),
+    phone:       supPhone.value.trim(),
+    pin:         supPin.value.trim(),
+    ssn:         supSsn.value.trim(),
+    salaxy_id:   supSalaxyId.value.trim(),
+    ui_language: supLang.value,
   };
   if (editingSupervisorId) payload.id = editingSupervisorId;
 
@@ -502,11 +535,11 @@ saveSupervisorBtn.addEventListener('click', async () => {
       body: JSON.stringify(payload),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Tallennus epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('common.save_failed'), true); return; }
     supervisorModal.classList.remove('visible');
     await loadSupervisors();
-    showStatus('Esihenkilö tallennettu.');
-  } catch { showStatus('Palvelinvirhe.', true); }
+    showStatus(i18n.t('admin.supervisor_saved'));
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { saveSupervisorBtn.disabled = false; }
 });
 
@@ -522,19 +555,19 @@ let   teamSupervisorId = null;
 
 async function openTeamModal(supervisorId, supervisorName) {
   teamSupervisorId           = supervisorId;
-  teamModalTitle.textContent = `Tiimi – ${supervisorName}`;
-  teamList.innerHTML         = '<div style="color:#7D95A1;padding:0.5rem">Ladataan...</div>';
+  teamModalTitle.textContent = i18n.t('admin.team_modal_title', { name: supervisorName });
+  teamList.innerHTML         = `<div style="color:#7D95A1;padding:0.5rem">${i18n.t('common.loading')}</div>`;
   teamModal.classList.add('visible');
 
   const res    = await fetch(`/api/supervisor_team.php?supervisor_id=${supervisorId}`);
   const result = await res.json();
-  if (!result.success) { teamList.innerHTML = '<div style="color:#E01541">Virhe.</div>'; return; }
+  if (!result.success) { teamList.innerHTML = `<div style="color:#E01541">${i18n.t('common.error')}</div>`; return; }
 
   teamList.innerHTML = result.employees.map(e => `
     <label style="display:flex;align-items:baseline;gap:0.5rem;padding:0.375rem 0;border-bottom:1px solid #F3F0F0;cursor:pointer;">
       <input type="checkbox" value="${e.id}" ${e.in_team ? 'checked' : ''}
         style="accent-color:#3C1EEB;width:1rem;height:1rem;flex-shrink:0;margin-top:0.1rem;">
-      <span>${escapeHtml(e.name)}${e.other_supervisors ? '<span style="color:#7D95A1;font-size:0.75rem;margin-left:0.375rem">Myös: ' + escapeHtml(e.other_supervisors) + '</span>' : ''}</span>
+      <span>${escapeHtml(e.name)}${e.other_supervisors ? `<span style="color:#7D95A1;font-size:0.75rem;margin-left:0.375rem">${i18n.t('admin.also')} ${escapeHtml(e.other_supervisors)}</span>` : ''}</span>
     </label>`).join('');
 }
 
@@ -549,11 +582,11 @@ saveTeamBtn.addEventListener('click', async () => {
       body: JSON.stringify({ supervisor_id: teamSupervisorId, employee_ids: ids }),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Tiimin tallennus epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('admin.team_save_failed'), true); return; }
     teamModal.classList.remove('visible');
     await loadSupervisors();
-    showStatus('Tiimi tallennettu.');
-  } catch { showStatus('Palvelinvirhe.', true); }
+    showStatus(i18n.t('admin.team_saved'));
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { saveTeamBtn.disabled = false; }
 });
 
@@ -574,7 +607,6 @@ function hideExportBtns() {
 }
 
 exportPayrollBtn.addEventListener('click', () => {
-  // Default: last 14 days
   const today = new Date(); const from = new Date(); from.setDate(today.getDate() - 14);
   payrollDateFrom.value = from.toISOString().split('T')[0];
   payrollDateTo.value   = today.toISOString().split('T')[0];
@@ -587,20 +619,20 @@ closePayrollModal.addEventListener('click', () => payrollModal.classList.remove(
 
 payrollPreviewBtn.addEventListener('click', async () => {
   const from = payrollDateFrom.value; const to = payrollDateTo.value;
-  if (!from || !to) { showStatus('Valitse aikaväli.', true); return; }
+  if (!from || !to) { showStatus(i18n.t('payroll.error_select_period'), true); return; }
 
   payrollPreviewBtn.disabled = true;
-  payrollPreview.innerHTML   = '<div style="color:#7D95A1;padding:0.5rem">Ladataan...</div>';
+  payrollPreview.innerHTML   = `<div style="color:#7D95A1;padding:0.5rem">${i18n.t('common.loading')}</div>`;
   hideExportBtns();
 
   try {
     const res    = await fetch(`/api/export_payroll.php?date_from=${from}&date_to=${to}`);
     const result = await res.json();
-    if (!res.ok || !result.success) { payrollPreview.innerHTML = `<div style="color:#E01541">${result.error || 'Virhe.'}</div>`; return; }
+    if (!res.ok || !result.success) { payrollPreview.innerHTML = `<div style="color:#E01541">${result.error || i18n.t('common.error')}</div>`; return; }
 
     const periods = result.periods || [];
     if (!periods.length) {
-      payrollPreview.innerHTML = '<div style="color:#7D95A1;padding:0.5rem">Ei hyväksyttyjä kirjauksia valitulle ajanjaksolle.</div>';
+      payrollPreview.innerHTML = `<div style="color:#7D95A1;padding:0.5rem">${i18n.t('payroll.no_approved')}</div>`;
       return;
     }
     payrollPreviewData = periods.flatMap(p => p.employees);
@@ -610,8 +642,8 @@ payrollPreviewBtn.addEventListener('click', async () => {
         <div style="font-weight:600;font-size:0.85rem;color:#3C1EEB;padding:0.4rem 0.25rem 0.3rem;">
           ${escapeHtml(period.period_label)}
           ${period.existing_payroll_id
-            ? `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ olemassa oleva palkkalista</span>`
-            : `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ luodaan uusi palkkalista</span>`}
+            ? `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">${i18n.t('payroll.existing_payroll')}</span>`
+            : `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">${i18n.t('payroll.new_payroll')}</span>`}
         </div>
         ${period.employees.map(emp => {
           const hasPending = emp.pending_hours > 0 || emp.pending_km > 0;
@@ -623,7 +655,7 @@ payrollPreviewBtn.addEventListener('click', async () => {
               : `<span style="width:1rem;height:1rem;display:inline-block;"></span>`}
             <strong>${escapeHtml(emp.employee_name)}</strong>
             <span style="color:#7D95A1;font-size:0.8rem;">${emp.total_hours.toFixed(1)}h${emp.total_km > 0 ? ' / ' + emp.total_km + ' km' : ''}</span>
-            ${!hasPending ? `<span style="font-size:0.75rem;color:#0E9537;margin-left:auto;">✓ Kaikki viety</span>` : ''}
+            ${!hasPending ? `<span style="font-size:0.75rem;color:#0E9537;margin-left:auto;">${i18n.t('payroll.all_exported_label')}</span>` : ''}
           </div>
           <table style="width:100%;border-collapse:collapse;">
             ${emp.entries.map(e => {
@@ -634,7 +666,7 @@ payrollPreviewBtn.addEventListener('click', async () => {
                 <td style="padding:0.375rem 0.75rem;font-size:0.8rem;${style}border-bottom:1px solid #F3F0F0;">${escapeHtml(e.project || '')}</td>
                 <td style="padding:0.375rem 0.75rem;font-size:0.8rem;${style}border-bottom:1px solid #F3F0F0;">${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
                 <td style="padding:0.375rem 0.75rem;font-size:0.75rem;border-bottom:1px solid #F3F0F0;text-align:right;">
-                  ${exported ? `<span style="color:#3C1EEB;">✓ Viety ${fmtDateTime(e.exported_at)}</span>` : ''}
+                  ${exported ? `<span style="color:#3C1EEB;">${i18n.t('payroll.exported_on', { date: fmtDateTime(e.exported_at) })}</span>` : ''}
                 </td>
               </tr>`;
             }).join('')}
@@ -650,7 +682,7 @@ payrollPreviewBtn.addEventListener('click', async () => {
       exportToSalaxy.classList.add('hidden');
       forceExportToSalaxy.classList.remove('hidden');
     }
-  } catch { payrollPreview.innerHTML = '<div style="color:#E01541">Palvelinvirhe.</div>'; }
+  } catch { payrollPreview.innerHTML = `<div style="color:#E01541">${i18n.t('common.server_error')}</div>`; }
   finally { payrollPreviewBtn.disabled = false; }
 });
 
@@ -661,7 +693,7 @@ async function doExport(force) {
     ids = [...new Set(payrollPreviewData.map(e => e.employee_id))];
   } else {
     ids = [...document.querySelectorAll('.export-emp-cb:checked')].map(cb => Number(cb.dataset.id));
-    if (!ids.length) { showStatus('Valitse vähintään yksi työntekijä.', true); return; }
+    if (!ids.length) { showStatus(i18n.t('payroll.error_select_employee'), true); return; }
   }
 
   const activeBtn = force ? forceExportToSalaxy : exportToSalaxy;
@@ -677,7 +709,7 @@ async function doExport(force) {
   payrollPreview.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 1rem;gap:1rem;">
       <div style="width:2.25rem;height:2.25rem;border:3px solid #C4CFD4;border-top-color:#3C1EEB;border-radius:50%;animation:spin 0.75s linear infinite;"></div>
-      <div style="color:#5E7682;font-size:0.875rem;">${force ? 'Viedään uudelleen Salaxyyn...' : 'Viedään Salaxyyn...'}</div>
+      <div style="color:#5E7682;font-size:0.875rem;">${force ? i18n.t('payroll.re_exporting') : i18n.t('payroll.exporting')}</div>
     </div>`;
 
   try {
@@ -691,8 +723,8 @@ async function doExport(force) {
     if (!res.ok || !result.success) {
       payrollPreview.innerHTML = `
         <div style="background:#FEF2F4;border:1px solid #F5AABB;border-radius:8px;padding:1.25rem 1.5rem;">
-          <div style="font-weight:700;color:#E01541;margin-bottom:0.5rem;">Vienti epäonnistui</div>
-          <div style="color:#5E7682;font-size:0.85rem;">${escapeHtml(result.error || 'Tuntematon virhe')}</div>
+          <div style="font-weight:700;color:#E01541;margin-bottom:0.5rem;">${i18n.t('payroll.export_failed')}</div>
+          <div style="color:#5E7682;font-size:0.85rem;">${escapeHtml(result.error || i18n.t('common.unknown_error'))}</div>
           <button onclick="payrollModal.classList.remove('visible')" style="margin-top:1rem;padding:0.5rem 1.25rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">OK</button>
         </div>`;
       hideExportBtns();
@@ -704,12 +736,12 @@ async function doExport(force) {
     ).join(', ');
     if (result.errors > 0 || result.total_sent === 0) {
       const errDetails = (result.errors_detail || []).map(err =>
-        `<li style="margin-bottom:0.25rem;">${escapeHtml(err.employee || '')} — ${escapeHtml(err.funcError || err.error || 'Virhe')} (HTTP ${err.createHttpCode || err.saveHttpCode || '?'})</li>`
+        `<li style="margin-bottom:0.25rem;">${escapeHtml(err.employee || '')} — ${escapeHtml(err.funcError || err.error || i18n.t('common.error'))} (HTTP ${err.createHttpCode || err.saveHttpCode || '?'})</li>`
       ).join('');
       payrollPreview.innerHTML = `
         <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:1.25rem 1.5rem;">
-          <div style="font-weight:700;color:#92400E;margin-bottom:0.25rem;">⚠ Osittainen vienti</div>
-          <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">Viety ${result.total_sent} kirjausta, ${result.errors} epäonnistui — ${payrollLinks || ''}</div>
+          <div style="font-weight:700;color:#92400E;margin-bottom:0.25rem;">${i18n.t('payroll.partial_export')}</div>
+          <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">${i18n.t('payroll.export_partial_info', { sent: result.total_sent, failed: result.errors })} — ${payrollLinks || ''}</div>
           ${errDetails ? `<ul style="color:#E01541;font-size:0.8rem;margin:0.5rem 0 0 1rem;padding:0;">${errDetails}</ul>` : ''}
           <button onclick="payrollModal.classList.remove('visible')" style="margin-top:1rem;padding:0.5rem 1.25rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">OK</button>
         </div>`;
@@ -720,19 +752,19 @@ async function doExport(force) {
     const totalAdded   = result.total_added   ?? result.total_sent;
     const totalAlready = result.total_already ?? 0;
     const countLine = (force && totalAlready > 0)
-      ? `${totalAdded} kirjausta lisätty, ${totalAlready} jo Salaxyssä — ${payrollLinks || ''}`
-      : `${result.total_sent} kirjausta — ${payrollLinks || ''}`;
+      ? `${totalAdded} ${i18n.t('salaxy.entries_added', { count: '' }).trim()}, ${totalAlready} — ${payrollLinks || ''}`
+      : `${result.total_sent} — ${payrollLinks || ''}`;
     payrollPreview.innerHTML = `
       <div style="background:#E8F5EC;border:1px solid #A7E3B5;border-radius:8px;padding:1.25rem 1.5rem;text-align:center;">
         <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
-        <div style="font-weight:700;font-size:1rem;color:#0E9537;margin-bottom:0.25rem;">Vienti onnistui!</div>
-        <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">Viety palkkalistalle ${ts}</div>
+        <div style="font-weight:700;font-size:1rem;color:#0E9537;margin-bottom:0.25rem;">${i18n.t('payroll.export_success')}</div>
+        <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">${i18n.t('entries.exported_on')} ${ts}</div>
         <div style="color:#5E7682;font-size:0.85rem;margin-bottom:1rem;">${countLine}</div>
         <button onclick="payrollModal.classList.remove('visible')" style="padding:0.5rem 1.5rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;font-weight:600;">OK</button>
       </div>`;
     hideExportBtns();
     loadEntries();
-  } catch { showStatus('Palvelinvirhe.', true); }
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { activeBtn.disabled = false; }
 }
 
@@ -755,9 +787,9 @@ let payrollSettings = { payroll_period: 'monthly', payday_1: 15, payday_2: 0 };
 function buildDayOptions(selected) {
   let html = '';
   for (let d = 1; d <= 31; d++) {
-    html += `<option value="${d}"${selected == d ? ' selected' : ''}>${d}. päivä</option>`;
+    html += `<option value="${d}"${selected == d ? ' selected' : ''}>${i18n.t('payroll.day_of_month', { day: d })}</option>`;
   }
-  html += `<option value="0"${selected == 0 ? ' selected' : ''}>Kuun viimeinen päivä</option>`;
+  html += `<option value="0"${selected == 0 ? ' selected' : ''}>${i18n.t('payroll.last_day')}</option>`;
   return html;
 }
 
@@ -805,26 +837,26 @@ savePayrollSettingsBtn.addEventListener('click', async () => {
       body: JSON.stringify({ payroll_period: period, payday_1: payday1, payday_2: payday2 }),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Tallennus epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('common.save_failed'), true); return; }
     payrollSettings = { payroll_period: period, payday_1: payday1, payday_2: payday2 };
     payrollSettingsModal.classList.remove('visible');
-    showStatus('Palkkakausi tallennettu.');
-  } catch { showStatus('Palvelinvirhe.', true); }
+    showStatus(i18n.t('admin.payroll_period_saved'));
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { savePayrollSettingsBtn.disabled = false; }
 });
 
 // ─── Salaxy sync ──────────────────────────────────────────────────────────────
 async function syncSalaxy() {
   syncSalaxyBtn.disabled = true;
-  showStatus('Synkronoidaan...');
+  showStatus(i18n.t('admin.syncing'));
   try {
     const res    = await fetch('/api/sync_employees_from_salaxy.php', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const result = await res.json();
-    if (!res.ok || !result.success) { saveSyncError(result.error || `HTTP ${res.status}`); showStatus('Synkronointi epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { saveSyncError(result.error || `HTTP ${res.status}`); showStatus(i18n.t('admin.sync_failed'), true); return; }
     saveSyncStatus(result.added ?? 0, result.updated ?? 0);
     showStatus('');
     await loadEmployees();
-  } catch (e) { saveSyncError(e.message || 'Verkkovirhe'); showStatus('Synkronointi epäonnistui.', true); }
+  } catch (e) { saveSyncError(e.message || i18n.t('common.network_error')); showStatus(i18n.t('admin.sync_failed'), true); }
   finally { syncSalaxyBtn.disabled = false; }
 }
 
@@ -837,21 +869,32 @@ async function logout() {
 async function tryLogin() {
   const email    = emailInput.value.trim();
   const password = passwordInput.value;
-  if (!email || !password) { showStatus('Syötä sähköposti ja salasana.', true); return; }
+  if (!email || !password) { showStatus(i18n.t('login.error_missing_credentials'), true); return; }
   loginBtn.disabled = true;
-  showStatus('Kirjaudutaan...');
+  showStatus(i18n.t('login.logging_in'));
   try {
     const res    = await fetch('/api/admin_login.php', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     const result = await res.json();
-    if (!res.ok || !result.success) { showStatus(result.error || 'Kirjautuminen epäonnistui.', true); return; }
+    if (!res.ok || !result.success) { showStatus(result.error || i18n.t('login.error_failed'), true); return; }
 
+    currentAdminId = result.admin.id;
     approvalsEnabled = !!(result.company?.approvals_enabled);
     document.getElementById('adminName').textContent = result.admin.name || result.admin.email;
     loginSection.classList.add('hidden');
     dashboardSection.classList.remove('hidden');
+
+    // Switch to admin's effective language
+    if (result.ui_language && result.ui_language !== i18n.getLang()) {
+      await i18n.load(result.ui_language);
+      localStorage.setItem('company_lang_' + (syncSlug || '_'), result.ui_language);
+    }
+
+    // Render language selectors
+    renderAdminLangBar(currentAdminId, result.admin.ui_language, result.company.ui_language);
+    i18n.applyToDOM();
 
     if (approvalsEnabled) {
       supervisorsSection.classList.remove('hidden');
@@ -863,7 +906,7 @@ async function tryLogin() {
     loadSyncStatus();
     await Promise.all([loadEmployees(), loadPayrollSettings()]);
     syncSalaxy();
-  } catch { showStatus('Palvelinvirhe.', true); }
+  } catch { showStatus(i18n.t('common.server_error'), true); }
   finally { loginBtn.disabled = false; }
 }
 
@@ -879,7 +922,7 @@ closePinModalBtn.addEventListener('click', () => pinResetModal.classList.remove(
 copyPinBtn.addEventListener('click', () => {
   const pin = newPinDisplay.textContent;
   navigator.clipboard.writeText(pin).then(() => {
-    copyPinBtn.textContent = 'Kopioitu!';
-    setTimeout(() => { copyPinBtn.textContent = 'Kopioi PIN'; }, 2000);
+    copyPinBtn.textContent = i18n.t('admin.pin_copied');
+    setTimeout(() => { copyPinBtn.textContent = i18n.t('admin.copy_pin'); }, 2000);
   }).catch(() => alert('PIN: ' + pin));
 });

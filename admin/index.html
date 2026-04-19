@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TimeTrackingApp – Ylläpito</title>
+  <title>TimeTrackingApp – Super Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -187,12 +187,12 @@
 
     <div class="page-header">
       <div>
-        <h1>TimeTrackingApp – Ylläpito</h1>
-        <p>Hallinnoi yrityksiä ja niiden admin-käyttäjiä</p>
+        <h1>TimeTrackingApp – Super Admin</h1>
+        <p>Manage companies and their admin users</p>
       </div>
       <div class="header-actions">
-        <button class="btn-primary" id="newCompanyBtn">+ Uusi yritys</button>
-        <button class="btn-secondary" id="logoutBtn">Kirjaudu ulos</button>
+        <button class="btn-primary" id="newCompanyBtn">+ New company</button>
+        <button class="btn-secondary" id="logoutBtn">Log out</button>
       </div>
     </div>
 
@@ -202,16 +202,16 @@
       <table id="companiesTable">
         <thead>
           <tr>
-            <th style="width:2.5rem;text-align:center;">Kirjaus</th>
-            <th style="width:2.5rem;text-align:center;">Hyväks.</th>
-            <th>Yritys</th>
+            <th style="width:2.5rem;text-align:center;">Active</th>
+            <th style="width:2.5rem;text-align:center;">Approvals</th>
+            <th>Company</th>
             <th>Slug</th>
-            <th>Työntekijät</th>
-            <th>Toiminnot</th>
+            <th>Employees</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="companiesTbody">
-          <tr><td colspan="6" class="empty">Ladataan...</td></tr>
+          <tr><td colspan="6" class="empty">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -220,30 +220,30 @@
 
   <div class="modal" id="newCompanyModal">
     <div class="modal-content">
-      <h2>Uusi yritys</h2>
+      <h2>New company</h2>
       <div class="status" id="modalStatus"></div>
 
       <div class="form-group">
-        <label for="companyName">Yrityksen nimi</label>
-        <input id="companyName" type="text" placeholder="Esim. Acme Corp" />
+        <label for="companyName">Company name</label>
+        <input id="companyName" type="text" placeholder="E.g. Acme Corp" />
       </div>
       <div class="form-group">
-        <label for="companySlug">URL-tunniste (slug)</label>
-        <input id="companySlug" type="text" placeholder="esim. acme-corp" />
-        <small>Tulee URLiin: /<strong id="slugPreview">slug</strong>/admin/</small>
+        <label for="companySlug">URL slug</label>
+        <input id="companySlug" type="text" placeholder="e.g. acme-corp" />
+        <small>Used in URL: /<strong id="slugPreview">slug</strong>/admin/</small>
       </div>
       <div class="form-group">
-        <label for="adminEmail">Admin-sähköposti</label>
+        <label for="adminEmail">Admin email</label>
         <input id="adminEmail" type="email" placeholder="admin@example.com" />
       </div>
       <div class="form-group">
-        <label for="adminPassword">Admin-salasana</label>
-        <input id="adminPassword" type="password" placeholder="Turvallinen salasana" />
+        <label for="adminPassword">Admin password</label>
+        <input id="adminPassword" type="password" placeholder="Secure password" />
       </div>
 
       <div class="modal-footer">
-        <button class="btn-primary" id="createCompanyBtn">Luo yritys</button>
-        <button class="btn-secondary" id="closeModalBtn">Peruuta</button>
+        <button class="btn-primary" id="createCompanyBtn">Create company</button>
+        <button class="btn-secondary" id="closeModalBtn">Cancel</button>
       </div>
     </div>
   </div>
@@ -251,37 +251,53 @@
   <!-- Settings modal -->
   <div class="modal" id="settingsModal">
     <div class="modal-content" style="max-width:520px;">
-      <h2 id="settingsModalTitle">Asetukset</h2>
+      <h2 id="settingsModalTitle">Settings</h2>
 
-      <h3 style="font-size:0.8rem;font-weight:600;color:#5E7682;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Admin-käyttäjät</h3>
+      <!-- Company language setting -->
+    <div style="margin-bottom:1rem;padding-bottom:0.875rem;border-bottom:1px solid var(--border);">
+      <label style="font-size:0.8rem;font-weight:600;color:#5E7682;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.5rem;">Default UI Language</label>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <select id="companyUiLangSelect" style="height:2rem;border-radius:6px;border:1px solid #C4CFD4;font-family:inherit;font-size:0.875rem;padding:0 0.625rem;background:#fff;flex:1;">
+          <option value="en">English</option>
+          <option value="fi">Suomi</option>
+          <option value="sv">Svenska</option>
+          <option value="et">Eesti</option>
+          <option value="uk">Українська</option>
+        </select>
+        <button class="btn-primary" id="saveCompanyLangBtn" style="height:2rem;white-space:nowrap;">Save</button>
+        <span id="companyLangStatus" style="font-size:0.8rem;color:#0E9537;display:none;">Saved!</span>
+      </div>
+    </div>
+
+    <h3 style="font-size:0.8rem;font-weight:600;color:#5E7682;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Admin users</h3>
       <div id="adminsList" style="margin-bottom:1rem;"></div>
 
       <!-- Inline add/edit form -->
       <div id="adminForm" class="hidden" style="background:#F3F0F0;border:1px solid #C4CFD4;border-radius:6px;padding:0.875rem;margin-bottom:0.875rem;">
         <p id="adminFormTitle" style="font-size:0.8rem;font-weight:600;margin-bottom:0.625rem;color:#283237;"></p>
         <div class="form-group">
-          <label for="adminFormName">Nimi</label>
-          <input id="adminFormName" type="text" placeholder="Etunimi Sukunimi" />
+          <label for="adminFormName">Name</label>
+          <input id="adminFormName" type="text" placeholder="First Last" />
         </div>
         <div class="form-group">
-          <label for="adminFormEmail">Sähköposti</label>
-          <input id="adminFormEmail" type="email" placeholder="admin@yritys.fi" />
+          <label for="adminFormEmail">Email</label>
+          <input id="adminFormEmail" type="email" placeholder="admin@company.com" />
         </div>
         <div class="form-group">
-          <label for="adminFormPassword" id="adminFormPasswordLabel">Salasana</label>
-          <input id="adminFormPassword" type="password" placeholder="Vähintään 6 merkkiä" />
+          <label for="adminFormPassword" id="adminFormPasswordLabel">Password</label>
+          <input id="adminFormPassword" type="password" placeholder="At least 6 characters" />
         </div>
         <div class="status" id="adminFormStatus"></div>
         <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-          <button class="btn-primary" id="saveAdminBtn" style="flex:1;">Tallenna</button>
-          <button class="btn-secondary" id="cancelAdminFormBtn" style="flex:1;">Peruuta</button>
+          <button class="btn-primary" id="saveAdminBtn" style="flex:1;">Save</button>
+          <button class="btn-secondary" id="cancelAdminFormBtn" style="flex:1;">Cancel</button>
         </div>
       </div>
 
-      <button class="btn-secondary" id="addAdminBtn" style="width:100%;margin-bottom:0.5rem;">+ Lisää admin</button>
+      <button class="btn-secondary" id="addAdminBtn" style="width:100%;margin-bottom:0.5rem;">+ Add admin</button>
 
       <div class="modal-footer">
-        <button class="btn-secondary" id="closeSettingsModalBtn">Sulje</button>
+        <button class="btn-secondary" id="closeSettingsModalBtn">Close</button>
       </div>
     </div>
   </div>
@@ -322,7 +338,7 @@
     function renderCompanies(companies) {
       currentCompanies = companies;
       if (companies.length === 0) {
-        companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">Ei yrityksiä. Luo uusi yritys aloittaaksesi.</td></tr>';
+        companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">No companies. Create a new company to get started.</td></tr>';
         return;
       }
       companiesTbody.innerHTML = companies.map(c => `
@@ -343,8 +359,8 @@
           <td>${c.employee_count || 0}</td>
           <td>
             <div style="display:flex;gap:0.375rem;">
-              <button class="action-btn settings-btn" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Asetukset</button>
-              <button class="action-btn" onclick="window.location.href='/${escapeHtml(c.slug)}/admin/'">Yritys-admin →</button>
+              <button class="action-btn settings-btn" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Settings</button>
+              <button class="action-btn" onclick="window.location.href='/${escapeHtml(c.slug)}/admin/'">Company admin →</button>
             </div>
           </td>
         </tr>
@@ -361,7 +377,7 @@
           });
           const result = await res.json();
           if (!res.ok || !result.success) {
-            showStatus(result.error || 'Tilan vaihto epäonnistui.', true);
+            showStatus(result.error || 'Failed to change status.', true);
             cb.checked = !cb.checked;
           } else {
             const co = currentCompanies.find(c => c.id === id);
@@ -378,7 +394,7 @@
           }
         } catch (e) {
           console.error(e);
-          showStatus('Palvelinvirhe.', true);
+          showStatus('Server error.', true);
           cb.checked = !cb.checked;
         } finally {
           cb.disabled = false;
@@ -402,14 +418,14 @@
         const response = await fetch('/api/companies.php');
         const result = await response.json();
         if (!response.ok || !result.success) {
-          showStatus(result.error || 'Yritysten lataus epäonnistui.', true);
-          companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">Virhe ladattaessa yrityksiä.</td></tr>';
+          showStatus(result.error || 'Failed to load companies.', true);
+          companiesTbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading companies.</td></tr>';
           return;
         }
         renderCompanies(result.companies || []);
       } catch (error) {
         console.error(error);
-        showStatus('Palvelinvirhe yritysten haussa.', true);
+        showStatus('Server error loading companies.', true);
       }
     }
 
@@ -445,12 +461,12 @@
       const password = adminPasswordInput.value;
 
       if (!name || !slug || !email || !password) {
-        showModalStatus('Täytä kaikki kentät.', true);
+        showModalStatus('Fill in all fields.', true);
         return;
       }
 
       createCompanyBtn.disabled = true;
-      showModalStatus('Luodaan yritystä...');
+      showModalStatus('Creating company...');
 
       try {
         const response = await fetch('/api/create_company.php', {
@@ -460,17 +476,17 @@
         });
         const result = await response.json();
         if (!response.ok || !result.success) {
-          showModalStatus(result.error || 'Yrityksen luominen epäonnistui.', true);
+          showModalStatus(result.error || 'Failed to create company.', true);
           createCompanyBtn.disabled = false;
           return;
         }
-        showStatus(`Yritys "${name}" luotu onnistuneesti.`);
+        showStatus(`Company "${name}" created successfully.`);
         newCompanyModal.classList.remove('visible');
         resetForm();
         await loadCompanies();
       } catch (error) {
         console.error(error);
-        showModalStatus('Palvelinvirhe.', true);
+        showModalStatus('Server error.', true);
         createCompanyBtn.disabled = false;
       }
     });
@@ -506,11 +522,11 @@
 
     function openAdminForm(admin = null) {
       editingAdminId = admin ? admin.id : null;
-      adminFormTitle.textContent        = admin ? 'Muokkaa admin-käyttäjää' : 'Lisää admin-käyttäjä';
+      adminFormTitle.textContent        = admin ? 'Edit admin user' : 'Add admin user';
       adminFormName.value               = admin?.name  || '';
       adminFormEmail.value              = admin?.email || '';
       adminFormPassword.value           = '';
-      adminFormPasswordLabel.textContent = admin ? 'Uusi salasana (jätä tyhjäksi, jos ei vaihdu)' : 'Salasana';
+      adminFormPasswordLabel.textContent = admin ? 'New password (leave blank to keep current)' : 'Password';
       adminFormStatus.className         = 'status';
       adminForm.classList.remove('hidden');
       addAdminBtn.classList.add('hidden');
@@ -525,7 +541,7 @@
 
     function renderAdminsList(admins) {
       if (!admins.length) {
-        adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;margin-bottom:0.5rem;">Ei admin-käyttäjiä.</p>';
+        adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;margin-bottom:0.5rem;">No admin users.</p>';
         return;
       }
       adminsList.innerHTML = admins.map(a => `
@@ -533,11 +549,11 @@
           <div>
             <div style="font-size:0.875rem;font-weight:500;">${escapeHtml(a.name || a.email)}</div>
             ${a.name ? `<div style="font-size:0.75rem;color:#7D95A1;">${escapeHtml(a.email)}</div>` : ''}
-            ${!Number(a.active) ? '<span style="font-size:0.7rem;color:#E01541;">Ei aktiivinen</span>' : ''}
+            ${!Number(a.active) ? '<span style="font-size:0.7rem;color:#E01541;">Inactive</span>' : ''}
           </div>
           <div style="display:flex;gap:0.375rem;flex-shrink:0;">
-            <button class="action-btn edit-admin-btn" data-id="${a.id}" style="font-size:0.75rem;">Muokkaa</button>
-            <button class="action-btn delete-admin-btn" data-id="${a.id}" style="font-size:0.75rem;color:#E01541;border-color:#F5AABB;">Poista</button>
+            <button class="action-btn edit-admin-btn" data-id="${a.id}" style="font-size:0.75rem;">Edit</button>
+            <button class="action-btn delete-admin-btn" data-id="${a.id}" style="font-size:0.75rem;color:#E01541;border-color:#F5AABB;">Delete</button>
           </div>
         </div>`).join('');
 
@@ -549,36 +565,62 @@
       });
       adminsList.querySelectorAll('.delete-admin-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('Poistetaanko admin-käyttäjä?')) return;
+          if (!confirm('Delete this admin user?')) return;
           btn.disabled = true;
           try {
             const res    = await fetch('/api/company_admins.php', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: Number(btn.dataset.id) }) });
             const result = await res.json();
-            if (!res.ok || !result.success) { showStatus(result.error || 'Poisto epäonnistui.', true); return; }
+            if (!res.ok || !result.success) { showStatus(result.error || 'Delete failed.', true); return; }
             await loadAdmins();
-          } catch { showStatus('Palvelinvirhe.', true); }
+          } catch { showStatus('Server error.', true); }
           finally { btn.disabled = false; }
         });
       });
     }
 
     async function loadAdmins() {
-      adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;">Ladataan...</p>';
+      adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;">Loading...</p>';
       try {
         const res    = await fetch(`/api/company_admins.php?company_id=${settingsCompanyId}`);
         const result = await res.json();
-        if (!res.ok || !result.success) { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Virhe ladattaessa.</p>'; return; }
+        if (!res.ok || !result.success) { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Error loading.</p>'; return; }
         renderAdminsList(result.admins || []);
-      } catch { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Palvelinvirhe.</p>'; }
+      } catch { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Server error.</p>'; }
     }
+
+    const companyUiLangSelect = document.getElementById('companyUiLangSelect');
+    const saveCompanyLangBtn  = document.getElementById('saveCompanyLangBtn');
+    const companyLangStatus   = document.getElementById('companyLangStatus');
 
     function openSettingsModal(companyId, companyName) {
       settingsCompanyId = companyId;
-      settingsModalTitle.textContent = `Asetukset – ${companyName}`;
+      settingsModalTitle.textContent = `Settings – ${companyName}`;
+      // Pre-select current company language
+      const company = currentCompanies.find(c => c.id === companyId);
+      companyUiLangSelect.value = company?.ui_language || 'en';
+      companyLangStatus.style.display = 'none';
       closeAdminForm();
       settingsModal.classList.add('visible');
       loadAdmins();
     }
+
+    saveCompanyLangBtn.addEventListener('click', async () => {
+      const lang = companyUiLangSelect.value;
+      saveCompanyLangBtn.disabled = true;
+      try {
+        const res    = await fetch('/api/companies.php', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ id: settingsCompanyId, ui_language: lang }),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) { showStatus(result.error || 'Save failed.', true); return; }
+        const co = currentCompanies.find(c => c.id === settingsCompanyId);
+        if (co) co.ui_language = lang;
+        companyLangStatus.style.display = 'inline';
+        setTimeout(() => { companyLangStatus.style.display = 'none'; }, 2000);
+      } catch { showStatus('Server error.', true); }
+      finally { saveCompanyLangBtn.disabled = false; }
+    });
 
     closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.remove('visible'));
     addAdminBtn.addEventListener('click', () => openAdminForm());
@@ -588,19 +630,19 @@
       const email    = adminFormEmail.value.trim();
       const name     = adminFormName.value.trim();
       const password = adminFormPassword.value;
-      if (!email) { showAdminFormStatus('Sähköposti vaaditaan.', true); return; }
+      if (!email) { showAdminFormStatus('Email is required.', true); return; }
 
       saveAdminBtn.disabled = true;
-      showAdminFormStatus('Tallennetaan...');
+      showAdminFormStatus('Saving...');
       try {
         const payload = { company_id: settingsCompanyId, email, name, password };
         if (editingAdminId) payload.id = editingAdminId;
         const res    = await fetch('/api/company_admins.php', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const result = await res.json();
-        if (!res.ok || !result.success) { showAdminFormStatus(result.error || 'Tallennus epäonnistui.', true); return; }
+        if (!res.ok || !result.success) { showAdminFormStatus(result.error || 'Save failed.', true); return; }
         closeAdminForm();
         await loadAdmins();
-      } catch { showAdminFormStatus('Palvelinvirhe.', true); }
+      } catch { showAdminFormStatus('Server error.', true); }
       finally { saveAdminBtn.disabled = false; }
     });
 

@@ -54,12 +54,26 @@ try {
         $_SESSION['employee_id']         = (int) $employee['id'];
         $_SESSION['employee_company_id'] = (int) $employee['companyId'];
 
+        // Resolve effective language: employee personal → company default → 'en'
+        $empRow = $db->prepare('SELECT ui_language FROM employees WHERE id = :id LIMIT 1');
+        $empRow->execute([':id' => (int) $employee['id']]);
+        $empData   = $empRow->fetch();
+        $empLang   = ($empData && $empData['ui_language']) ? $empData['ui_language'] : null;
+
+        $compRow = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
+        $compRow->execute([':id' => (int) $employee['companyId']]);
+        $compData  = $compRow->fetch();
+        $compLang  = ($compData && $compData['ui_language']) ? $compData['ui_language'] : 'en';
+
+        $effectiveLang = $empLang ?: $compLang;
+
         echo json_encode([
             'valid'        => true,
             'id'           => (int) $employee['id'],
             'name'         => $employee['name'],
             'companyId'    => (int) $employee['companyId'],
             'employmentId' => $employee['employmentId'] ?? null,
+            'ui_language'  => $effectiveLang,
         ]);
     } else {
         http_response_code(401);

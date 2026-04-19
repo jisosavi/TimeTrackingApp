@@ -10,7 +10,7 @@ try {
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $db->query(
-            'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, COUNT(e.id) AS employee_count
+            'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language, COUNT(e.id) AS employee_count
              FROM companies c
              LEFT JOIN employees e ON e.company_id = c.id
              GROUP BY c.id
@@ -27,8 +27,12 @@ try {
         $id                = isset($payload['id']) ? (int) $payload['id'] : null;
         $active            = isset($payload['active']) ? (int) $payload['active'] : null;
         $approvalsEnabled  = isset($payload['approvals_enabled']) ? (int) $payload['approvals_enabled'] : null;
+        $uiLanguage        = isset($payload['ui_language']) ? trim((string) $payload['ui_language']) : null;
+        if ($uiLanguage !== null && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk'], true)) {
+            $uiLanguage = null;
+        }
 
-        if (!$id || ($active === null && $approvalsEnabled === null)) {
+        if (!$id || ($active === null && $approvalsEnabled === null && $uiLanguage === null)) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'id and at least one field required']);
             exit;
@@ -41,6 +45,10 @@ try {
         if ($approvalsEnabled !== null) {
             $db->prepare('UPDATE companies SET approvals_enabled = :ae WHERE id = :id')
                ->execute([':ae' => $approvalsEnabled, ':id' => $id]);
+        }
+        if ($uiLanguage !== null) {
+            $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
+               ->execute([':lang' => $uiLanguage, ':id' => $id]);
         }
 
         echo json_encode(['success' => true]);
