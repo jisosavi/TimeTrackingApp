@@ -74,6 +74,8 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 ## Screenshots
 
 **Employee PIN login** — each company has its own login URL at `/{slug}/`.
+Employees only need to open URL on any device and give their unique PIN.
+Nothing else is needed for onboarding, no configuration or installing anything!
 
 <img src="screenshots/01-pin-login.png" width="260" alt="Employee PIN login">
 
@@ -96,6 +98,8 @@ Employees can see the entries they have made and follow the approval process. Th
 ---
 
 **Approvals** — managers can follow the entries sent by their employees and approve them. They can also ask for more information about the entries.
+Managers only need to open URL on any device and give their unique PIN.
+Nothing else is needed for onboarding, no configuration or installing anything!
 
 <img src="screenshots/05-approval.png" width="600" alt="Company admin employee list">
 
