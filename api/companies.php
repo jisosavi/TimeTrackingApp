@@ -28,7 +28,7 @@ try {
         $active            = isset($payload['active']) ? (int) $payload['active'] : null;
         $approvalsEnabled  = isset($payload['approvals_enabled']) ? (int) $payload['approvals_enabled'] : null;
         $uiLanguage        = isset($payload['ui_language']) ? trim((string) $payload['ui_language']) : null;
-        if ($uiLanguage !== null && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk'], true)) {
+        if ($uiLanguage !== null && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk', 'xh'], true)) {
             $uiLanguage = null;
         }
 

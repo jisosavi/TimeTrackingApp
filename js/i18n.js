@@ -1,5 +1,5 @@
 const i18n = (() => {
-  const LANGS = ['en', 'fi', 'sv', 'et', 'uk'];
+  const LANGS = ['en', 'fi', 'sv', 'et', 'uk', 'xh'];
   let strings = {};
   let lang = 'en';
 
@@ -54,7 +54,7 @@ const i18n = (() => {
   function getLang() { return lang; }
 
   function buildLangSelect(currentLang, targetType, targetId) {
-    const names = { en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська' };
+    const names = { en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa' };
     const opts = LANGS.map(l =>
       `<option value="${l}"${l === currentLang ? ' selected' : ''}>${names[l]}</option>`
     ).join('');

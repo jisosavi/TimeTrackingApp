@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $active     = isset($payload['active']) ? (int) $payload['active'] : 1;
     $langProvided = array_key_exists('ui_language', $payload);
     $uiLanguage   = $langProvided ? trim((string) $payload['ui_language']) : null;
-    if ($uiLanguage !== null && $uiLanguage !== '' && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk'], true)) {
+    if ($uiLanguage !== null && $uiLanguage !== '' && !in_array($uiLanguage, ['en', 'fi', 'sv', 'et', 'uk', 'xh'], true)) {
         $uiLanguage = null; $langProvided = false;
     }
     if ($uiLanguage === '') $uiLanguage = null; // empty = clear override

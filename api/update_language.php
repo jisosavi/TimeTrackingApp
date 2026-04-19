@@ -12,7 +12,7 @@ $lang       = trim((string) ($payload['lang'] ?? ''));
 $targetType = trim((string) ($payload['target_type'] ?? ''));
 $targetId   = isset($payload['target_id']) ? (int) $payload['target_id'] : null;
 
-$allowed = ['en', 'fi', 'sv', 'et', 'uk'];
+$allowed = ['en', 'fi', 'sv', 'et', 'uk', 'xh'];
 $isClear = ($lang === '');
 if (!$isClear && !in_array($lang, $allowed, true)) {
     sendJson(['success' => false, 'error' => 'Invalid language'], 400);
