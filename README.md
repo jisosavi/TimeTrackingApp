@@ -125,6 +125,7 @@ Employees can see the entries they have made and follow the approval process. Th
 | Path | Description |
 |---|---|
 | `/{slug}/` | Employee PIN login and time entry |
+| `/{slug}/approval/` | Supervisor/manager approval portal |
 | `/{slug}/admin/` | Company admin dashboard |
 | `/admin/` | Super-admin: all companies |
 
@@ -190,22 +191,36 @@ A default super-admin and test company are bootstrapped on first run:
 
 ```
 ├── index.html                      # Employee login + time entry UI
-├── validate_pin.php                # PIN authentication
-├── save_hours.php                  # Export time entries to Salaxy
+├── approval.html                   # Supervisor/manager approval portal
+├── validate_pin.php                # Employee PIN authentication
+├── save_hours.php                  # Time entry submission (legacy)
+├── salaxy_sync.php                 # Salaxy API integration helpers
+├── llm_proxy.php                   # Gemini AI proxy
 ├── bootstrap.php                   # DB init and schema migrations
 ├── router.php                      # PHP dev server routing
 ├── config.php                      # API keys and DB path (not in git)
 ├── admin/
 │   └── index.html                  # Super-admin UI
 ├── api/
-│   ├── admin_login.php
+│   ├── common.php                  # Shared auth helpers and utilities
+│   ├── admin_login.php             # Company admin login
 │   ├── companies.php               # List companies / toggle active
+│   ├── company_admins.php          # CRUD for company admin users
 │   ├── create_company.php          # Create company + admin account
 │   ├── employees.php               # CRUD for employees
+│   ├── supervisors.php             # CRUD for supervisors
+│   ├── supervisor_login.php        # Supervisor PIN login
+│   ├── supervisor_team.php         # Supervisor ↔ employee assignments
+│   ├── time_entries.php            # Time entry read/delete
+│   ├── review_entries.php          # Approve / reject / clarify entries
+│   ├── clarify_entry.php           # Employee clarification response
+│   ├── export_payroll.php          # Export approved entries to Salaxy payroll
+│   ├── payroll_settings.php        # Payroll period settings per company
 │   ├── sync_employees_from_salaxy.php
 │   ├── logout.php
 │   └── debug_credentials.php      # Dev/testing only — lists PINs
 ├── company/
+│   ├── index.php                   # Router for company-scoped paths
 │   └── {slug}/
 │       └── admin/
 │           ├── index.html
