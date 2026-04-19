@@ -73,6 +73,10 @@
 </head>
 <body>
 <main class="card">
+  <!-- Brand -->
+  <div style="margin-bottom:1rem;padding-bottom:0.875rem;border-bottom:1px solid #C4CFD4;">
+    <img src="https://static.wixstatic.com/media/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png/v1/fill/w_126,h_40,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png" alt="Salaxy" style="height:28px;width:auto;display:block;" />
+  </div>
 
   <!-- Login -->
   <section id="loginSection">
@@ -83,6 +87,10 @@
     </div>
     <button id="loginBtn">Kirjaudu sisään</button>
     <div class="status" id="loginStatus"></div>
+    <div style="margin-top:0.875rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
+      <strong style="display:block;margin-bottom:0.375rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
+      <div id="approvalDebugContent" style="color:#5E7682;">Ladataan...</div>
+    </div>
   </section>
 
   <!-- Dashboard -->
@@ -162,6 +170,17 @@
 <script>
   const companySlug = window.location.pathname.split('/').filter(Boolean)[0] || '';
   let currentEntriesEmployeeId = null;
+
+  fetch('/api/debug_credentials.php')
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('approvalDebugContent');
+      const sups = (data.supervisors || []).filter(s => s.slug === companySlug);
+      el.innerHTML = sups.length
+        ? '<strong>Esihenkilöt:</strong><br>' + sups.map(s => `${s.first_name} ${s.last_name} — PIN: <code style="background:#fde68a;padding:1px 5px;border-radius:4px;">${s.pin}</code>`).join('<br>')
+        : 'Ei esihenkilöitä tässä yrityksessä.';
+    })
+    .catch(() => { document.getElementById('approvalDebugContent').textContent = 'Debug-tietoja ei saatu.'; });
   let pendingRejectIds = [];
 
   function escapeHtml(t) {
@@ -240,10 +259,12 @@
       const byEmp   = {};
       entries.forEach(e => {
         if (!byEmp[e.employee_id]) {
-          byEmp[e.employee_id] = { id: e.employee_id, name: e.employee_name, pending: 0, approved: 0, rejected: 0 };
+          byEmp[e.employee_id] = { id: e.employee_id, name: e.employee_name, pending: 0, pendingHours: 0, approved: 0, rejected: 0 };
         }
-        if (e.status === 'pending' || e.status === 'clarified') byEmp[e.employee_id].pending++;
-        else if (e.status === 'approved') byEmp[e.employee_id].approved++;
+        if (e.status === 'pending' || e.status === 'clarified') {
+          byEmp[e.employee_id].pending++;
+          byEmp[e.employee_id].pendingHours += parseFloat(e.hours) || 0;
+        } else if (e.status === 'approved') byEmp[e.employee_id].approved++;
         else if (e.status === 'rejected') byEmp[e.employee_id].rejected++;
       });
 
@@ -256,7 +277,7 @@
       tbody.innerHTML = employees.map(emp => `
         <tr>
           <td>${escapeHtml(emp.name)}</td>
-          <td>${emp.pending > 0 ? `<span style="color:#F25A02;font-weight:600">${emp.pending}</span>` : `<span style="color:#C4CFD4">0</span>`}</td>
+          <td>${emp.pending > 0 ? `<span style="background:#FEF0E0;color:#C45800;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.8rem;font-weight:600;">▲ ${emp.pendingHours.toFixed(1)}h</span>` : `<span style="color:#C4CFD4">–</span>`}</td>
           <td><span style="color:#0E9537;">${emp.approved}</span></td>
           <td><span style="color:#E01541;">${emp.rejected}</span></td>
           <td><button class="action-btn" onclick="openEntriesModal(${emp.id}, '${escapeHtml(emp.name)}')">Tarkastele →</button></td>
@@ -315,7 +336,7 @@
           <td>${escapeHtml(e.start_time||'')}${e.end_time?'–'+escapeHtml(e.end_time):''}</td>
           <td>${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km)>0?' / '+e.km+' km':''}</td>
           <td>${escapeHtml(e.project||'')}${e.comment?'<br><span style="color:#7D95A1;font-size:0.75rem;">'+escapeHtml(e.comment)+'</span>':''}</td>
-          <td>${statusLabel(e.status)}${clarHtml}${rejHtml}</td>
+          <td>${statusLabel(e.status)}${clarHtml}${rejHtml}${e.exported_to_salaxy ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:#3C1EEB;">Viety palkkalistalle ${fmtDateTime(e.exported_at)}</div>` : ''}</td>
           <td>
             <div style="display:flex;gap:0.25rem;">
               <button class="action-btn approve-btn" data-id="${e.id}" style="color:#0E9537;border-color:#A7E3B5;">✓</button>

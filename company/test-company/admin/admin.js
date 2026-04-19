@@ -107,7 +107,10 @@ function renderEmployees(employees) {
           ${emp.active ? 'checked' : ''}
           style="width:1.1rem;height:1.1rem;accent-color:#3C1EEB;cursor:pointer;" />
       </td>
-      <td>${escapeHtml(emp.name)}</td>
+      <td>
+        ${escapeHtml(emp.name)}
+        ${parseFloat(emp.pending_hours) > 0 ? `<span style="margin-left:0.5rem;background:#FEF0E0;color:#C45800;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:600;white-space:nowrap;">▲ ${parseFloat(emp.pending_hours).toFixed(1)}h odottaa</span>` : ''}
+      </td>
       <td><code>${escapeHtml(emp.pin)}</code></td>
       <td>${escapeHtml(emp.ssn || '')}</td>
       <td>${escapeHtml(emp.employmentId || '')}</td>
@@ -302,7 +305,7 @@ function renderEntries(entries, grouping) {
         <td>${escapeHtml(e.start_time || '')}${e.end_time ? '–' + escapeHtml(e.end_time) : ''}</td>
         <td>${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
         <td>${escapeHtml(e.project || '')}${e.comment ? '<br><span style="color:#7D95A1;font-size:0.75rem">' + escapeHtml(e.comment) + '</span>' : ''}</td>
-        <td>${statusLabel(e.status)}${clarHtml}${rejHtml}</td>
+        <td>${statusLabel(e.status)}${clarHtml}${rejHtml}${e.exported_to_salaxy ? `<div style="margin-top:0.25rem;font-size:0.72rem;color:#3C1EEB;">Viety palkkalistalle ${fmtDateTime(e.exported_at)}</div>` : ''}</td>
         <td>
           <div style="display:flex;gap:0.25rem;">
             <button class="action-btn approve-btn" data-id="${e.id}" style="color:#0E9537;border-color:#A7E3B5;">✓</button>
@@ -555,14 +558,20 @@ saveTeamBtn.addEventListener('click', async () => {
 });
 
 // ─── Payroll export modal ─────────────────────────────────────────────────────
-const payrollModal     = document.getElementById('payrollModal');
-const payrollDateFrom  = document.getElementById('payrollDateFrom');
-const payrollDateTo    = document.getElementById('payrollDateTo');
-const payrollPreviewBtn = document.getElementById('payrollPreviewBtn');
-const payrollPreview   = document.getElementById('payrollPreview');
-const exportToSalaxy   = document.getElementById('exportToSalaxy');
-const closePayrollModal = document.getElementById('closePayrollModal');
-let   payrollPreviewData = [];
+const payrollModal        = document.getElementById('payrollModal');
+const payrollDateFrom     = document.getElementById('payrollDateFrom');
+const payrollDateTo       = document.getElementById('payrollDateTo');
+const payrollPreviewBtn   = document.getElementById('payrollPreviewBtn');
+const payrollPreview      = document.getElementById('payrollPreview');
+const exportToSalaxy      = document.getElementById('exportToSalaxy');
+const forceExportToSalaxy = document.getElementById('forceExportToSalaxy');
+const closePayrollModal   = document.getElementById('closePayrollModal');
+let   payrollPreviewData  = [];
+
+function hideExportBtns() {
+  exportToSalaxy.classList.add('hidden');
+  forceExportToSalaxy.classList.add('hidden');
+}
 
 exportPayrollBtn.addEventListener('click', () => {
   // Default: last 14 days
@@ -570,7 +579,7 @@ exportPayrollBtn.addEventListener('click', () => {
   payrollDateFrom.value = from.toISOString().split('T')[0];
   payrollDateTo.value   = today.toISOString().split('T')[0];
   payrollPreview.innerHTML = '';
-  exportToSalaxy.classList.add('hidden');
+  hideExportBtns();
   payrollModal.classList.add('visible');
 });
 
@@ -582,7 +591,7 @@ payrollPreviewBtn.addEventListener('click', async () => {
 
   payrollPreviewBtn.disabled = true;
   payrollPreview.innerHTML   = '<div style="color:#7D95A1;padding:0.5rem">Ladataan...</div>';
-  exportToSalaxy.classList.add('hidden');
+  hideExportBtns();
 
   try {
     const res    = await fetch(`/api/export_payroll.php?date_from=${from}&date_to=${to}`);
@@ -594,64 +603,214 @@ payrollPreviewBtn.addEventListener('click', async () => {
       payrollPreview.innerHTML = '<div style="color:#7D95A1;padding:0.5rem">Ei hyväksyttyjä kirjauksia valitulle ajanjaksolle.</div>';
       return;
     }
-    // Collect all unique employee IDs across periods for the checkboxes
     payrollPreviewData = periods.flatMap(p => p.employees);
 
     payrollPreview.innerHTML = periods.map(period => `
       <div style="margin-bottom:1rem;">
         <div style="font-weight:600;font-size:0.85rem;color:#3C1EEB;padding:0.4rem 0.25rem 0.3rem;">
           ${escapeHtml(period.period_label)}
-          ${period.existing_payroll_id ? `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ olemassa oleva palkkalista</span>` : '<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ luodaan uusi palkkalista</span>'}
+          ${period.existing_payroll_id
+            ? `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ olemassa oleva palkkalista</span>`
+            : `<span style="font-weight:400;color:#7D95A1;margin-left:0.5rem;">▸ luodaan uusi palkkalista</span>`}
         </div>
-        ${period.employees.map(emp => `
+        ${period.employees.map(emp => {
+          const hasPending = emp.pending_hours > 0 || emp.pending_km > 0;
+          return `
         <div style="margin-bottom:0.5rem;border:1px solid #C4CFD4;border-radius:6px;overflow:hidden;">
           <div style="background:#F3F0F0;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.625rem;">
-            <input type="checkbox" class="export-emp-cb" data-id="${emp.employee_id}" checked
-              style="accent-color:#3C1EEB;width:1rem;height:1rem;">
+            ${hasPending
+              ? `<input type="checkbox" class="export-emp-cb" data-id="${emp.employee_id}" checked style="accent-color:#3C1EEB;width:1rem;height:1rem;">`
+              : `<span style="width:1rem;height:1rem;display:inline-block;"></span>`}
             <strong>${escapeHtml(emp.employee_name)}</strong>
             <span style="color:#7D95A1;font-size:0.8rem;">${emp.total_hours.toFixed(1)}h${emp.total_km > 0 ? ' / ' + emp.total_km + ' km' : ''}</span>
+            ${!hasPending ? `<span style="font-size:0.75rem;color:#0E9537;margin-left:auto;">✓ Kaikki viety</span>` : ''}
           </div>
           <table style="width:100%;border-collapse:collapse;">
-            ${emp.entries.map(e => `
-            <tr>
-              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;color:#5E7682;border-bottom:1px solid #F3F0F0;">${fmtDate(e.entry_date)}</td>
-              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${escapeHtml(e.project || '')}</td>
-              <td style="padding:0.375rem 0.75rem;font-size:0.8rem;border-bottom:1px solid #F3F0F0;">${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
-            </tr>`).join('')}
+            ${emp.entries.map(e => {
+              const exported = e.exported_to_salaxy == 1;
+              const style = exported ? 'color:#9DB4BF;' : 'color:#5E7682;';
+              return `<tr style="${exported ? 'background:#FAFAFA;' : ''}">
+                <td style="padding:0.375rem 0.75rem;font-size:0.8rem;${style}border-bottom:1px solid #F3F0F0;">${fmtDate(e.entry_date)}</td>
+                <td style="padding:0.375rem 0.75rem;font-size:0.8rem;${style}border-bottom:1px solid #F3F0F0;">${escapeHtml(e.project || '')}</td>
+                <td style="padding:0.375rem 0.75rem;font-size:0.8rem;${style}border-bottom:1px solid #F3F0F0;">${parseFloat(e.hours).toFixed(1)}h${parseFloat(e.km) > 0 ? ' / ' + e.km + ' km' : ''}</td>
+                <td style="padding:0.375rem 0.75rem;font-size:0.75rem;border-bottom:1px solid #F3F0F0;text-align:right;">
+                  ${exported ? `<span style="color:#3C1EEB;">✓ Viety ${fmtDateTime(e.exported_at)}</span>` : ''}
+                </td>
+              </tr>`;
+            }).join('')}
           </table>
-        </div>`).join('')}
+        </div>`;}).join('')}
       </div>`).join('');
 
-    exportToSalaxy.classList.remove('hidden');
+    const anyPending = periods.some(p => p.employees.some(e => e.pending_hours > 0 || e.pending_km > 0));
+    if (anyPending) {
+      exportToSalaxy.classList.remove('hidden');
+      forceExportToSalaxy.classList.add('hidden');
+    } else {
+      exportToSalaxy.classList.add('hidden');
+      forceExportToSalaxy.classList.remove('hidden');
+    }
   } catch { payrollPreview.innerHTML = '<div style="color:#E01541">Palvelinvirhe.</div>'; }
   finally { payrollPreviewBtn.disabled = false; }
 });
 
-exportToSalaxy.addEventListener('click', async () => {
+async function doExport(force) {
   const from = payrollDateFrom.value; const to = payrollDateTo.value;
-  const ids  = [...document.querySelectorAll('.export-emp-cb:checked')].map(cb => Number(cb.dataset.id));
-  if (!ids.length) { showStatus('Valitse vähintään yksi työntekijä.', true); return; }
+  let ids;
+  if (force) {
+    ids = [...new Set(payrollPreviewData.map(e => e.employee_id))];
+  } else {
+    ids = [...document.querySelectorAll('.export-emp-cb:checked')].map(cb => Number(cb.dataset.id));
+    if (!ids.length) { showStatus('Valitse vähintään yksi työntekijä.', true); return; }
+  }
 
-  exportToSalaxy.disabled = true;
-  showStatus('Viedään Salaxyyn...');
+  const activeBtn = force ? forceExportToSalaxy : exportToSalaxy;
+  activeBtn.disabled = true;
+  hideExportBtns();
+
+  if (!document.getElementById('spin-kf')) {
+    const s = document.createElement('style');
+    s.id = 'spin-kf';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+  payrollPreview.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 1rem;gap:1rem;">
+      <div style="width:2.25rem;height:2.25rem;border:3px solid #C4CFD4;border-top-color:#3C1EEB;border-radius:50%;animation:spin 0.75s linear infinite;"></div>
+      <div style="color:#5E7682;font-size:0.875rem;">${force ? 'Viedään uudelleen Salaxyyn...' : 'Viedään Salaxyyn...'}</div>
+    </div>`;
+
   try {
+    const body = { date_from: from, date_to: to, employee_ids: ids };
+    if (force) body.force = true;
     const res    = await fetch('/api/export_payroll.php', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date_from: from, date_to: to, employee_ids: ids }),
+      body: JSON.stringify(body),
     });
     const result = await res.json();
-    console.log('Export result:', result);
-    if (!res.ok || !result.success) { showStatus(result.error || 'Vienti epäonnistui.', true); return; }
-    if (result.errors > 0 || result.total_sent === 0) {
-      console.warn('Export had errors:', result.errors_detail);
-      showStatus(`Varoitus: ${result.total_sent} kirjausta viety, ${result.errors} epäonnistui. Tarkista konsoli.`, true);
+    if (!res.ok || !result.success) {
+      payrollPreview.innerHTML = `
+        <div style="background:#FEF2F4;border:1px solid #F5AABB;border-radius:8px;padding:1.25rem 1.5rem;">
+          <div style="font-weight:700;color:#E01541;margin-bottom:0.5rem;">Vienti epäonnistui</div>
+          <div style="color:#5E7682;font-size:0.85rem;">${escapeHtml(result.error || 'Tuntematon virhe')}</div>
+          <button onclick="payrollModal.classList.remove('visible')" style="margin-top:1rem;padding:0.5rem 1.25rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">OK</button>
+        </div>`;
+      hideExportBtns();
       return;
     }
-    const payrollLinks = (result.payrolls || []).map(p => `<a href="${p.url}" target="_blank">jakso ${p.period_start}</a>`).join(', ');
-    showStatus(`Viety Salaxyyn! ${result.total_sent} kirjausta — ${payrollLinks || 'ok'}`);
-    payrollModal.classList.remove('visible');
+    const ts = fmtDateTime(new Date().toISOString());
+    const payrollLinks = (result.payrolls || []).map(p =>
+      `<a href="${p.url}" target="_blank" style="color:#3C1EEB;text-decoration:underline;">${p.period_start}</a>`
+    ).join(', ');
+    if (result.errors > 0 || result.total_sent === 0) {
+      const errDetails = (result.errors_detail || []).map(err =>
+        `<li style="margin-bottom:0.25rem;">${escapeHtml(err.employee || '')} — ${escapeHtml(err.funcError || err.error || 'Virhe')} (HTTP ${err.createHttpCode || err.saveHttpCode || '?'})</li>`
+      ).join('');
+      payrollPreview.innerHTML = `
+        <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:1.25rem 1.5rem;">
+          <div style="font-weight:700;color:#92400E;margin-bottom:0.25rem;">⚠ Osittainen vienti</div>
+          <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">Viety ${result.total_sent} kirjausta, ${result.errors} epäonnistui — ${payrollLinks || ''}</div>
+          ${errDetails ? `<ul style="color:#E01541;font-size:0.8rem;margin:0.5rem 0 0 1rem;padding:0;">${errDetails}</ul>` : ''}
+          <button onclick="payrollModal.classList.remove('visible')" style="margin-top:1rem;padding:0.5rem 1.25rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">OK</button>
+        </div>`;
+      hideExportBtns();
+      loadEntries();
+      return;
+    }
+    const totalAdded   = result.total_added   ?? result.total_sent;
+    const totalAlready = result.total_already ?? 0;
+    const countLine = (force && totalAlready > 0)
+      ? `${totalAdded} kirjausta lisätty, ${totalAlready} jo Salaxyssä — ${payrollLinks || ''}`
+      : `${result.total_sent} kirjausta — ${payrollLinks || ''}`;
+    payrollPreview.innerHTML = `
+      <div style="background:#E8F5EC;border:1px solid #A7E3B5;border-radius:8px;padding:1.25rem 1.5rem;text-align:center;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
+        <div style="font-weight:700;font-size:1rem;color:#0E9537;margin-bottom:0.25rem;">Vienti onnistui!</div>
+        <div style="color:#5E7682;font-size:0.85rem;margin-bottom:0.5rem;">Viety palkkalistalle ${ts}</div>
+        <div style="color:#5E7682;font-size:0.85rem;margin-bottom:1rem;">${countLine}</div>
+        <button onclick="payrollModal.classList.remove('visible')" style="padding:0.5rem 1.5rem;background:#3C1EEB;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;font-weight:600;">OK</button>
+      </div>`;
+    hideExportBtns();
+    loadEntries();
   } catch { showStatus('Palvelinvirhe.', true); }
-  finally { exportToSalaxy.disabled = false; }
+  finally { activeBtn.disabled = false; }
+}
+
+exportToSalaxy.addEventListener('click', () => doExport(false));
+forceExportToSalaxy.addEventListener('click', () => doExport(true));
+
+// ─── Payroll settings ─────────────────────────────────────────────────────────
+const payrollSettingsBtn         = document.getElementById('payrollSettingsBtn');
+const payrollSettingsModal       = document.getElementById('payrollSettingsModal');
+const savePayrollSettingsBtn     = document.getElementById('savePayrollSettingsBtn');
+const closePayrollSettingsModal  = document.getElementById('closePayrollSettingsModal');
+const settingsMonthly            = document.getElementById('settingsMonthly');
+const settingsBiweekly           = document.getElementById('settingsBiweekly');
+const monthlyPaydayEl            = document.getElementById('monthlyPayday');
+const biweeklyPayday1El          = document.getElementById('biweeklyPayday1');
+const biweeklyPayday2El          = document.getElementById('biweeklyPayday2');
+
+let payrollSettings = { payroll_period: 'monthly', payday_1: 15, payday_2: 0 };
+
+function buildDayOptions(selected) {
+  let html = '';
+  for (let d = 1; d <= 31; d++) {
+    html += `<option value="${d}"${selected == d ? ' selected' : ''}>${d}. päivä</option>`;
+  }
+  html += `<option value="0"${selected == 0 ? ' selected' : ''}>Kuun viimeinen päivä</option>`;
+  return html;
+}
+
+function updatePeriodVisibility() {
+  const isBiweekly = document.querySelector('input[name=payrollPeriod]:checked')?.value === 'biweekly';
+  settingsMonthly.classList.toggle('hidden', isBiweekly);
+  settingsBiweekly.classList.toggle('hidden', !isBiweekly);
+}
+
+document.querySelectorAll('input[name=payrollPeriod]').forEach(r =>
+  r.addEventListener('change', updatePeriodVisibility)
+);
+
+async function loadPayrollSettings() {
+  try {
+    const res    = await fetch('/api/payroll_settings.php');
+    const result = await res.json();
+    if (result.success && result.settings) payrollSettings = result.settings;
+  } catch { /* silent */ }
+}
+
+function openPayrollSettingsModal() {
+  const s = payrollSettings;
+  const isBi = s.payroll_period === 'biweekly';
+  document.getElementById(isBi ? 'periodBiweekly' : 'periodMonthly').checked = true;
+  monthlyPaydayEl.innerHTML    = buildDayOptions(s.payday_1);
+  biweeklyPayday1El.innerHTML  = buildDayOptions(s.payday_1);
+  biweeklyPayday2El.innerHTML  = buildDayOptions(s.payday_2);
+  updatePeriodVisibility();
+  payrollSettingsModal.classList.add('visible');
+}
+
+payrollSettingsBtn.addEventListener('click', openPayrollSettingsModal);
+closePayrollSettingsModal.addEventListener('click', () => payrollSettingsModal.classList.remove('visible'));
+
+savePayrollSettingsBtn.addEventListener('click', async () => {
+  const period  = document.querySelector('input[name=payrollPeriod]:checked')?.value || 'monthly';
+  const payday1 = period === 'biweekly' ? Number(biweeklyPayday1El.value) : Number(monthlyPaydayEl.value);
+  const payday2 = period === 'biweekly' ? Number(biweeklyPayday2El.value) : 0;
+
+  savePayrollSettingsBtn.disabled = true;
+  try {
+    const res    = await fetch('/api/payroll_settings.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payroll_period: period, payday_1: payday1, payday_2: payday2 }),
+    });
+    const result = await res.json();
+    if (!res.ok || !result.success) { showStatus(result.error || 'Tallennus epäonnistui.', true); return; }
+    payrollSettings = { payroll_period: period, payday_1: payday1, payday_2: payday2 };
+    payrollSettingsModal.classList.remove('visible');
+    showStatus('Palkkakausi tallennettu.');
+  } catch { showStatus('Palvelinvirhe.', true); }
+  finally { savePayrollSettingsBtn.disabled = false; }
 });
 
 // ─── Salaxy sync ──────────────────────────────────────────────────────────────
@@ -702,7 +861,7 @@ async function tryLogin() {
 
     showStatus('');
     loadSyncStatus();
-    await loadEmployees();
+    await Promise.all([loadEmployees(), loadPayrollSettings()]);
     syncSalaxy();
   } catch { showStatus('Palvelinvirhe.', true); }
   finally { loginBtn.disabled = false; }

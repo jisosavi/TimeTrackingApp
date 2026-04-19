@@ -1,8 +1,46 @@
 # TimeTrackingApp
 
-TimeTrackingApp is a multi-company employee time tracking solution built on top of **[Salaxy](https://salaxy.com) payroll software and API**. It gives Salaxy users and software partners an easy, ready-to-deploy way to provide time tracking for the SME sector — without building payroll integration from scratch.
+An easy to use, AI-powered time tracking solution seamlessly integrated with **[Salaxy](https://salaxy.com)** - the real-time, open API payroll platform trusted by forward-thinking businesses.
 
-Employees log their hours using natural language (voice or text). An AI layer interprets the input, confirms the details in a conversational flow, and exports the final entry directly to Salaxy as a payslip item. Company admins manage employees and sync them from Salaxy. A top-level super-admin handles multiple companies from a single dashboard.
+Focus is on usability: easy for employees to log hours and easy for manager to approve!
+
+## Overview
+
+TimeTrackingApp extends Salaxy's automated payroll capabilities by providing an intuitive time and expense tracking interface for small and medium enterprises. Built on Salaxy's powerful Open API, it demonstrates how developers can create value-added solutions that integrate directly with real-time payroll processing.
+
+## Key Features
+
+### Very Easy Login and Time Entry
+- **Login with PIN**: Employees login with PIN. Works with simple URL on any phone. Nothing else needed!
+- **Voice & Text Input**: Employees log hours using conversational AI (text or speech)
+- **Smart Interpretation**: AI understands natural language entries like "worked 8 hours on client project today"
+- **Confirmation Flow**: Interactive dialogue ensures accuracy before submission
+
+### Streamlined Approval Workflow
+- **Very Easy to Use for Manager**: Manager login with PIN. Works with simple URL on any phone!
+- **Manager Review**: Company managers can approve, reject, or request clarification on entries
+- **Expense Management**: Handle both time and expense submissions in one workflow
+- **Audit Trail**: Complete history of all submissions and approvals
+
+### Direct Payroll Integration
+- **One-Click Sync**: Approved entries flow directly to Salaxy payroll
+- **Automatic Payroll Updates**: System generates and updates open payroll periods
+- **Real-Time Processing**: Changes reflect immediately in Salaxy's payroll calculations
+
+### Multi-Company Management
+- **Super Admin Dashboard**: Manage multiple companies from a centralized interface
+- **Automatic Employee Sync**: Employees are synchronized in real-time from Salaxy's payroll system
+- **Company-Level Administration**: Each company admin has full control over their workforce
+
+## Why Build on Salaxy?
+
+This project showcases the power of Salaxy's modern payroll infrastructure:
+
+- **Open API First**: RESTful, OpenAPI-compliant endpoints make integration straightforward
+- **Real-Time Processing**: No batch delays - see changes instantly
+- **AI Integrated**: AI helps payroll users and platform is built for the future with Salaxy AI architecture
+- **Developer-Friendly**: Comprehensive documentation, test environments, and consistent APIs
+- **Break Free from Legacy**: Unlike closed-box solutions, Salaxy empowers developers to innovate
 
 ---
 
@@ -13,10 +51,14 @@ Employees log their hours using natural language (voice or text). An AI layer in
 - Voice or text input — natural language like *"Yesterday 2h on project Alpha"*
 - Gemini AI interprets entries, asks follow-up questions if details are missing, and shows a summary before sending
 - Entries exported to Salaxy payroll via API — one payroll created per day, entries added as payslip items
-- Mileage allowance (km-korvaus) support
+- Mileage allowance (km-korvaus) support, easy to add more entry types
+
+**Company managers** (`/{slug}/approval/`)
+- Manage approval of entries: approve/reject/ask clarification.
 
 **Company admin** (`/{slug}/admin/`)
 - Manage employees: add, edit, deactivate, reset PIN
+- Manage teams and managers: who works in what team and who are the managers in approval
 - Sync employees from Salaxy with one click — new employees are imported, existing ones updated
 - Sync status shown inline: last synced timestamp, or error reason on failure
 - Auto-sync on every admin login
@@ -24,6 +66,7 @@ Employees log their hours using natural language (voice or text). An AI layer in
 **Super-admin** (`/admin/`)
 - Create and manage companies with a slug-based URL and admin account
 - Enable or disable time tracking per company via an inline toggle
+- Manage admins of each company
 - Navigate directly to each company's admin panel
 
 ---
@@ -36,15 +79,25 @@ Employees log their hours using natural language (voice or text). An AI layer in
 
 ---
 
-**Time entry** — employees describe their hours in plain language. The AI confirms details and shows a summary before the entry is sent to Salaxy.
+**Time entry** — employees describe their hours in plain language. The AI confirms details and shows a summary before the entry is sent to manager for approval.
 
 <img src="screenshots/02-time-entry.png" width="260" alt="Employee time entry chat UI">
+
+Employees can see the entries they have made and follow the approval process. They can also comment if managers have questions about the entries.
+
+<img src="screenshots/02-time-entry-2.png" width="260" alt="Employee time entry chat UI">
 
 ---
 
 **Company admin** — manage employees, reset PINs, and sync from Salaxy. Sync status and timestamp are shown inline next to the sync button.
 
 <img src="screenshots/03-company-admin.png" width="600" alt="Company admin employee list">
+
+---
+
+**Approvals** — managers can follow the entries sent by their employees and approve them. They can also ask for more information about the entries.
+
+<img src="screenshots/05-approval.png" width="600" alt="Company admin employee list">
 
 ---
 

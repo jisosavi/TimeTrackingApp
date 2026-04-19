@@ -230,30 +230,36 @@ foreach ($salaxyEmployees as $emp) {
     $existing = $stmt->fetch();
 
     if ($existing) {
+        // Found by employment ID — sync name if changed
         if ($existing['name'] !== $fullName) {
             $db->prepare('UPDATE employees SET name = :name WHERE id = :id')
                ->execute([':name' => $fullName, ':id' => $existing['id']]);
             $updated++;
         }
     } else {
-        $stmt = $db->prepare(
-            'SELECT id FROM employees WHERE company_id = :company_id AND pin = :pin'
+        // Skip if an employee with the same name already exists — prevents duplicates
+        // when Salaxy has multiple employment records for the same person.
+        // Never overwrite an existing employee's salaxy_employment_id via sync.
+        $byName = $db->prepare(
+            'SELECT id FROM employees WHERE company_id = :company_id AND name = :name LIMIT 1'
         );
-        $stmt->execute([':company_id' => $companyId, ':pin' => $pin]);
-
-        if (!$stmt->fetch()) {
-            $db->prepare(
-                'INSERT INTO employees (company_id, pin, name, salaxy_employment_id, role, active)
-                 VALUES (:company_id, :pin, :name, :salaxy_id, :role, 1)'
-            )->execute([
-                ':company_id' => $companyId,
-                ':pin' => $pin,
-                ':name' => $fullName,
-                ':salaxy_id' => $empId,
-                ':role' => 'employee',
-            ]);
-            $added++;
+        $byName->execute([':company_id' => $companyId, ':name' => $fullName]);
+        if ($byName->fetch()) {
+            continue;
         }
+
+        // Truly new employee — insert with a generated PIN
+        $db->prepare(
+            'INSERT INTO employees (company_id, pin, name, salaxy_employment_id, role, active)
+             VALUES (:company_id, :pin, :name, :salaxy_id, :role, 1)'
+        )->execute([
+            ':company_id' => $companyId,
+            ':pin' => $pin,
+            ':name' => $fullName,
+            ':salaxy_id' => $empId,
+            ':role' => 'employee',
+        ]);
+        $added++;
     }
 }
 

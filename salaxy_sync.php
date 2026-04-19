@@ -128,13 +128,21 @@ function salaxyRequest(string $method, string $endpoint, ?array $data = null): a
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    
+
+    $logFile = __DIR__ . '/data/salaxy_debug.log';
+    $logEntry = date('Y-m-d H:i:s') . " $method $endpoint\n"
+        . "  REQUEST: " . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n"
+        . "  HTTP: $httpCode\n"
+        . "  RESPONSE: " . ($response ?: '(empty)') . "\n"
+        . ($error ? "  CURL_ERR: $error\n" : '');
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+
     if ($error) {
         return ['success' => false, 'error' => $error, 'httpCode' => 0];
     }
-    
+
     $decoded = json_decode($response, true);
-    
+
     return [
         'success' => $httpCode >= 200 && $httpCode < 300,
         'httpCode' => $httpCode,
@@ -268,7 +276,7 @@ function getEmployeeDefaultHourlyPrice(string $employmentId): ?float {
         'employer' => ['isSelf' => true],
         'worker' => ['employmentId' => $employmentId]
     ];
-    
+
     // Käytä save=false jotta ei tallenneta turhaa laskelmaa
     $response = salaxyRequest('POST', '/calculations/update-from-employment?save=false&updateRows=true', $tempData);
     
@@ -566,6 +574,165 @@ function addMileageRow(string $payrollId, array $entry, ?string $existingCalcId,
     $response['success'] = true;
     
     return $response;
+}
+
+/**
+ * Export all entries for one employee in a single API call (one calculation).
+ * Creates a fresh calculation with all hourly and mileage rows batched together.
+ */
+function exportEmployeeEntries(
+    string $payrollId,
+    array  $entries,
+    ?string $existingCalcId,
+    string $employmentId
+): array {
+    $calcResult = getOrCreateCalculation($payrollId, $existingCalcId, $employmentId);
+    if (!$calcResult['success']) {
+        return [
+            'success'        => false,
+            'error'          => $calcResult['error'] ?? 'Failed to get/create calculation',
+            'createHttpCode' => $calcResult['createHttpCode'] ?? null,
+            'createData'     => $calcResult['createData'] ?? null,
+            'createRaw'      => $calcResult['createRaw'] ?? null,
+        ];
+    }
+
+    $calculationId      = $calcResult['calculationId'];
+    $calcObject         = $calcResult['calcObject'];
+    $isNewCalc          = $calcResult['isNew'];
+    $defaultHourlyPrice = getEmployeeDefaultHourlyPrice($employmentId) ?? 0;
+
+    $baseRows = $calcObject['rows'] ?? [];
+
+    // For a fresh calculation remove the placeholder hourlySalary default row;
+    // we replace it with per-entry rows.
+    if ($isNewCalc) {
+        $removed  = false;
+        $baseRows = array_values(array_filter($baseRows, function ($r) use (&$removed) {
+            if (!$removed && ($r['rowType'] ?? '') === 'hourlySalary') {
+                $removed = true;
+                return false;
+            }
+            return true;
+        }));
+    }
+
+    $maxIdx = array_reduce($baseRows, fn($c, $r) => max($c, $r['rowIndex'] ?? -1), -1);
+
+    // Build a set of messages already on Salaxy to avoid adding duplicates.
+    // Keyed on message only (not rowType) because Salaxy may return taxFreeKmAllowance
+    // rows back as rowType "salary", so rowType-based matching would miss them.
+    $existingMsgs = [];
+    if (!$isNewCalc) {
+        foreach ($baseRows as $row) {
+            $msg = $row['message'] ?? '';
+            if ($msg !== '') {
+                $existingMsgs[$msg] = true;
+            }
+        }
+    }
+
+    $addedRows      = [];
+    $newEntryCount  = 0;
+    $skipEntryCount = 0;
+    foreach ($entries as $entry) {
+        $hours   = (float) ($entry['hours']   ?? 0);
+        $mileage = (float) ($entry['mileage'] ?? 0);
+        $entryIsNew = false;
+
+        if ($hours > 0) {
+            $msg = buildDescription($entry);
+            if (!isset($existingMsgs[$msg])) {
+                $addedRows[] = [
+                    'rowIndex'   => ++$maxIdx,
+                    'rowType'    => 'hourlySalary',
+                    'count'      => $hours,
+                    'price'      => $defaultHourlyPrice,
+                    'unit'       => 'hours',
+                    'message'    => $msg,
+                    'source'     => 'undefined',
+                    'sourceId'   => null,
+                    'accounting' => ['vatPercent' => null, 'vatEntries' => null, 'dimensions' => [], 'entry' => null],
+                    'period'     => null,
+                    'data'       => new \stdClass(),
+                ];
+                $entryIsNew = true;
+            }
+        }
+
+        if ($mileage > 0) {
+            $date    = $entry['date'] ?? '';
+            $project = $entry['project'] ?? '';
+            $msg     = $date . ($project ? ' | ' . $project : '') . ' | km-korvaus';
+            if (!isset($existingMsgs[$msg])) {
+                $addedRows[] = [
+                    'rowIndex'   => ++$maxIdx,
+                    'rowType'    => 'taxFreeKmAllowance',
+                    'count'      => $mileage,
+                    'price'      => 0.25,
+                    'unit'       => 'km',
+                    'message'    => $msg,
+                    'source'     => 'undefined',
+                    'sourceId'   => null,
+                    'accounting' => ['vatPercent' => null, 'vatEntries' => null, 'dimensions' => [], 'entry' => null],
+                    'period'     => null,
+                    'data'       => new \stdClass(),
+                ];
+                $entryIsNew = true;
+            }
+        }
+
+        if ($entryIsNew) $newEntryCount++;
+        else             $skipEntryCount++;
+    }
+
+    // All entries already exist on Salaxy — nothing to add
+    if (empty($addedRows) && !$isNewCalc) {
+        return [
+            'success'            => true,
+            'isNewCalculation'   => false,
+            'calculationId'      => $calculationId,
+            'finalCalculationId' => $calculationId,
+            'saveResponse'       => ['success' => true],
+            'newEntryCount'      => 0,
+            'skipEntryCount'     => count($entries),
+        ];
+    }
+
+    $calcObject['rows'] = array_merge($baseRows, $addedRows);
+
+    if ($isNewCalc) {
+        $calcObject['info'] = array_merge($calcObject['info'] ?? [], ['payrollId' => $payrollId]);
+    }
+
+    $saveResponse = salaxyRequest('POST', '/calculations/update-from-employment?save=true&updateRows=false', $calcObject);
+
+    if (!$saveResponse['success'] || !isset($saveResponse['data']['id'])) {
+        return [
+            'success'          => false,
+            'error'            => 'Save calculation failed',
+            'isNewCalculation' => $isNewCalc,
+            'saveResponse'     => $saveResponse,
+        ];
+    }
+
+    $finalCalcId = $saveResponse['data']['id'];
+    $result = [
+        'success'            => true,
+        'isNewCalculation'   => $isNewCalc,
+        'calculationId'      => $calculationId,
+        'finalCalculationId' => $finalCalcId,
+        'saveResponse'       => $saveResponse,
+        'newEntryCount'      => $newEntryCount,
+        'skipEntryCount'     => $skipEntryCount,
+    ];
+
+    if ($isNewCalc) {
+        $addCalcResponse = salaxyRequest('POST', '/payroll/' . $payrollId . '/add-calc?ids=' . $finalCalcId, null);
+        $result['addCalcResponse'] = $addCalcResponse;
+    }
+
+    return $result;
 }
 
 // ============================================================

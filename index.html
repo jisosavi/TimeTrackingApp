@@ -186,8 +186,8 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 2px rgb(60 30 235 / 0.12);
     }
-    .composer .buttons { display: flex; gap: 0.5rem; }
-    .composer button { flex: 1; }
+    .composer .buttons { display: flex; flex-direction: column; gap: 0.5rem; }
+    .composer button { width: 100%; }
     .status { font-size: 0.8rem; color: var(--text-muted); min-height: 1.1rem; }
     .pill {
       align-self: flex-start;
@@ -276,22 +276,23 @@
     <!-- Nav bar (shown after login) -->
     <nav class="nav-bar hidden" id="navBar">
       <button id="navChatBtn" class="active">Kirjaa tunteja</button>
-      <button id="navEntriesBtn">Tuntikirjaukset</button>
+      <button id="navEntriesBtn">Tuntikirjaukset <span id="entriesAlertBadge" style="display:none;background:#E01541;color:#fff;border-radius:9999px;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;margin-left:0.25rem;vertical-align:middle;line-height:1.5;"></span></button>
     </nav>
 
     <section class="chat hidden" id="chatScreen">
-      <div class="pill">Kirjattu sisään</div>
+      <div style="align-self:stretch;padding-bottom:0.625rem;border-bottom:2px solid var(--primary);margin-bottom:0.25rem;">
+        <span id="employeeNameLabel" style="font-size:1rem;font-weight:700;color:#283237;letter-spacing:-0.01em;"></span>
+      </div>
       <h1>Työtuntien kirjaus</h1>
       <div class="chat-area" id="chatArea"></div>
       <div class="composer">
         <textarea id="chatInput" placeholder="Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa."></textarea>
         <div class="buttons">
-          <button class="btn-primary" id="sendBtn" title="Lähetä">➤</button>
-          <button id="micBtn" title="Sanelu">🎙️</button>
+          <button id="micBtn" title="Sanelu">🎙 Sanele / nauhoita</button>
+          <button class="btn-primary" id="sendBtn" title="Lähetä">➤ Lähetä</button>
         </div>
       </div>
       <div class="status" id="chatStatus">Valmis.</div>
-      <button class="btn-salaxy" id="salaxyBtn" title="Lähetä tunnit Salaxyyn">📤 Lähetä Salaxyyn</button>
     </section>
 
     <section class="entries-screen hidden" id="entriesScreen">
@@ -299,8 +300,18 @@
         <strong style="font-size:0.9rem;">Omat kirjaukseni</strong>
         <button id="refreshEntriesBtn" style="height:1.75rem;padding:0 0.625rem;font-size:0.75rem;border-radius:6px;border:1px solid #C4CFD4;background:#fff;cursor:pointer;font-family:inherit;">↺ Päivitä</button>
       </div>
+      <div id="entriesNotice" style="display:none;margin-bottom:0.75rem;"></div>
       <div id="myEntriesList"><div class="entries-empty">Ladataan...</div></div>
     </section>
+
+    <div id="salaxyBrand" class="hidden" style="margin-top:1.5rem;display:flex;justify-content:center;padding-top:1rem;border-top:1px solid #E8E4E4;">
+      <img src="https://static.wixstatic.com/media/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png/v1/fill/w_126,h_40,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png" alt="Salaxy" style="height:20px;width:auto;opacity:0.35;" />
+    </div>
+
+    <div id="loggedInDebugBox" class="hidden" style="margin-top:1rem;padding:0.75rem;border-radius:6px;background:#FFF8F0;border:1px solid #F25A02;border-left:3px solid #F25A02;font-size:0.8rem;color:#283237;">
+      <strong style="display:block;margin-bottom:0.5rem;color:#F25A02;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">For testing / debug only</strong>
+      <button class="btn-salaxy" id="salaxyBtn" title="Lähetä tunnit Salaxyyn">📤 Lähetä Salaxyyn</button>
+    </div>
   </main>
 
   <script>
@@ -491,6 +502,11 @@ ${info}<br>
       const [y, m, d] = isoDate.split('-');
       return `${d}.${m}.${y}`;
     }
+    function fmtDateTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('fi-FI',{day:'2-digit',month:'2-digit',year:'numeric'}) + ', klo ' +
+             d.toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'});
+    }
     function escapeHtml(t) {
       return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -505,7 +521,37 @@ ${info}<br>
       } catch { myEntriesList.innerHTML = '<div class="entries-empty">Verkkovirhe.</div>'; }
     }
 
+    function updateEntriesAlert(entries) {
+      const rejected  = entries.filter(e => e.status === 'rejected').length;
+      const clarified = entries.filter(e => e.status === 'clarified').length;
+
+      // Nav badge — shows count of entries requiring action
+      const badge = document.getElementById('entriesAlertBadge');
+      if (rejected > 0) {
+        badge.textContent = rejected;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      // Notice banner inside entries screen
+      const notice = document.getElementById('entriesNotice');
+      const lines = [];
+      if (rejected > 0)  lines.push(`<strong>${rejected} kirjaus${rejected  > 1 ? 'ta' : ''} hylätty</strong> — tarkista ja lähetä lisäselvitys`);
+      if (clarified > 0) lines.push(`${clarified} selvitys${clarified > 1 ? 'tä' : ''} odottaa käsittelyä`);
+
+      if (lines.length) {
+        const color = rejected > 0 ? { bg:'#FEF2F4', border:'#F5AABB', text:'#9B0F2E', icon:'⚠' }
+                                   : { bg:'#FFF8F0', border:'#F5C08A', text:'#7A3800', icon:'ℹ' };
+        notice.innerHTML = `<div style="background:${color.bg};border:1px solid ${color.border};border-radius:8px;padding:0.625rem 0.875rem;font-size:0.8rem;color:${color.text};line-height:1.5;">${color.icon} ${lines.join(' &bull; ')}</div>`;
+        notice.style.display = 'block';
+      } else {
+        notice.style.display = 'none';
+      }
+    }
+
     function renderMyEntries(entries) {
+      updateEntriesAlert(entries);
       if (!entries.length) { myEntriesList.innerHTML = '<div class="entries-empty">Ei kirjauksia.</div>'; return; }
       myEntriesList.innerHTML = entries.map(e => {
         const badgeClass = { pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected', clarified:'badge-clarified' }[e.status] || 'badge-pending';
@@ -530,6 +576,7 @@ ${info}<br>
           ${e.project ? `<div style="color:#5E7682;font-size:0.8rem;margin-top:0.125rem;">${escapeHtml(e.project)}</div>` : ''}
           ${e.comment ? `<div style="color:#7D95A1;font-size:0.75rem;">${escapeHtml(e.comment)}</div>` : ''}
           ${rejNote}${clarNote}${clarifyBtn}
+          ${e.exported_to_salaxy ? `<div style="font-size:0.72rem;color:#3C1EEB;margin-top:0.25rem;">Viety palkkalistalle ${fmtDateTime(e.exported_at)}</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -673,9 +720,13 @@ ${info}<br>
           loginScreen.classList.add("hidden");
           navBar.classList.remove("hidden");
           chatScreen.classList.remove("hidden");
-          showSuccess(chatStatus, "Tervetuloa, " + data.name + "!");
+          document.getElementById('loggedInDebugBox').classList.remove('hidden');
+          document.getElementById('salaxyBrand').classList.remove('hidden');
+          chatStatus.textContent = '';
+          document.getElementById('employeeNameLabel').textContent = data.name;
+          loadMyEntries(); // silently populate the entries badge in the background
           appendBubble(
-            "Hei " + data.name + "!\n\nKerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9-12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8-12 projekti Bravo kommentti: Meni ennakoitua pidempään'"
+            "Kerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9-12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8-12 projekti Bravo kommentti: Meni ennakoitua pidempään'"
           );
         } else {
           showError(pinStatus, data.error || "Väärä PIN. Yritä uudelleen.");

@@ -23,7 +23,15 @@ try {
          ORDER BY c.slug, e.name'
     )->fetchAll();
 
-    echo json_encode(['admins' => $admins, 'employees' => $employees]);
+    $supervisors = $db->query(
+        'SELECT c.name AS company, c.slug, s.first_name, s.last_name, s.pin
+         FROM supervisors s
+         JOIN companies c ON c.id = s.company_id
+         WHERE s.active = 1
+         ORDER BY c.slug, s.last_name'
+    )->fetchAll();
+
+    echo json_encode(['admins' => $admins, 'employees' => $employees, 'supervisors' => $supervisors]);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);

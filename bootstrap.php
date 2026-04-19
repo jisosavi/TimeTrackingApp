@@ -136,6 +136,15 @@ function initializeDatabase(PDO $db): void
     if (!in_array('approvals_enabled', $cols)) {
         $db->exec('ALTER TABLE companies ADD COLUMN approvals_enabled INTEGER NOT NULL DEFAULT 0');
     }
+    if (!in_array('payroll_period', $cols)) {
+        $db->exec("ALTER TABLE companies ADD COLUMN payroll_period TEXT NOT NULL DEFAULT 'monthly'");
+    }
+    if (!in_array('payday_1', $cols)) {
+        $db->exec('ALTER TABLE companies ADD COLUMN payday_1 INTEGER NOT NULL DEFAULT 15');
+    }
+    if (!in_array('payday_2', $cols)) {
+        $db->exec('ALTER TABLE companies ADD COLUMN payday_2 INTEGER NOT NULL DEFAULT 0');
+    }
 
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);

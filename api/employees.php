@@ -8,10 +8,16 @@ $db = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active
-         FROM employees
-         WHERE company_id = :company_id
-         ORDER BY name ASC'
+        "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active,
+           COALESCE((
+             SELECT ROUND(SUM(te.hours), 1)
+             FROM time_entries te
+             WHERE te.employee_id = e.id
+               AND te.status IN ('pending', 'clarified')
+           ), 0) AS pending_hours
+         FROM employees e
+         WHERE e.company_id = :company_id
+         ORDER BY e.name ASC"
     );
     $stmt->execute([':company_id' => $admin['company_id']]);
     $employees = $stmt->fetchAll();

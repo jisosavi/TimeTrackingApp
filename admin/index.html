@@ -29,9 +29,12 @@
       font-family: 'Figtree', system-ui, sans-serif;
       font-size: 14px;
       line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
       padding: 2.5rem 1.5rem;
     }
-    .container { max-width: 860px; margin: 0 auto; }
+    .container { width: min(860px, 100%); }
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -175,7 +178,12 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" style="background:var(--card);border-radius:8px;border:1px solid var(--border);box-shadow:0 1px 3px rgb(0 0 0/0.08);padding:1.5rem;">
+
+    <!-- Brand -->
+    <div style="margin-bottom:1rem;padding-bottom:0.875rem;border-bottom:1px solid var(--border);">
+      <img src="https://static.wixstatic.com/media/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png/v1/fill/w_126,h_40,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/4e9ff1_be4e966e9c6e49568cb04ccdba355512~mv2.png" alt="Salaxy" style="height:28px;width:auto;display:block;" />
+    </div>
 
     <div class="page-header">
       <div>
@@ -190,7 +198,7 @@
 
     <div class="status" id="status"></div>
 
-    <div class="card">
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);">
       <table id="companiesTable">
         <thead>
           <tr>
@@ -236,6 +244,44 @@
       <div class="modal-footer">
         <button class="btn-primary" id="createCompanyBtn">Luo yritys</button>
         <button class="btn-secondary" id="closeModalBtn">Peruuta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content" style="max-width:520px;">
+      <h2 id="settingsModalTitle">Asetukset</h2>
+
+      <h3 style="font-size:0.8rem;font-weight:600;color:#5E7682;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Admin-käyttäjät</h3>
+      <div id="adminsList" style="margin-bottom:1rem;"></div>
+
+      <!-- Inline add/edit form -->
+      <div id="adminForm" class="hidden" style="background:#F3F0F0;border:1px solid #C4CFD4;border-radius:6px;padding:0.875rem;margin-bottom:0.875rem;">
+        <p id="adminFormTitle" style="font-size:0.8rem;font-weight:600;margin-bottom:0.625rem;color:#283237;"></p>
+        <div class="form-group">
+          <label for="adminFormName">Nimi</label>
+          <input id="adminFormName" type="text" placeholder="Etunimi Sukunimi" />
+        </div>
+        <div class="form-group">
+          <label for="adminFormEmail">Sähköposti</label>
+          <input id="adminFormEmail" type="email" placeholder="admin@yritys.fi" />
+        </div>
+        <div class="form-group">
+          <label for="adminFormPassword" id="adminFormPasswordLabel">Salasana</label>
+          <input id="adminFormPassword" type="password" placeholder="Vähintään 6 merkkiä" />
+        </div>
+        <div class="status" id="adminFormStatus"></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+          <button class="btn-primary" id="saveAdminBtn" style="flex:1;">Tallenna</button>
+          <button class="btn-secondary" id="cancelAdminFormBtn" style="flex:1;">Peruuta</button>
+        </div>
+      </div>
+
+      <button class="btn-secondary" id="addAdminBtn" style="width:100%;margin-bottom:0.5rem;">+ Lisää admin</button>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="closeSettingsModalBtn">Sulje</button>
       </div>
     </div>
   </div>
@@ -297,7 +343,8 @@
           <td>${c.employee_count || 0}</td>
           <td>
             <div style="display:flex;gap:0.375rem;">
-              <button class="action-btn" onclick="window.location.href='/${escapeHtml(c.slug)}/admin/'">Hallinnoi →</button>
+              <button class="action-btn settings-btn" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Asetukset</button>
+              <button class="action-btn" onclick="window.location.href='/${escapeHtml(c.slug)}/admin/'">Yritys-admin →</button>
             </div>
           </td>
         </tr>
@@ -343,6 +390,10 @@
       });
       companiesTbody.querySelectorAll('.approvals-checkbox').forEach(cb => {
         cb.addEventListener('change', () => toggleCompanyField(cb, Number(cb.dataset.id), 'approvals_enabled'));
+      });
+
+      companiesTbody.querySelectorAll('.settings-btn').forEach(btn => {
+        btn.addEventListener('click', () => openSettingsModal(Number(btn.dataset.id), btn.dataset.name));
       });
     }
 
@@ -427,6 +478,130 @@
     logoutBtn.addEventListener('click', async () => {
       await fetch('/api/logout.php');
       window.location.href = '/';
+    });
+
+    // ─── Settings modal ────────────────────────────────────────────────────────
+    const settingsModal       = document.getElementById('settingsModal');
+    const settingsModalTitle  = document.getElementById('settingsModalTitle');
+    const adminsList          = document.getElementById('adminsList');
+    const adminForm           = document.getElementById('adminForm');
+    const adminFormTitle      = document.getElementById('adminFormTitle');
+    const adminFormName       = document.getElementById('adminFormName');
+    const adminFormEmail      = document.getElementById('adminFormEmail');
+    const adminFormPassword   = document.getElementById('adminFormPassword');
+    const adminFormPasswordLabel = document.getElementById('adminFormPasswordLabel');
+    const adminFormStatus     = document.getElementById('adminFormStatus');
+    const saveAdminBtn        = document.getElementById('saveAdminBtn');
+    const cancelAdminFormBtn  = document.getElementById('cancelAdminFormBtn');
+    const addAdminBtn         = document.getElementById('addAdminBtn');
+    const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
+
+    let settingsCompanyId = null;
+    let editingAdminId    = null;
+
+    function showAdminFormStatus(msg, isError = false) {
+      adminFormStatus.textContent = msg;
+      adminFormStatus.className = `status visible ${isError ? 'error' : 'success'}`;
+    }
+
+    function openAdminForm(admin = null) {
+      editingAdminId = admin ? admin.id : null;
+      adminFormTitle.textContent        = admin ? 'Muokkaa admin-käyttäjää' : 'Lisää admin-käyttäjä';
+      adminFormName.value               = admin?.name  || '';
+      adminFormEmail.value              = admin?.email || '';
+      adminFormPassword.value           = '';
+      adminFormPasswordLabel.textContent = admin ? 'Uusi salasana (jätä tyhjäksi, jos ei vaihdu)' : 'Salasana';
+      adminFormStatus.className         = 'status';
+      adminForm.classList.remove('hidden');
+      addAdminBtn.classList.add('hidden');
+      adminFormName.focus();
+    }
+
+    function closeAdminForm() {
+      adminForm.classList.add('hidden');
+      addAdminBtn.classList.remove('hidden');
+      editingAdminId = null;
+    }
+
+    function renderAdminsList(admins) {
+      if (!admins.length) {
+        adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;margin-bottom:0.5rem;">Ei admin-käyttäjiä.</p>';
+        return;
+      }
+      adminsList.innerHTML = admins.map(a => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border:1px solid #C4CFD4;border-radius:6px;margin-bottom:0.375rem;background:#fff;">
+          <div>
+            <div style="font-size:0.875rem;font-weight:500;">${escapeHtml(a.name || a.email)}</div>
+            ${a.name ? `<div style="font-size:0.75rem;color:#7D95A1;">${escapeHtml(a.email)}</div>` : ''}
+            ${!Number(a.active) ? '<span style="font-size:0.7rem;color:#E01541;">Ei aktiivinen</span>' : ''}
+          </div>
+          <div style="display:flex;gap:0.375rem;flex-shrink:0;">
+            <button class="action-btn edit-admin-btn" data-id="${a.id}" style="font-size:0.75rem;">Muokkaa</button>
+            <button class="action-btn delete-admin-btn" data-id="${a.id}" style="font-size:0.75rem;color:#E01541;border-color:#F5AABB;">Poista</button>
+          </div>
+        </div>`).join('');
+
+      adminsList.querySelectorAll('.edit-admin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const admin = admins.find(a => String(a.id) === btn.dataset.id);
+          if (admin) openAdminForm(admin);
+        });
+      });
+      adminsList.querySelectorAll('.delete-admin-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Poistetaanko admin-käyttäjä?')) return;
+          btn.disabled = true;
+          try {
+            const res    = await fetch('/api/company_admins.php', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: Number(btn.dataset.id) }) });
+            const result = await res.json();
+            if (!res.ok || !result.success) { showStatus(result.error || 'Poisto epäonnistui.', true); return; }
+            await loadAdmins();
+          } catch { showStatus('Palvelinvirhe.', true); }
+          finally { btn.disabled = false; }
+        });
+      });
+    }
+
+    async function loadAdmins() {
+      adminsList.innerHTML = '<p style="font-size:0.8rem;color:#7D95A1;">Ladataan...</p>';
+      try {
+        const res    = await fetch(`/api/company_admins.php?company_id=${settingsCompanyId}`);
+        const result = await res.json();
+        if (!res.ok || !result.success) { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Virhe ladattaessa.</p>'; return; }
+        renderAdminsList(result.admins || []);
+      } catch { adminsList.innerHTML = '<p style="color:#E01541;font-size:0.8rem;">Palvelinvirhe.</p>'; }
+    }
+
+    function openSettingsModal(companyId, companyName) {
+      settingsCompanyId = companyId;
+      settingsModalTitle.textContent = `Asetukset – ${companyName}`;
+      closeAdminForm();
+      settingsModal.classList.add('visible');
+      loadAdmins();
+    }
+
+    closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.remove('visible'));
+    addAdminBtn.addEventListener('click', () => openAdminForm());
+    cancelAdminFormBtn.addEventListener('click', closeAdminForm);
+
+    saveAdminBtn.addEventListener('click', async () => {
+      const email    = adminFormEmail.value.trim();
+      const name     = adminFormName.value.trim();
+      const password = adminFormPassword.value;
+      if (!email) { showAdminFormStatus('Sähköposti vaaditaan.', true); return; }
+
+      saveAdminBtn.disabled = true;
+      showAdminFormStatus('Tallennetaan...');
+      try {
+        const payload = { company_id: settingsCompanyId, email, name, password };
+        if (editingAdminId) payload.id = editingAdminId;
+        const res    = await fetch('/api/company_admins.php', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const result = await res.json();
+        if (!res.ok || !result.success) { showAdminFormStatus(result.error || 'Tallennus epäonnistui.', true); return; }
+        closeAdminForm();
+        await loadAdmins();
+      } catch { showAdminFormStatus('Palvelinvirhe.', true); }
+      finally { saveAdminBtn.disabled = false; }
     });
 
     loadCompanies();

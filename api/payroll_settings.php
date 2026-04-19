@@ -1,0 +1,31 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/common.php';
+
+$admin = requireAdmin();
+$db    = getDb();
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $stmt = $db->prepare('SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = :id');
+    $stmt->execute([':id' => $admin['company_id']]);
+    $settings = $stmt->fetch() ?: ['payroll_period' => 'monthly', 'payday_1' => 15, 'payday_2' => 0];
+    sendJson(['success' => true, 'settings' => $settings]);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $payload = getJsonPayload();
+    $period  = in_array($payload['payroll_period'] ?? '', ['monthly', 'biweekly'])
+        ? $payload['payroll_period']
+        : 'monthly';
+    $payday1 = max(0, min(31, (int) ($payload['payday_1'] ?? 15)));
+    $payday2 = max(0, min(31, (int) ($payload['payday_2'] ?? 0)));
+
+    $db->prepare(
+        'UPDATE companies SET payroll_period = :period, payday_1 = :p1, payday_2 = :p2 WHERE id = :id'
+    )->execute([':period' => $period, ':p1' => $payday1, ':p2' => $payday2, ':id' => $admin['company_id']]);
+
+    sendJson(['success' => true]);
+}
+
+sendJson(['success' => false, 'error' => 'Method not allowed'], 405);

@@ -45,6 +45,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sendJson(['success' => false, 'error' => 'PIN-koodin on oltava 3–6 numeroa.'], 400);
     }
 
+    if ($pin !== '') {
+        // Check uniqueness across supervisors in the same company
+        $supQuery = 'SELECT id FROM supervisors WHERE pin = :pin AND company_id = :cid';
+        if ($id) $supQuery .= ' AND id != :id';
+        $supStmt = $db->prepare($supQuery);
+        $supParams = [':pin' => $pin, ':cid' => $admin['company_id']];
+        if ($id) $supParams[':id'] = $id;
+        $supStmt->execute($supParams);
+        if ($supStmt->fetch()) {
+            sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä toisella esihenkilöllä.'], 409);
+        }
+
+        // Check uniqueness across employees in the same company
+        $empStmt = $db->prepare('SELECT id FROM employees WHERE pin = :pin AND company_id = :cid');
+        $empStmt->execute([':pin' => $pin, ':cid' => $admin['company_id']]);
+        if ($empStmt->fetch()) {
+            sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä työntekijällä.'], 409);
+        }
+    }
+
     if ($id) {
         // Fetch current PIN if not changing
         if ($pin === '') {
