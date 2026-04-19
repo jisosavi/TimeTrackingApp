@@ -321,7 +321,6 @@
 
   <script src="/js/i18n.js"></script>
   <script>
-    const APP_KEY     = "tT9#kL2$mN7@pQ4!23";
     const companySlug = window.location.pathname.split('/').filter(Boolean)[0] || '';
     let currentEmployee = null;
 
@@ -755,7 +754,7 @@
       try {
         const res    = await fetch("salaxy_sync.php", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-App-Key": APP_KEY },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ entries: pendingEntries, employmentId: currentEmployee?.employmentId || null }),
         });
         const result = await res.json();

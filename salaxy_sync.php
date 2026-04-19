@@ -5,15 +5,15 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
 
-// APP_KEY tulee config.php:stä
 const DRAFT_FILE = __DIR__ . '/data/salaxy_draft.json';
 const TOKEN_FILE = __DIR__ . '/data/salaxy_token.json';
 
 // When included as a library (e.g. from export_payroll.php) skip standalone execution
 if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
-    if (($_SERVER['HTTP_X_APP_KEY'] ?? '') !== APP_KEY) {
+    if (session_status() === PHP_SESSION_NONE) { session_start(); }
+    if (empty($_SESSION['employee_id'])) {
         http_response_code(401);
-        echo json_encode(['message' => 'Luvaton pyyntö']);
+        echo json_encode(['message' => 'Unauthorized']);
         exit;
     }
 }

@@ -183,13 +183,7 @@ php -S localhost:8000 router.php
 | `http://localhost:8000/test-company/approval/` | Company supervisors/managers, approval |
 | `http://localhost:8000/admin/` | Super-admin |
 
-A default super-admin and test company are bootstrapped on first run:
-
-| Role | Email | Password |
-|---|---|---|
-| Super-admin / Company admin | `admin@timeapp.local` | `Admin123!` |
-
-> **NOTE: Change the default password before deploying to any shared environment!!**
+A default super-admin and test company are bootstrapped on first run. Login credentials are set in `bootstrap.php` — change the default password before deploying to any shared environment.
 
 ### Adding a company
 
