@@ -123,11 +123,25 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | Layer | Technology |
 |---|---|
 | Frontend | Vanilla JS, HTML/CSS — Figtree font, Salaxy design tokens |
+| i18n | Flat JSON locale files (`locales/`), runtime-loaded via `js/i18n.js` |
 | Backend | PHP 8+, SQLite via PDO |
 | AI | Google Gemini API (natural language → structured time entry) |
 | Payroll | Salaxy REST API — OAuth2 token auth, employee sync, payroll export |
 | Dev server | PHP built-in server with `router.php` for slug-based routing |
 | Production | Apache with `.htaccess` rewrites |
+
+### Supported languages
+
+| Code | Language |
+|---|---|
+| `en` | English |
+| `fi` | Suomi |
+| `sv` | Svenska |
+| `et` | Eesti |
+| `uk` | Українська |
+| `xh` | isiXhosa |
+
+Languages can be set per company, per employee, and per supervisor independently. Adding a new locale requires only a new JSON file in `locales/` and a one-line addition in `js/i18n.js`.
 
 ---
 
@@ -139,6 +153,14 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | `/{slug}/approval/` | Supervisor/manager approval portal |
 | `/{slug}/admin/` | Company admin dashboard |
 | `/admin/` | Super-admin: all companies |
+| `/api/employees.php` | Employee CRUD |
+| `/api/supervisors.php` | Supervisor CRUD |
+| `/api/time_entries.php` | Time entry read/delete |
+| `/api/review_entries.php` | Approve / reject / clarify entries |
+| `/api/export_payroll.php` | Export approved entries to Salaxy |
+| `/api/sync_employees_from_salaxy.php` | Sync employees from Salaxy |
+| `/api/update_language.php` | Update UI language preference |
+| `/api/company_lang.php` | Get company default language |
 
 ---
 
@@ -188,8 +210,9 @@ A default super-admin and test company are bootstrapped on first run. Login cred
 ### Adding a company
 
 1. Log in to `/admin/`
-2. Click **+ Uusi yritys** and fill in company name, slug, and admin credentials
-3. Log in to `/{slug}/admin/` and click **Synkronoi työntekijät Salaxystä** to import employees
+2. Click **+ New company** and fill in company name, slug, and admin credentials
+3. Log in to `/{slug}/admin/` and click **Sync employees from Salaxy** to import employees
+4. Employees are created with a randomly generated PIN — reset individual PINs from the employee list as needed
 
 ---
 
@@ -199,9 +222,9 @@ A default super-admin and test company are bootstrapped on first run. Login cred
 ├── index.html                            # Employee login + time entry UI
 ├── approval.html                         # Supervisor/manager approval portal
 ├── validate_pin.php                      # Employee PIN authentication
-├── save_hours.php                        # Time entry submission (legacy)
-├── salaxy_sync.php                       # Salaxy API integration helpers
+├── salaxy_sync.php                       # Salaxy API integration (employee-facing sync)
 ├── llm_proxy.php                         # Gemini AI proxy
+├── save_hours.php                        # Time entry submission
 ├── bootstrap.php                         # DB init and schema migrations
 ├── router.php                            # PHP dev server routing
 ├── config.php                            # API keys and DB path (not in git)
@@ -212,6 +235,7 @@ A default super-admin and test company are bootstrapped on first run. Login cred
 │   ├── admin_login.php                   # Company admin login
 │   ├── companies.php                     # List companies / toggle active
 │   ├── company_admins.php                # CRUD for company admin users
+│   ├── company_lang.php                  # Get company default UI language
 │   ├── create_company.php                # Create company + admin account
 │   ├── employees.php                     # CRUD for employees
 │   ├── supervisors.php                   # CRUD for supervisors
@@ -222,17 +246,27 @@ A default super-admin and test company are bootstrapped on first run. Login cred
 │   ├── clarify_entry.php                 # Employee clarification response
 │   ├── export_payroll.php                # Export approved entries to Salaxy payroll
 │   ├── payroll_settings.php              # Payroll period settings per company
-│   ├── sync_employees_from_salaxy.php    # Salaxy API sync, employees
-│   ├── logout.php                        
-│   └── debug_credentials.php             # Dev/testing only — lists PINs
+│   ├── sync_employees_from_salaxy.php    # Sync employees from Salaxy
+│   ├── update_language.php               # Update UI language per user/company
+│   ├── logout.php
+│   └── debug_credentials.php             # Dev/testing only — remove before publishing
+├── js/
+│   └── i18n.js                           # i18n runtime: locale loading, t(), applyToDOM()
+├── locales/
+│   ├── en.json                           # English
+│   ├── fi.json                           # Finnish
+│   ├── sv.json                           # Swedish
+│   ├── et.json                           # Estonian
+│   ├── uk.json                           # Ukrainian
+│   └── xh.json                           # isiXhosa
 ├── company/
 │   ├── index.php                         # Router for company-scoped paths
 │   └── {slug}/
 │       └── admin/
-│           ├── index.html
-│           └── admin.js
+│           ├── index.html                # Company admin UI
+│           └── admin.js                  # Company admin logic
 └── data/
-    └── app.sqlite                         # Auto-created, not in git
+    └── app.sqlite                        # Auto-created, not in git
 ```
 
 ---
