@@ -145,10 +145,11 @@ function getEmployeesFromSalaxy(): array {
                 $otherParty = $item['otherPartyInfo'];
                 $avatar = $otherParty['avatar'] ?? [];
                 $employees[] = [
-                    'id' => $item['otherId'] ?? $otherParty['officialId'] ?? null,
+                    'id' => $item['id'] ?? $item['otherId'] ?? null,
                     'firstName' => $avatar['firstName'] ?? '',
                     'lastName' => $avatar['lastName'] ?? '',
-                    'employmentId' => $item['otherId'] ?? null,
+                    'employmentId' => $item['id'] ?? $item['otherId'] ?? null,
+                    'ssn' => $item['otherId'] ?? $otherParty['officialId'] ?? null,
                 ];
             }
         }
@@ -216,9 +217,9 @@ foreach ($salaxyEmployees as $emp) {
     $firstName = $emp['firstName'] ?? '';
     $lastName = $emp['lastName'] ?? '';
     $fullName = trim($firstName . ' ' . $lastName);
-    $pin = substr(str_replace(['-', '+', ' '], '', $empId), 0, 6);
+    $ssn = $emp['ssn'] ?? '';
 
-    if (!$fullName || !$pin) {
+    if (!$fullName) {
         continue;
     }
 
@@ -248,16 +249,23 @@ foreach ($salaxyEmployees as $emp) {
             continue;
         }
 
-        // Truly new employee — insert with a generated PIN
+        // Generate a unique random 6-digit PIN for this company
+        do {
+            $pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $pinCheck = $db->prepare('SELECT id FROM employees WHERE company_id = :company_id AND pin = :pin');
+            $pinCheck->execute([':company_id' => $companyId, ':pin' => $pin]);
+        } while ($pinCheck->fetch());
+
         $db->prepare(
-            'INSERT INTO employees (company_id, pin, name, salaxy_employment_id, role, active)
-             VALUES (:company_id, :pin, :name, :salaxy_id, :role, 1)'
+            'INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active)
+             VALUES (:company_id, :pin, :name, :ssn, :salaxy_id, :role, 1)'
         )->execute([
             ':company_id' => $companyId,
-            ':pin' => $pin,
-            ':name' => $fullName,
-            ':salaxy_id' => $empId,
-            ':role' => 'employee',
+            ':pin'        => $pin,
+            ':name'       => $fullName,
+            ':ssn'        => $ssn ?: null,
+            ':salaxy_id'  => $empId,
+            ':role'       => 'employee',
         ]);
         $added++;
     }
