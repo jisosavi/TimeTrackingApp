@@ -28,16 +28,16 @@ const loading = ref(false)
 
 const isPinLogin = computed(() => loginType === 'employee' || loginType === 'supervisor')
 
-const title = computed(() => {
+const loginTypeLabel = computed(() => {
   switch (loginType) {
-    case 'employee': return 'Employee Login'
-    case 'supervisor': return t('approval.login_title')
-    case 'admin': return t('admin.login_title')
-    case 'superadmin': return 'Super Admin'
+    case 'employee':   return 'Employee Login'
+    case 'supervisor': return 'Supervisor Admin Login'
+    case 'admin':      return 'Company Admin Login'
+    case 'superadmin': return 'Super Admin Login'
   }
 })
 
-const subtitle = computed(() =>
+const companyName = computed(() =>
   slug ? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '',
 )
 
@@ -135,10 +135,11 @@ async function loginWithPassword() {
   <div class="min-h-screen flex items-center justify-center bg-background p-4">
     <div class="w-full max-w-sm space-y-4">
 
-      <div class="text-center space-y-2">
-        <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto" />
-        <h1 class="text-2xl font-semibold tracking-tight">{{ title }}</h1>
-        <p v-if="subtitle" class="text-sm text-muted-foreground">{{ subtitle }}</p>
+      <div class="text-center space-y-1">
+        <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-2" />
+        <h1 class="text-2xl font-semibold tracking-tight">TimeTrackingApp</h1>
+        <p v-if="loginType === 'employee' && companyName" class="text-sm text-muted-foreground">{{ companyName }}</p>
+        <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
       </div>
 
       <Card>
