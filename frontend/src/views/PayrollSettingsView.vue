@@ -28,12 +28,19 @@ onMounted(async () => {
   }
 })
 
+function formatTs(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 async function doSave() {
   loading.value = true
   saved.value = false
   error.value = null
   try {
     await savePayrollSettings(settings.value)
+    settings.value.payroll_settings_updated_at = new Date().toISOString()
     saved.value = true
     setTimeout(() => { saved.value = false }, 2000)
   } catch (e) {
@@ -89,6 +96,9 @@ async function doSave() {
         </Button>
         <span v-if="saved" class="text-xs text-green-600">Saved!</span>
       </div>
+      <p v-if="settings.payroll_settings_updated_at" class="text-xs text-muted-foreground">
+        Last saved {{ formatTs(settings.payroll_settings_updated_at) }}
+      </p>
     </div>
   </div>
 </template>

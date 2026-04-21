@@ -145,6 +145,9 @@ function initializeDatabase(PDO $db): void
     if (!in_array('payday_2', $cols)) {
         $db->exec('ALTER TABLE companies ADD COLUMN payday_2 INTEGER NOT NULL DEFAULT 0');
     }
+    if (!in_array('payroll_settings_updated_at', $cols)) {
+        $db->exec('ALTER TABLE companies ADD COLUMN payroll_settings_updated_at TEXT');
+    }
     if (!in_array('ui_language', $cols)) {
         $db->exec("ALTER TABLE companies ADD COLUMN ui_language TEXT NOT NULL DEFAULT 'en'");
     }

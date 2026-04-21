@@ -71,6 +71,7 @@ export interface PayrollSettings {
   payroll_period: 'monthly' | 'biweekly'
   payday_1: number
   payday_2: number
+  payroll_settings_updated_at?: string | null
 }
 
 export interface ExportEntryRow {
