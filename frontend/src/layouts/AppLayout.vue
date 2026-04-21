@@ -107,7 +107,7 @@ async function logout() {
           :key="link.to"
           :to="link.to"
           class="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-md border border-input bg-background text-foreground font-medium hover:bg-muted transition-colors"
-          active-class="bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+          active-class="bg-primary text-primary-foreground border-primary hover:bg-[#6D56F0]"
         >
           {{ link.label }}
           <span

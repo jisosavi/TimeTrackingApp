@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -10,7 +10,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Figtree', sans-serif;
     --font-heading: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -49,81 +49,109 @@
     --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Salaxy light theme ──────────────────────────────────────────────────── */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /* Surface */
+    --background:           #ffffff;
+    --foreground:           #283237;
+    --card:                 #ffffff;
+    --card-foreground:      #283237;
+    --popover:              #ffffff;
+    --popover-foreground:   #283237;
+
+    /* Brand blue – primary actions, active nav, focus rings */
+    --primary:              #3C1EEB;
+    --primary-foreground:   #ffffff;
+
+    /* Warm light grey – secondary buttons, tag backgrounds */
+    --secondary:            #EDE8E8;
+    --secondary-foreground: #283237;
+
+    /* Muted surfaces and text */
+    --muted:                #EDE8E8;
+    --muted-foreground:     #5E7682;
+
+    /* Light lavender – hover highlights, selection backgrounds */
+    --accent:               #CEC7FA;
+    --accent-foreground:    #283237;
+
+    /* Red – errors, destructive actions */
+    --destructive:          #E01541;
+
+    /* Borders and inputs */
+    --border:               #C4CFD4;
+    --input:                #C4CFD4;
+    --ring:                 #6D56F0;
+
+    /* Chart colours drawn from the full Salaxy palette */
+    --chart-1:              #3C1EEB;
+    --chart-2:              #28EB64;
+    --chart-3:              #6D56F0;
+    --chart-4:              #0E9537;
+    --chart-5:              #283237;
+
+    --radius: 0.5rem;
+
+    /* Sidebar (inherits from main palette) */
+    --sidebar:                      #EDE8E8;
+    --sidebar-foreground:           #283237;
+    --sidebar-primary:              #3C1EEB;
+    --sidebar-primary-foreground:   #ffffff;
+    --sidebar-accent:               #CEC7FA;
+    --sidebar-accent-foreground:    #283237;
+    --sidebar-border:               #C4CFD4;
+    --sidebar-ring:                 #6D56F0;
 }
 
+/* ── Salaxy dark theme ───────────────────────────────────────────────────── */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background:           #283237;
+    --foreground:           #EDE8E8;
+    --card:                 #45565F;
+    --card-foreground:      #EDE8E8;
+    --popover:              #45565F;
+    --popover-foreground:   #EDE8E8;
+
+    --primary:              #6D56F0;
+    --primary-foreground:   #ffffff;
+
+    --secondary:            #45565F;
+    --secondary-foreground: #EDE8E8;
+
+    --muted:                #45565F;
+    --muted-foreground:     #A0B2BA;
+
+    --accent:               #3C1EEB;
+    --accent-foreground:    #EDE8E8;
+
+    --destructive:          #E01541;
+
+    --border:               #5E7682;
+    --input:                #5E7682;
+    --ring:                 #9E8EF5;
+
+    --chart-1:              #6D56F0;
+    --chart-2:              #28EB64;
+    --chart-3:              #9E8EF5;
+    --chart-4:              #13CD4B;
+    --chart-5:              #EDE8E8;
+
+    --sidebar:                      #45565F;
+    --sidebar-foreground:           #EDE8E8;
+    --sidebar-primary:              #6D56F0;
+    --sidebar-primary-foreground:   #ffffff;
+    --sidebar-accent:               #3C1EEB;
+    --sidebar-accent-foreground:    #EDE8E8;
+    --sidebar-border:               #5E7682;
+    --sidebar-ring:                 #9E8EF5;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-    }
+    @apply border-border outline-ring;
+  }
   body {
     @apply bg-background text-foreground;
     @apply font-sans;
-    }
+  }
 }
