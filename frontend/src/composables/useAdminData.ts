@@ -35,6 +35,8 @@ export function useAdminData() {
     name: string
     pin: string
     active?: number
+    employmentId?: string
+    ui_language?: string
   }): Promise<Employee> {
     const data = await apiFetch<{ employee: Employee }>('/api/employees.php', {
       method: 'POST',

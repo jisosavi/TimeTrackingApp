@@ -27,14 +27,14 @@ const LANG_NAMES: Record<string, string> = {
 
 const showEmpForm = ref(false)
 const editingEmpId = ref<number | null>(null)
-const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en' })
+const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en', employmentId: '' })
 const empFormError = ref<string | null>(null)
 const empSaving = ref(false)
 const syncing = ref(false)
 
 function openAddEmp() {
   editingEmpId.value = null
-  empForm.value = { name: '', pin: '', active: 1, ui_language: 'en' }
+  empForm.value = { name: '', pin: '', active: 1, ui_language: 'en', employmentId: '' }
   empFormError.value = null
   showEmpForm.value = true
 }
@@ -43,7 +43,7 @@ function openEditEmp(id: number) {
   const emp = employees.value.find(e => e.id === id)
   if (!emp) return
   editingEmpId.value = id
-  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en' }
+  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '' }
   empFormError.value = null
   showEmpForm.value = false
 }
@@ -62,7 +62,7 @@ async function submitEmpForm() {
   try {
     const payload = editingEmpId.value
       ? { id: editingEmpId.value, ...empForm.value }
-      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language }
+      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language, employmentId: empForm.value.employmentId }
     await saveEmployee(payload)
     cancelEmpForm()
   } catch (e) {
@@ -346,6 +346,10 @@ async function doExport(force = false) {
                   <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                 </select>
               </div>
+              <div class="space-y-1 col-span-2">
+                <Label class="text-xs">Salaxy ID</Label>
+                <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
+              </div>
             </div>
             <p v-if="empFormError" class="text-xs text-destructive">{{ empFormError }}</p>
             <div class="flex gap-2">
@@ -366,6 +370,9 @@ async function doExport(force = false) {
               <div class="space-y-0.5">
                 <p class="font-medium text-sm">{{ emp.name }}</p>
                 <p class="text-xs text-muted-foreground">PIN: ●●●●</p>
+                <p class="text-xs text-muted-foreground font-mono">
+                  Salaxy ID: {{ emp.employmentId ?? '—' }}
+                </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
@@ -396,6 +403,10 @@ async function doExport(force = false) {
                   <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                     <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                   </select>
+                </div>
+                <div class="space-y-1 col-span-2">
+                  <Label class="text-xs">Salaxy ID</Label>
+                  <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
                 </div>
               </div>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
