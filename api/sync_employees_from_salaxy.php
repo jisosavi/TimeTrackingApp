@@ -140,17 +140,23 @@ try {
         $existing = $stmt->fetch();
 
         if ($existing) {
-            if ($existing['name'] !== $fullName) {
-                $db->prepare('UPDATE employees SET name = :name WHERE id = :id')
-                   ->execute([':name' => $fullName, ':id' => $existing['id']]);
-                $updated++;
-            }
+            $db->prepare(
+                'UPDATE employees SET name = :name, ssn = COALESCE(:ssn, ssn), salaxy_employment_id = :sid WHERE id = :id'
+            )->execute([':name' => $fullName, ':ssn' => $ssn ?: null, ':sid' => $empId, ':id' => $existing['id']]);
+            $updated++;
         } else {
             $byName = $db->prepare(
                 'SELECT id FROM employees WHERE company_id = :cid AND name = :name LIMIT 1'
             );
             $byName->execute([':cid' => $companyId, ':name' => $fullName]);
-            if ($byName->fetch()) continue;
+            $nameMatch = $byName->fetch();
+            if ($nameMatch) {
+                $db->prepare(
+                    'UPDATE employees SET salaxy_employment_id = :sid, ssn = COALESCE(:ssn, ssn) WHERE id = :id'
+                )->execute([':sid' => $empId, ':ssn' => $ssn ?: null, ':id' => $nameMatch['id']]);
+                $updated++;
+                continue;
+            }
 
             do {
                 $pin     = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
