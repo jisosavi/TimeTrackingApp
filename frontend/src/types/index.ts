@@ -67,6 +67,48 @@ export interface ReviewEntry extends TimeEntry {
   employee_name: string
 }
 
+export interface PayrollSettings {
+  payroll_period: 'monthly' | 'biweekly'
+  payday_1: number
+  payday_2: number
+}
+
+export interface ExportEntryRow {
+  id: number
+  entry_date: string
+  hours: number
+  km: number
+  project: string | null
+  exported_to_salaxy: number
+}
+
+export interface ExportEmployee {
+  employee_id: number
+  employee_name: string
+  salaxy_employment_id: string | null
+  total_hours: number
+  total_km: number
+  pending_hours: number
+  pending_km: number
+  entries: ExportEntryRow[]
+}
+
+export interface ExportPeriod {
+  period_start: string
+  period_end: string
+  period_label: string
+  existing_payroll_id: string | null
+  employees: ExportEmployee[]
+}
+
+export interface ExportResult {
+  total_sent: number
+  total_added: number
+  total_already: number
+  errors: number
+  payrolls: { period_start: string; salaxy_payroll_id: string; url: string }[]
+}
+
 export interface LlmEntry {
   date: string
   start: string

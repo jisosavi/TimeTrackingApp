@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
-import type { Employee, Supervisor, TeamMember } from '@/types'
+import type { Employee, Supervisor, TeamMember, PayrollSettings, ExportPeriod, ExportResult } from '@/types'
 
 export function validateEmployeeForm(name: string, pin: string): string | null {
   if (!name.trim()) return 'Name is required'
@@ -122,6 +122,37 @@ export function useAdminData() {
     if (sup) sup.team_size = employeeIds.length
   }
 
+  async function fetchPayrollSettings(): Promise<PayrollSettings> {
+    const data = await apiFetch<{ settings: PayrollSettings }>('/api/payroll_settings.php')
+    return data.settings
+  }
+
+  async function savePayrollSettings(settings: PayrollSettings): Promise<void> {
+    await apiFetch('/api/payroll_settings.php', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    })
+  }
+
+  async function fetchExportPreview(dateFrom: string, dateTo: string): Promise<ExportPeriod[]> {
+    const data = await apiFetch<{ periods: ExportPeriod[] }>(
+      `/api/export_payroll.php?date_from=${dateFrom}&date_to=${dateTo}`,
+    )
+    return data.periods
+  }
+
+  async function submitExport(
+    dateFrom: string,
+    dateTo: string,
+    employeeIds: number[],
+    force = false,
+  ): Promise<ExportResult> {
+    return apiFetch<ExportResult>('/api/export_payroll.php', {
+      method: 'POST',
+      body: JSON.stringify({ date_from: dateFrom, date_to: dateTo, employee_ids: employeeIds, force }),
+    })
+  }
+
   return {
     employees,
     supervisors,
@@ -137,5 +168,9 @@ export function useAdminData() {
     deleteSupervisor,
     fetchTeam,
     saveTeam,
+    fetchPayrollSettings,
+    savePayrollSettings,
+    fetchExportPreview,
+    submitExport,
   }
 }
