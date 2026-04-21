@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -33,23 +33,37 @@ async function changeLanguage(lang: string) {
   auth.setAuth(auth.token!, { ...user, uiLanguage: lang })
 }
 
+const pendingCount = ref(0)
+
+onMounted(async () => {
+  const type = auth.user?.type
+  if (type === 'admin' || type === 'supervisor') {
+    try {
+      const data = await apiFetch<{ entries: { status: string }[] }>('/api/time_entries.php')
+      pendingCount.value = data.entries.filter(
+        e => e.status === 'pending' || e.status === 'clarified',
+      ).length
+    } catch {}
+  }
+})
+
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}
   if (type === 'employee') {
-    return [{ to: `/${slug}/home`, label: t('nav.log_hours') }]
+    return [{ to: `/${slug}/home`, label: t('nav.log_hours'), badge: 0 }]
   }
   if (type === 'supervisor') {
-    return [{ to: `/${slug}/approval/home`, label: t('approval.dashboard_title') }]
+    return [{ to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value }]
   }
   if (type === 'admin') {
     return [
-      { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title') },
-      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title') },
-      { to: `/${slug}/admin/payroll-settings`, label: 'Payroll Settings' },
+      { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title'), badge: 0 },
+      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value },
+      { to: `/${slug}/admin/payroll-settings`, label: 'Payroll Settings', badge: 0 },
     ]
   }
   if (type === 'superadmin') {
-    return [{ to: '/admin/dashboard', label: 'Companies' }]
+    return [{ to: '/admin/dashboard', label: 'Companies', badge: 0 }]
   }
   return []
 })
@@ -89,10 +103,16 @@ async function logout() {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-sm px-4 py-1.5 rounded-md border border-input bg-background text-foreground font-medium hover:bg-muted transition-colors"
+          class="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-md border border-input bg-background text-foreground font-medium hover:bg-muted transition-colors"
           active-class="bg-primary text-primary-foreground border-primary hover:bg-primary/90"
         >
           {{ link.label }}
+          <span
+            v-if="link.badge > 0"
+            class="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none"
+          >
+            {{ link.badge }}
+          </span>
         </RouterLink>
       </nav>
     </div>
