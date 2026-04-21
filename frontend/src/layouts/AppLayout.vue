@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 
@@ -8,19 +8,23 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const navLinks = computed(() => {
-  const type = auth.user?.type
-  const links = []
+  const { type, companySlug: slug } = auth.user ?? {}
   if (type === 'employee') {
-    links.push({ to: '/employee', label: 'Log Hours' })
+    return [{ to: `/${slug}/home`, label: 'Log Hours' }]
   }
   if (type === 'supervisor') {
-    links.push({ to: '/manager', label: 'Approvals' })
+    return [{ to: `/${slug}/approval/home`, label: 'Approvals' }]
   }
   if (type === 'admin') {
-    links.push({ to: '/manager', label: 'Approvals' })
-    links.push({ to: '/admin', label: 'Admin' })
+    return [
+      { to: `/${slug}/approval/home`, label: 'Approvals' },
+      { to: `/${slug}/admin/dashboard`, label: 'Admin' },
+    ]
   }
-  return links
+  if (type === 'superadmin') {
+    return [{ to: '/admin/dashboard', label: 'Companies' }]
+  }
+  return []
 })
 
 async function logout() {
@@ -29,7 +33,7 @@ async function logout() {
     headers: { Authorization: `Bearer ${auth.token}` },
   }).catch(() => {})
   auth.clearAuth()
-  router.push('/login')
+  router.push('/admin')
 }
 </script>
 

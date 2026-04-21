@@ -1,12 +1,13 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
-export type UserType = 'employee' | 'supervisor' | 'admin'
+export type UserType = 'employee' | 'supervisor' | 'admin' | 'superadmin'
 
 export interface AuthUser {
   id: number
   type: UserType
   companyId: number
+  companySlug: string
   name: string
   email?: string
   uiLanguage: string

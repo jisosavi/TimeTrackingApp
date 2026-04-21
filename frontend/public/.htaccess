@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /test/TimeTrackingAppVue/
+
+  # Don't rewrite existing files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Send all other requests to index.html for Vue Router
+  RewriteRule ^ index.html [L]
+</IfModule>
