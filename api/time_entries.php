@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     $saved = 0;
+    $ids   = [];
     foreach ($entries as $e) {
         // Normalise date from DD-MM-YYYY to YYYY-MM-DD
         $rawDate = trim((string) ($e['date'] ?? date('d-m-Y')));
@@ -42,10 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':project'     => trim((string) ($e['project'] ?? '')),
             ':comment'     => trim((string) ($e['notes'] ?? '')),
         ]);
+        $ids[] = (int) $db->lastInsertId();
         $saved++;
     }
 
-    sendJson(['success' => true, 'saved' => $saved]);
+    sendJson(['success' => true, 'saved' => $saved, 'ids' => $ids]);
 }
 
 // GET — fetch entries (admin/supervisor for any employee, employee for own)
@@ -114,6 +116,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     sendJson(['success' => true, 'entries' => $stmt->fetchAll()]);
+}
+
+// DELETE — employee soft-deletes their own pending entry (used by chat update flow)
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $emp     = requireEmployee();
+    $payload = getJsonPayload();
+    $id      = isset($payload['id']) ? (int) $payload['id'] : null;
+
+    if (!$id) {
+        sendJson(['success' => false, 'error' => 'id vaaditaan'], 400);
+    }
+
+    $stmt = $db->prepare(
+        "SELECT id FROM time_entries
+         WHERE id = :id AND employee_id = :eid AND status IN ('pending', 'clarified')"
+    );
+    $stmt->execute([':id' => $id, ':eid' => $emp['id']]);
+
+    if (!$stmt->fetch()) {
+        sendJson(['success' => false, 'error' => 'Kirjausta ei löydy'], 404);
+    }
+
+    $db->prepare("UPDATE time_entries SET status = 'deleted' WHERE id = :id")
+       ->execute([':id' => $id]);
+
+    sendJson(['success' => true]);
 }
 
 sendJson(['success' => false, 'error' => 'Method not allowed'], 405);
