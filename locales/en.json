@@ -42,6 +42,8 @@
 
   "nav.log_hours": "Log hours",
   "nav.my_entries": "My entries",
+  "nav.payroll": "Payroll",
+  "nav.settings": "Settings",
 
   "chat.title": "Work hours log",
   "chat.placeholder": "Type or dictate e.g. 15.11 8–12 Project Alpha.",

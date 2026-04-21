@@ -42,6 +42,8 @@
 
   "nav.log_hours": "Kirjaa tunteja",
   "nav.my_entries": "Tuntikirjaukset",
+  "nav.payroll": "Palkanlaskenta",
+  "nav.settings": "Asetukset",
 
   "chat.title": "Työtuntien kirjaus",
   "chat.placeholder": "Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa.",

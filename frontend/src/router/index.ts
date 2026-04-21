@@ -63,6 +63,12 @@ const router = createRouter({
           meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
         },
         {
+          path: ':slug/admin/payroll',
+          name: 'admin-payroll',
+          component: () => import('@/views/PayrollView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['admin'] },
+        },
+        {
           path: ':slug/admin/payroll-settings',
           name: 'admin-payroll-settings',
           component: () => import('@/views/PayrollSettingsView.vue'),
@@ -92,7 +98,7 @@ function loginRouteForPath(to: { name: unknown; params: Record<string, unknown> 
   const slug = to.params.slug as string | undefined
   if (!slug) return { name: 'superadmin-login' }
   const name = to.name as string
-  if (name === 'admin-dashboard') return { name: 'admin-login', params: { slug } }
+  if (name === 'admin-dashboard' || name === 'admin-payroll' || name === 'admin-payroll-settings') return { name: 'admin-login', params: { slug } }
   if (name === 'supervisor-home') return { name: 'supervisor-login', params: { slug } }
   return { name: 'employee-login', params: { slug } }
 }

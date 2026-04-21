@@ -59,7 +59,8 @@ const navLinks = computed(() => {
     return [
       { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title'), badge: 0 },
       { to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value },
-      { to: `/${slug}/admin/payroll-settings`, label: 'Payroll Settings', badge: 0 },
+      { to: `/${slug}/admin/payroll`, label: t('nav.payroll'), badge: 0 },
+      { to: `/${slug}/admin/payroll-settings`, label: t('nav.settings'), badge: 0 },
     ]
   }
   if (type === 'superadmin') {

@@ -42,6 +42,8 @@
 
   "nav.log_hours": "Registrera tid",
   "nav.my_entries": "Mina registreringar",
+  "nav.payroll": "Lön",
+  "nav.settings": "Inställningar",
 
   "chat.title": "Tidsregistrering",
   "chat.placeholder": "Skriv eller diktera t.ex. 15.11 8–12 projekt Alpha.",
