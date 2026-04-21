@@ -39,7 +39,10 @@ export function useChat() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${auth.token}`,
         },
-        body: JSON.stringify({ history: recentHistory }),
+        body: JSON.stringify({
+          history: recentHistory,
+          language: auth.user?.uiLanguage ?? 'en',
+        }),
       })
 
       const data = (await res.json()) as { reply?: string; error?: string }

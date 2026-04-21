@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterView, RouterLink, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
+
+const { t } = useI18n()
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -10,15 +13,15 @@ const router = useRouter()
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}
   if (type === 'employee') {
-    return [{ to: `/${slug}/home`, label: 'Log Hours' }]
+    return [{ to: `/${slug}/home`, label: t('nav.log_hours') }]
   }
   if (type === 'supervisor') {
-    return [{ to: `/${slug}/approval/home`, label: 'Approvals' }]
+    return [{ to: `/${slug}/approval/home`, label: t('approval.dashboard_title') }]
   }
   if (type === 'admin') {
     return [
-      { to: `/${slug}/approval/home`, label: 'Approvals' },
-      { to: `/${slug}/admin/dashboard`, label: 'Admin' },
+      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title') },
+      { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title') },
     ]
   }
   if (type === 'superadmin') {
@@ -57,7 +60,7 @@ async function logout() {
         </div>
         <div class="flex items-center gap-3">
           <span class="text-sm text-muted-foreground">{{ auth.user?.name }}</span>
-          <Button variant="outline" size="sm" @click="logout">Sign out</Button>
+          <Button variant="outline" size="sm" @click="logout">{{ t('common.logout') }}</Button>
         </div>
       </div>
     </header>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useApproval, groupByEmployee } from '@/composables/useApproval'
 
+const { t } = useI18n()
 const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
 
 onMounted(fetchEntries)
@@ -56,8 +58,16 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   rejected:  { label: 'Rejected',  variant: 'destructive' },
 }
 
+const statusKey: Record<string, string> = {
+  pending:   'status.pending',
+  approved:  'status.approved',
+  rejected:  'status.rejected',
+  clarified: 'status.clarified',
+}
+
 function getCfg(status: string) {
-  return statusConfig[status] ?? { label: status, variant: 'outline' as const }
+  const base = statusConfig[status] ?? { label: status, variant: 'outline' as const }
+  return { ...base, label: statusKey[status] ? t(statusKey[status]!) : base.label }
 }
 </script>
 
@@ -88,7 +98,7 @@ function getCfg(status: string) {
       <!-- Needs Review tab -->
       <TabsContent value="review">
         <div v-if="!loading && needsReview.length === 0" class="text-sm text-muted-foreground text-center py-8">
-          No entries awaiting review.
+          {{ t('approval.no_team_entries') }}
         </div>
 
         <div v-for="group in grouped" :key="group.name" class="space-y-2 mb-6">
@@ -129,7 +139,7 @@ function getCfg(status: string) {
               v-if="entry.status === 'clarified' && entry.employee_clarification"
               class="rounded-md bg-muted px-3 py-2 text-sm"
             >
-              <span class="font-medium">Clarification: </span>{{ entry.employee_clarification }}
+              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ entry.employee_clarification }}
             </div>
 
             <!-- Action buttons -->

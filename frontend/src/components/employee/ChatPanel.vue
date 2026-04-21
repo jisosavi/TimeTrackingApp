@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChat } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{ entriesSaved: [] }>()
 
@@ -74,8 +77,8 @@ function formatMessage(text: string) {
     <!-- Chat history -->
     <div ref="chatEl" class="flex-1 overflow-y-auto space-y-3 pb-4">
       <div v-if="history.length === 0" class="text-center text-sm text-muted-foreground py-12">
-        <p class="font-medium">Log your hours</p>
-        <p class="mt-1">Try: "Monday 9–12, project X" or use the mic</p>
+        <p class="font-medium">{{ t('chat.title') }}</p>
+        <p class="mt-1">{{ t('chat.placeholder') }}</p>
       </div>
 
       <div
@@ -92,14 +95,14 @@ function formatMessage(text: string) {
         >
           <p class="whitespace-pre-wrap">{{ formatMessage(msg.content) }}</p>
           <p v-if="msg.savedCount" class="mt-1.5 text-xs opacity-70 font-medium">
-            ✓ {{ msg.savedCount }} {{ msg.savedCount === 1 ? 'entry' : 'entries' }} saved
+            ✓ {{ t('chat.entries_saved', { count: msg.savedCount }) }}
           </p>
         </div>
       </div>
 
       <div v-if="loading" class="flex justify-start">
         <div class="bg-muted rounded-2xl rounded-bl-sm px-4 py-2.5">
-          <span class="text-sm text-muted-foreground">Thinking…</span>
+          <span class="text-sm text-muted-foreground">{{ t('chat.processing') }}</span>
         </div>
       </div>
     </div>
@@ -108,7 +111,7 @@ function formatMessage(text: string) {
     <div class="border-t pt-3 space-y-2">
       <Textarea
         v-model="inputText"
-        placeholder="Describe your hours… (e.g. Monday 9–12, project X)"
+        :placeholder="t('chat.placeholder')"
         class="min-h-16 resize-none"
         :disabled="loading"
         @keydown="onKeydown"
@@ -120,11 +123,11 @@ function formatMessage(text: string) {
           :class="isListening ? 'text-destructive border-destructive' : ''"
           @click="startVoice"
         >
-          {{ isListening ? '● Listening' : '🎤 Voice' }}
+          {{ isListening ? `● ${t('chat.listening')}` : '🎤 Voice' }}
         </Button>
-        <Button variant="ghost" size="sm" @click="reset">Clear</Button>
+        <Button variant="ghost" size="sm" @click="reset">{{ t('common.cancel') }}</Button>
         <Button size="sm" :disabled="loading || !inputText.trim()" @click="submit">
-          Send
+          {{ t('chat.send_button') }}
         </Button>
       </div>
     </div>

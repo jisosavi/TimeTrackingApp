@@ -26,8 +26,19 @@ if (!$payload || !isset($payload['history'])) {
 
 $messages = $payload['history'];
 
+$language = $payload['language'] ?? 'fi';
+$langInstructions = [
+    'en' => 'Communicate in English',
+    'fi' => 'Keskustele suomeksi',
+    'sv' => 'Kommunicera på svenska',
+    'et' => 'Suhtle eesti keeles',
+    'uk' => 'Спілкуйся українською',
+    'xh' => 'Communicate in isiXhosa',
+];
+$langInstruction = $langInstructions[$language] ?? $langInstructions['fi'];
+
 $today        = date('d-m-Y');
-$systemPrompt = "Olet TimeAppin tuntikirjausassistentti. Tänään on {$today}. Keskustele suomeksi.
+$systemPrompt = "Olet TimeAppin tuntikirjausassistentti. Tänään on {$today}. {$langInstruction}.
 
 TULKINTAOHJEET:
 - Tulkitse 'tänään' = {$today}, 'eilen', 'toissapäivänä', 'huomenna' automaattisesti

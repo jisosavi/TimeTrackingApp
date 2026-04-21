@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import type { AuthUser } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -27,8 +30,8 @@ const isPinLogin = computed(() => loginType === 'employee' || loginType === 'sup
 const title = computed(() => {
   switch (loginType) {
     case 'employee': return 'Employee Login'
-    case 'supervisor': return 'Supervisor Login'
-    case 'admin': return 'Admin Login'
+    case 'supervisor': return t('approval.login_title')
+    case 'admin': return t('admin.login_title')
     case 'superadmin': return 'Super Admin'
   }
 })
@@ -139,15 +142,15 @@ async function loginWithPassword() {
       <Card>
         <CardHeader class="pb-2">
           <CardTitle class="text-base sr-only">Sign in</CardTitle>
-          <CardDescription v-if="isPinLogin">Enter your 6-digit PIN</CardDescription>
-          <CardDescription v-else>Enter your email and password</CardDescription>
+          <CardDescription v-if="isPinLogin">{{ t('login.subtitle') }}</CardDescription>
+          <CardDescription v-else>{{ t('login.error_missing_credentials') }}</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
 
           <!-- PIN login (employee + supervisor) -->
           <template v-if="isPinLogin">
             <div class="space-y-2">
-              <Label for="pin">PIN</Label>
+              <Label for="pin">{{ t('login.pin_label') }}</Label>
               <Input
                 id="pin"
                 v-model="pin"
@@ -166,7 +169,7 @@ async function loginWithPassword() {
           <!-- Password login (admin + superadmin) -->
           <template v-else>
             <div class="space-y-2">
-              <Label for="email">Email</Label>
+              <Label for="email">{{ t('login.email_label') }}</Label>
               <Input
                 id="email"
                 v-model="email"
@@ -177,7 +180,7 @@ async function loginWithPassword() {
               />
             </div>
             <div class="space-y-2">
-              <Label for="password">Password</Label>
+              <Label for="password">{{ t('login.password_label') }}</Label>
               <Input
                 id="password"
                 v-model="password"
@@ -196,7 +199,7 @@ async function loginWithPassword() {
             :disabled="loading || (isPinLogin ? !pin : !email || !password)"
             @click="submit"
           >
-            {{ loading ? 'Signing in…' : 'Sign in' }}
+            {{ loading ? t('login.logging_in') : t('login.sign_in_button') }}
           </Button>
 
         </CardContent>
