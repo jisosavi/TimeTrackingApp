@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Записати години",
   "nav.my_entries": "Мої записи",
-  "nav.payroll": "Зарплата",
+  "nav.payroll": "Експорт зарплати",
   "nav.settings": "Налаштування",
 
   "chat.title": "Облік робочого часу",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Дії",
 
   "admin.login_title": "Вхід адміністратора",
-  "admin.employees_title": "Адмін компанії",
+  "admin.employees_title": "Персонал",
   "admin.employees_subtitle": "Керуйте працівниками та PIN-кодами.",
   "admin.add_employee": "Додати працівника",
   "admin.add_employee_title": "Додати працівника",

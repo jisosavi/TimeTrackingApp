@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Registrera tid",
   "nav.my_entries": "Mina registreringar",
-  "nav.payroll": "Lön",
+  "nav.payroll": "Löneexport",
   "nav.settings": "Inställningar",
 
   "chat.title": "Tidsregistrering",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Åtgärder",
 
   "admin.login_title": "Admininloggning",
-  "admin.employees_title": "Företagsadmin",
+  "admin.employees_title": "Personal",
   "admin.employees_subtitle": "Hantera anställda och PIN-koder.",
   "admin.add_employee": "Lägg till anställd",
   "admin.add_employee_title": "Lägg till anställd",

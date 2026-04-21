@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Rekhoda amaxesha",
   "nav.my_entries": "Izingeniso zam",
-  "nav.payroll": "Intlawulo",
+  "nav.payroll": "Thumela Intlawulo",
   "nav.settings": "Iinqobo",
 
   "chat.title": "Irekhodi lamaxesha omsebenzi",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Izenzo",
 
   "admin.login_title": "Ukungena kweMlawuli",
-  "admin.employees_title": "Ulawulo lwenkampani",
+  "admin.employees_title": "Abasebenzi",
   "admin.employees_subtitle": "Lawula abasebenzi ne-PIN.",
   "admin.add_employee": "Faka umsebenzi",
   "admin.add_employee_title": "Faka umsebenzi",

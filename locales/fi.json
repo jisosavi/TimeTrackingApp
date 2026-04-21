@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Kirjaa tunteja",
   "nav.my_entries": "Tuntikirjaukset",
-  "nav.payroll": "Palkanlaskenta",
+  "nav.payroll": "Palkkavienti",
   "nav.settings": "Asetukset",
 
   "chat.title": "Työtuntien kirjaus",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Toiminnot",
 
   "admin.login_title": "Admin-kirjautuminen",
-  "admin.employees_title": "Yrityksen hallinta",
+  "admin.employees_title": "Henkilöstö",
   "admin.employees_subtitle": "Hallinnoi työntekijöitä ja PIN-koodeja.",
   "admin.add_employee": "Lisää työntekijä",
   "admin.add_employee_title": "Lisää työntekijä",

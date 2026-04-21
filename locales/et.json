@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Registreeri tunde",
   "nav.my_entries": "Minu kirjed",
-  "nav.payroll": "Palgaarvestus",
+  "nav.payroll": "Palga eksport",
   "nav.settings": "Seaded",
 
   "chat.title": "Tööaja registreerimine",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Toimingud",
 
   "admin.login_title": "Admini sisselogimine",
-  "admin.employees_title": "Ettevõtte admin",
+  "admin.employees_title": "Personal",
   "admin.employees_subtitle": "Halda töötajaid ja PIN-koode.",
   "admin.add_employee": "Lisa töötaja",
   "admin.add_employee_title": "Lisa töötaja",

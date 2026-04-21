@@ -42,7 +42,7 @@
 
   "nav.log_hours": "Log hours",
   "nav.my_entries": "My entries",
-  "nav.payroll": "Payroll",
+  "nav.payroll": "Export Payroll",
   "nav.settings": "Settings",
 
   "chat.title": "Work hours log",
@@ -127,7 +127,7 @@
   "approval.col_actions": "Actions",
 
   "admin.login_title": "Admin login",
-  "admin.employees_title": "Company Admin",
+  "admin.employees_title": "Personnel",
   "admin.employees_subtitle": "Manage employees and PINs.",
   "admin.add_employee": "Add employee",
   "admin.add_employee_title": "Add employee",
