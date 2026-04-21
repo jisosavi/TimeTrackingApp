@@ -88,8 +88,8 @@ async function logout() {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-sm px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          active-class="bg-muted text-foreground"
+          class="text-sm px-4 py-1.5 rounded-md border border-input bg-background text-foreground font-medium hover:bg-muted transition-colors"
+          active-class="bg-primary text-primary-foreground border-primary hover:bg-primary/90"
         >
           {{ link.label }}
         </RouterLink>
