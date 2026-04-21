@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useApproval, groupByEmployee } from '@/composables/useApproval'
 import { useAuthStore } from '@/stores/auth'
@@ -21,6 +22,25 @@ const teamMembers = ref<TeamMemberDetail[]>([])
 const teamLoading = ref(false)
 const teamError = ref<string | null>(null)
 const teamLoaded = ref(false)
+const teamSearch = ref('')
+
+function teamLastName(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2 ? parts[parts.length - 1]! : name
+}
+
+function teamLastFirst(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length < 2) return name
+  return `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`
+}
+
+const sortedFilteredTeamMembers = computed(() => {
+  const q = teamSearch.value.trim().toLowerCase()
+  return [...teamMembers.value]
+    .filter(m => !q || teamLastFirst(m.name).toLowerCase().includes(q))
+    .sort((a, b) => teamLastName(a.name).localeCompare(teamLastName(b.name), 'fi', { sensitivity: 'base' }))
+})
 
 async function loadTeam() {
   if (teamLoaded.value) return
@@ -292,21 +312,28 @@ function getCfg(status: string) {
         <div v-else-if="teamError" class="text-sm text-destructive text-center py-8">
           {{ teamError }}
         </div>
-        <div v-else-if="teamMembers.length === 0 && teamLoaded" class="text-sm text-muted-foreground text-center py-8">
-          No team members assigned yet.
-        </div>
-        <div v-else class="space-y-3">
-          <div
-            v-for="member in teamMembers"
-            :key="member.id"
-            class="rounded-lg border p-4 bg-card space-y-1"
-          >
-            <p class="font-medium text-sm">{{ member.name }}</p>
-            <p v-if="member.email" class="text-xs text-muted-foreground">{{ member.email }}</p>
-            <p v-if="member.phone" class="text-xs text-muted-foreground">{{ member.phone }}</p>
-            <p v-if="member.birth_year" class="text-xs text-muted-foreground">b. {{ member.birth_year }}</p>
-            <p v-if="!member.email && !member.phone && !member.birth_year" class="text-xs text-muted-foreground italic">
-              No contact details on file.
+        <div v-else>
+          <div v-if="teamLoaded" class="space-y-2">
+            <Input
+              v-model="teamSearch"
+              placeholder="Search by name…"
+              class="h-8 text-sm"
+            />
+            <div
+              v-for="member in sortedFilteredTeamMembers"
+              :key="member.id"
+              class="rounded-lg border px-3 py-2.5 bg-card"
+            >
+              <p class="font-medium text-sm">{{ teamLastFirst(member.name) }}</p>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                {{ [member.email, member.phone, member.birth_year ? 'b. ' + member.birth_year : null].filter(Boolean).join(' · ') || 'No contact details on file.' }}
+              </p>
+            </div>
+            <p v-if="sortedFilteredTeamMembers.length === 0 && teamSearch" class="text-sm text-muted-foreground text-center py-4">
+              No results.
+            </p>
+            <p v-else-if="teamMembers.length === 0" class="text-sm text-muted-foreground text-center py-8">
+              No team members assigned yet.
             </p>
           </div>
         </div>

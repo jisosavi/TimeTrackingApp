@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,17 +19,42 @@ onMounted(() => {
   fetchSupervisors()
 })
 
+// ── Name helpers ──────────────────────────────────────────────────────────────
+// For employees stored as "Firstname Lastname" single string
+function empLastName(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2 ? parts[parts.length - 1]! : name
+}
+
+function lastFirst(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length < 2) return name
+  return `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`
+}
+
+function infoLine(fields: (string | null | undefined)[]): string {
+  return fields.filter(Boolean).join(' · ')
+}
+
 // ── Employee section ──────────────────────────────────────────────────────────
 const LANG_NAMES: Record<string, string> = {
   en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa',
 }
 
+const empSearch = ref('')
 const showEmpForm = ref(false)
 const editingEmpId = ref<number | null>(null)
 const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en', employmentId: '', email: '', phone: '', birth_year: '' })
 const empFormError = ref<string | null>(null)
 const empSaving = ref(false)
 const syncing = ref(false)
+
+const sortedFilteredEmployees = computed(() => {
+  const q = empSearch.value.trim().toLowerCase()
+  return [...employees.value]
+    .filter(e => !q || lastFirst(e.name).toLowerCase().includes(q))
+    .sort((a, b) => empLastName(a.name).localeCompare(empLastName(b.name), 'fi', { sensitivity: 'base' }))
+})
 
 function openAddEmp() {
   editingEmpId.value = null
@@ -79,6 +104,7 @@ async function doSync() {
 }
 
 // ── Supervisor section ────────────────────────────────────────────────────────
+const supSearch = ref('')
 const showSupForm = ref(false)
 const editingSupId = ref<number | null>(null)
 const supForm = ref({ first_name: '', last_name: '', email: '', phone: '', pin: '', active: 1 })
@@ -89,6 +115,13 @@ const teamExpandedId = ref<number | null>(null)
 const teamMembers = ref<TeamMember[]>([])
 const teamSelectedIds = ref<number[]>([])
 const teamLoading = ref(false)
+
+const sortedFilteredSupervisors = computed(() => {
+  const q = supSearch.value.trim().toLowerCase()
+  return [...supervisors.value]
+    .filter(s => !q || `${s.last_name} ${s.first_name}`.toLowerCase().includes(q))
+    .sort((a, b) => a.last_name.localeCompare(b.last_name, 'fi', { sensitivity: 'base' }))
+})
 
 function openAddSup() {
   editingSupId.value = null
@@ -201,7 +234,6 @@ async function submitTeam() {
     teamLoading.value = false
   }
 }
-
 </script>
 
 <template>
@@ -234,8 +266,14 @@ async function submitTeam() {
             </Button>
           </div>
 
-          <!-- Sync result -->
           <p v-if="syncMessage" class="text-sm text-muted-foreground">{{ syncMessage }}</p>
+
+          <!-- Search -->
+          <Input
+            v-model="empSearch"
+            placeholder="Search by name…"
+            class="h-8 text-sm"
+          />
 
           <!-- Add form -->
           <div v-if="showEmpForm" class="rounded-lg border p-4 space-y-3 bg-muted/40">
@@ -283,26 +321,17 @@ async function submitTeam() {
 
           <!-- Employee list -->
           <div
-            v-for="emp in employees"
+            v-for="emp in sortedFilteredEmployees"
             :key="emp.id"
-            class="rounded-lg border p-4 space-y-3 bg-card"
+            class="rounded-lg border px-3 py-2.5 bg-card"
           >
-            <div class="flex items-start justify-between gap-2">
-              <div class="space-y-0.5">
-                <p class="font-medium text-sm">{{ emp.name }}</p>
-                <p v-if="emp.email" class="text-xs text-muted-foreground">{{ emp.email }}</p>
-                <p v-if="emp.phone" class="text-xs text-muted-foreground">{{ emp.phone }}</p>
-                <p v-if="emp.birth_year" class="text-xs text-muted-foreground">b. {{ emp.birth_year }}</p>
-                <p class="text-xs text-muted-foreground">PIN: ●●●●</p>
-                <p class="text-xs text-muted-foreground font-mono">
-                  Salaxy ID: {{ emp.employmentId ?? '—' }}
-                </p>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium text-sm">{{ lastFirst(emp.name) }}</p>
+              <div class="flex items-center gap-1.5 shrink-0">
                 <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
                   {{ emp.pending_hours }}h pending
                 </Badge>
-                <Badge :variant="emp.active ? 'default' : 'outline'">
+                <Badge :variant="emp.active ? 'default' : 'outline'" class="text-[10px]">
                   {{ emp.active ? 'Active' : 'Inactive' }}
                 </Badge>
                 <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEditEmp(emp.id)">
@@ -310,9 +339,15 @@ async function submitTeam() {
                 </Button>
               </div>
             </div>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              {{ infoLine([emp.email, emp.phone, emp.birth_year ? 'b. ' + emp.birth_year : null, 'PIN: ●●●●']) }}
+            </p>
+            <p v-if="emp.employmentId" class="text-xs text-muted-foreground font-mono truncate">
+              Salaxy ID: {{ emp.employmentId }}
+            </p>
 
             <!-- Inline edit form -->
-            <div v-if="editingEmpId === emp.id" class="space-y-3 pt-1 border-t">
+            <div v-if="editingEmpId === emp.id" class="space-y-3 pt-2 mt-2 border-t">
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
                   <Label class="text-xs">Name</Label>
@@ -359,8 +394,8 @@ async function submitTeam() {
             </div>
           </div>
 
-          <p v-if="!loadingEmps && employees.length === 0" class="text-sm text-muted-foreground text-center py-8">
-            No employees yet. Add one or sync from Salaxy.
+          <p v-if="!loadingEmps && sortedFilteredEmployees.length === 0" class="text-sm text-muted-foreground text-center py-8">
+            {{ empSearch ? 'No results.' : 'No employees yet. Add one or sync from Salaxy.' }}
           </p>
         </div>
       </TabsContent>
@@ -376,6 +411,13 @@ async function submitTeam() {
               {{ loadingSups ? 'Loading…' : 'Refresh' }}
             </Button>
           </div>
+
+          <!-- Search -->
+          <Input
+            v-model="supSearch"
+            placeholder="Search by name…"
+            class="h-8 text-sm"
+          />
 
           <!-- Add form -->
           <div v-if="showSupForm" class="rounded-lg border p-4 space-y-3 bg-muted/40">
@@ -413,28 +455,24 @@ async function submitTeam() {
 
           <!-- Supervisor list -->
           <div
-            v-for="sup in supervisors"
+            v-for="sup in sortedFilteredSupervisors"
             :key="sup.id"
-            class="rounded-lg border p-4 space-y-3 bg-card"
+            class="rounded-lg border px-3 py-2.5 bg-card"
           >
-            <div class="flex items-start justify-between gap-2">
-              <div class="space-y-0.5">
-                <p class="font-medium text-sm">{{ sup.first_name }} {{ sup.last_name }}</p>
-                <p class="text-xs text-muted-foreground">{{ sup.email }}</p>
-                <p class="text-xs text-muted-foreground">{{ sup.phone }}</p>
-                <p class="text-xs text-muted-foreground">
-                  PIN: <span class="font-mono">{{ sup.pin || '—' }}</span>
-                </p>
-              </div>
+            <div class="flex items-center justify-between gap-2">
+              <p class="font-medium text-sm">{{ sup.last_name }} {{ sup.first_name }}</p>
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                 <Badge variant="secondary" class="text-[10px]">Team: {{ sup.team_size }}</Badge>
-                <Badge :variant="sup.active ? 'default' : 'outline'">
+                <Badge :variant="sup.active ? 'default' : 'outline'" class="text-[10px]">
                   {{ sup.active ? 'Active' : 'Inactive' }}
                 </Badge>
               </div>
             </div>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              {{ infoLine([sup.email, sup.phone, sup.pin ? 'PIN: ' + sup.pin : null]) }}
+            </p>
 
-            <div class="flex gap-2 flex-wrap">
+            <div class="flex gap-2 flex-wrap mt-2">
               <Button variant="outline" size="sm" class="h-7 text-xs" @click="openEditSup(sup.id)">
                 Edit
               </Button>
@@ -458,7 +496,7 @@ async function submitTeam() {
             </div>
 
             <!-- Inline edit form -->
-            <div v-if="editingSupId === sup.id" class="space-y-3 pt-1 border-t">
+            <div v-if="editingSupId === sup.id" class="space-y-3 pt-2 mt-2 border-t">
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
                   <Label class="text-xs">First Name</Label>
@@ -495,10 +533,10 @@ async function submitTeam() {
             </div>
 
             <!-- Team assignment -->
-            <div v-if="teamExpandedId === sup.id" class="space-y-2 pt-1 border-t">
+            <div v-if="teamExpandedId === sup.id" class="space-y-2 pt-2 mt-2 border-t">
               <p class="text-xs font-medium text-muted-foreground">Team members</p>
               <div v-if="teamLoading" class="text-xs text-muted-foreground">Loading…</div>
-              <div v-else class="space-y-1.5 max-h-48 overflow-y-auto">
+              <div v-else class="space-y-1 max-h-48 overflow-y-auto">
                 <label
                   v-for="member in teamMembers"
                   :key="member.id"
@@ -509,7 +547,7 @@ async function submitTeam() {
                     :checked="teamSelectedIds.includes(member.id)"
                     @change="toggleTeamMember(member.id)"
                   />
-                  <span>{{ member.name }}</span>
+                  <span>{{ lastFirst(member.name) }}</span>
                   <span v-if="member.other_supervisors" class="text-xs text-muted-foreground">
                     (also: {{ member.other_supervisors }})
                   </span>
@@ -525,8 +563,8 @@ async function submitTeam() {
             </div>
           </div>
 
-          <p v-if="!loadingSups && supervisors.length === 0" class="text-sm text-muted-foreground text-center py-8">
-            No supervisors yet.
+          <p v-if="!loadingSups && sortedFilteredSupervisors.length === 0" class="text-sm text-muted-foreground text-center py-8">
+            {{ supSearch ? 'No results.' : 'No supervisors yet.' }}
           </p>
         </div>
       </TabsContent>
