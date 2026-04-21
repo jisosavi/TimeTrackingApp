@@ -9,6 +9,7 @@ $db = getDb();
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
         "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
+                e.email, e.phone, e.birth_year,
            COALESCE((
              SELECT ROUND(SUM(te.hours), 1)
              FROM time_entries te
@@ -32,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pin = trim((string) ($payload['pin'] ?? ''));
     $ssn = trim((string) ($payload['ssn'] ?? ''));
     $employmentId = trim((string) ($payload['employmentId'] ?? ''));
+    $email     = trim((string) ($payload['email'] ?? ''));
+    $phone     = trim((string) ($payload['phone'] ?? ''));
+    $birthYearRaw = $payload['birth_year'] ?? null;
+    $birthYear = ($birthYearRaw !== null && $birthYearRaw !== '') ? (int) $birthYearRaw : null;
     $active          = isset($payload['active']) ? (int) $payload['active'] : 1;
     $langProvided    = array_key_exists('ui_language', $payload);
     $uiLanguage      = $langProvided ? trim((string) $payload['ui_language']) : null;
@@ -86,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $db->prepare(
             "UPDATE employees
              SET name = :name, pin = :pin, ssn = :ssn, salaxy_employment_id = :employmentId,
-                 active = :active, ui_language = {$uiLangExpr}
+                 active = :active, ui_language = {$uiLangExpr},
+                 email = :email, phone = :phone, birth_year = :birth_year
              WHERE id = :id AND company_id = :company_id"
         );
         $stmt->execute([
@@ -96,13 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':employmentId' => $employmentId,
             ':active' => $active,
             ':ui_language' => $uiLanguage,
+            ':email' => $email ?: null,
+            ':phone' => $phone ?: null,
+            ':birth_year' => $birthYear,
             ':id' => $id,
             ':company_id' => $admin['company_id'],
         ]);
     } else {
         $stmt = $db->prepare(
-            'INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active, ui_language)
-             VALUES (:company_id, :pin, :name, :ssn, :employmentId, :role, :active, :ui_language)'
+            'INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active, ui_language, email, phone, birth_year)
+             VALUES (:company_id, :pin, :name, :ssn, :employmentId, :role, :active, :ui_language, :email, :phone, :birth_year)'
         );
         $stmt->execute([
             ':company_id' => $admin['company_id'],
@@ -113,12 +122,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':role' => 'employee',
             ':active' => $active,
             ':ui_language' => $uiLanguage,
+            ':email' => $email ?: null,
+            ':phone' => $phone ?: null,
+            ':birth_year' => $birthYear,
         ]);
         $id = (int) $db->lastInsertId();
     }
 
     $stmt = $db->prepare(
-        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active, ui_language
+        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active, ui_language, email, phone, birth_year
          FROM employees
          WHERE id = :id AND company_id = :company_id'
     );

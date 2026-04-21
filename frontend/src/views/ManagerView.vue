@@ -6,9 +6,36 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useApproval, groupByEmployee } from '@/composables/useApproval'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import type { TeamMemberDetail } from '@/types'
 
 const { t } = useI18n()
 const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
+const auth = useAuthStore()
+const { apiFetch } = useApi()
+
+const isSupervisor = computed(() => auth.user?.type === 'supervisor')
+
+const teamMembers = ref<TeamMemberDetail[]>([])
+const teamLoading = ref(false)
+const teamError = ref<string | null>(null)
+const teamLoaded = ref(false)
+
+async function loadTeam() {
+  if (teamLoaded.value) return
+  teamLoading.value = true
+  teamError.value = null
+  try {
+    const data = await apiFetch<{ members: TeamMemberDetail[] }>('/api/my_team.php')
+    teamMembers.value = data.members
+    teamLoaded.value = true
+  } catch (e) {
+    teamError.value = e instanceof Error ? e.message : 'Failed to load team'
+  } finally {
+    teamLoading.value = false
+  }
+}
 
 onMounted(fetchEntries)
 
@@ -87,7 +114,7 @@ function getCfg(status: string) {
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <Tabs default-value="review" class="w-full">
-      <TabsList class="grid w-full grid-cols-3 mb-4">
+      <TabsList :class="['grid w-full mb-4', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
         <TabsTrigger value="review" class="gap-1.5">
           Needs Review
           <Badge v-if="needsReview.length > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
@@ -102,6 +129,9 @@ function getCfg(status: string) {
           <Badge v-if="rejectedEntries.length > 0" variant="outline" class="h-4 min-w-4 px-1 text-[10px]">
             {{ rejectedEntries.length }}
           </Badge>
+        </TabsTrigger>
+        <TabsTrigger v-if="isSupervisor" value="team" @click="loadTeam">
+          Your Team
         </TabsTrigger>
       </TabsList>
 
@@ -250,6 +280,34 @@ function getCfg(status: string) {
             <div v-if="entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
               <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ entry.employee_clarification }}
             </div>
+          </div>
+        </div>
+      </TabsContent>
+
+      <!-- Your Team tab -->
+      <TabsContent v-if="isSupervisor" value="team">
+        <div v-if="teamLoading" class="text-sm text-muted-foreground text-center py-8">
+          Loading…
+        </div>
+        <div v-else-if="teamError" class="text-sm text-destructive text-center py-8">
+          {{ teamError }}
+        </div>
+        <div v-else-if="teamMembers.length === 0 && teamLoaded" class="text-sm text-muted-foreground text-center py-8">
+          No team members assigned yet.
+        </div>
+        <div v-else class="space-y-3">
+          <div
+            v-for="member in teamMembers"
+            :key="member.id"
+            class="rounded-lg border p-4 bg-card space-y-1"
+          >
+            <p class="font-medium text-sm">{{ member.name }}</p>
+            <p v-if="member.email" class="text-xs text-muted-foreground">{{ member.email }}</p>
+            <p v-if="member.phone" class="text-xs text-muted-foreground">{{ member.phone }}</p>
+            <p v-if="member.birth_year" class="text-xs text-muted-foreground">b. {{ member.birth_year }}</p>
+            <p v-if="!member.email && !member.phone && !member.birth_year" class="text-xs text-muted-foreground italic">
+              No contact details on file.
+            </p>
           </div>
         </div>
       </TabsContent>

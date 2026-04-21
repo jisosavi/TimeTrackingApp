@@ -156,6 +156,15 @@ function initializeDatabase(PDO $db): void
     if (!in_array('ui_language', $empCols)) {
         $db->exec('ALTER TABLE employees ADD COLUMN ui_language TEXT');
     }
+    if (!in_array('email', $empCols)) {
+        $db->exec('ALTER TABLE employees ADD COLUMN email TEXT');
+    }
+    if (!in_array('phone', $empCols)) {
+        $db->exec('ALTER TABLE employees ADD COLUMN phone TEXT');
+    }
+    if (!in_array('birth_year', $empCols)) {
+        $db->exec('ALTER TABLE employees ADD COLUMN birth_year INTEGER');
+    }
 
     $supCols = array_column($db->query('PRAGMA table_info(supervisors)')->fetchAll(), 'name');
     if (!in_array('ui_language', $supCols)) {

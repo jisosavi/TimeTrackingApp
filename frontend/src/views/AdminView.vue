@@ -26,14 +26,14 @@ const LANG_NAMES: Record<string, string> = {
 
 const showEmpForm = ref(false)
 const editingEmpId = ref<number | null>(null)
-const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en', employmentId: '' })
+const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en', employmentId: '', email: '', phone: '', birth_year: '' })
 const empFormError = ref<string | null>(null)
 const empSaving = ref(false)
 const syncing = ref(false)
 
 function openAddEmp() {
   editingEmpId.value = null
-  empForm.value = { name: '', pin: '', active: 1, ui_language: 'en', employmentId: '' }
+  empForm.value = { name: '', pin: '', active: 1, ui_language: 'en', employmentId: '', email: '', phone: '', birth_year: '' }
   empFormError.value = null
   showEmpForm.value = true
 }
@@ -42,7 +42,7 @@ function openEditEmp(id: number) {
   const emp = employees.value.find(e => e.id === id)
   if (!emp) return
   editingEmpId.value = id
-  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '' }
+  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '', email: emp.email ?? '', phone: emp.phone ?? '', birth_year: emp.birth_year != null ? String(emp.birth_year) : '' }
   empFormError.value = null
   showEmpForm.value = false
 }
@@ -59,9 +59,10 @@ async function submitEmpForm() {
   empSaving.value = true
   empFormError.value = null
   try {
+    const birthYearNum = empForm.value.birth_year ? parseInt(empForm.value.birth_year, 10) : null
     const payload = editingEmpId.value
-      ? { id: editingEmpId.value, ...empForm.value }
-      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language, employmentId: empForm.value.employmentId }
+      ? { id: editingEmpId.value, ...empForm.value, birth_year: birthYearNum }
+      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language, employmentId: empForm.value.employmentId, email: empForm.value.email, phone: empForm.value.phone, birth_year: birthYearNum }
     await saveEmployee(payload)
     cancelEmpForm()
   } catch (e) {
@@ -254,6 +255,18 @@ async function submitTeam() {
                   <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                 </select>
               </div>
+              <div class="space-y-1">
+                <Label class="text-xs">Email</Label>
+                <Input v-model="empForm.email" type="email" />
+              </div>
+              <div class="space-y-1">
+                <Label class="text-xs">Phone</Label>
+                <Input v-model="empForm.phone" type="tel" />
+              </div>
+              <div class="space-y-1">
+                <Label class="text-xs">Year of birth</Label>
+                <Input v-model="empForm.birth_year" maxlength="4" placeholder="e.g. 1990" />
+              </div>
               <div class="space-y-1 col-span-2">
                 <Label class="text-xs">Salaxy ID</Label>
                 <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
@@ -277,6 +290,9 @@ async function submitTeam() {
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5">
                 <p class="font-medium text-sm">{{ emp.name }}</p>
+                <p v-if="emp.email" class="text-xs text-muted-foreground">{{ emp.email }}</p>
+                <p v-if="emp.phone" class="text-xs text-muted-foreground">{{ emp.phone }}</p>
+                <p v-if="emp.birth_year" class="text-xs text-muted-foreground">b. {{ emp.birth_year }}</p>
                 <p class="text-xs text-muted-foreground">PIN: ●●●●</p>
                 <p class="text-xs text-muted-foreground font-mono">
                   Salaxy ID: {{ emp.employmentId ?? '—' }}
@@ -311,6 +327,18 @@ async function submitTeam() {
                   <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                     <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                   </select>
+                </div>
+                <div class="space-y-1">
+                  <Label class="text-xs">Email</Label>
+                  <Input v-model="empForm.email" type="email" />
+                </div>
+                <div class="space-y-1">
+                  <Label class="text-xs">Phone</Label>
+                  <Input v-model="empForm.phone" type="tel" />
+                </div>
+                <div class="space-y-1">
+                  <Label class="text-xs">Year of birth</Label>
+                  <Input v-model="empForm.birth_year" maxlength="4" placeholder="e.g. 1990" />
                 </div>
                 <div class="space-y-1 col-span-2">
                   <Label class="text-xs">Salaxy ID</Label>

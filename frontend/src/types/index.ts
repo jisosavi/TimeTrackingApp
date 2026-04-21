@@ -40,6 +40,17 @@ export interface Employee {
   active: number
   ui_language: string | null
   pending_hours: number
+  email: string | null
+  phone: string | null
+  birth_year: number | null
+}
+
+export interface TeamMemberDetail {
+  id: number
+  name: string
+  email: string | null
+  phone: string | null
+  birth_year: number | null
 }
 
 export interface Supervisor {
