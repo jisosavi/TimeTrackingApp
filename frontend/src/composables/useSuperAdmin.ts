@@ -39,13 +39,13 @@ export function useSuperAdmin() {
       method: 'POST',
       body: JSON.stringify(payload),
     })
-    companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0, salaxy_company_id: null })
+    companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0, business_id: null })
     return data.company
   }
 
   async function updateCompany(
     id: number,
-    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled' | 'salaxy_company_id'>>,
+    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled' | 'business_id'>>,
   ) {
     const data = await apiFetch<{ company: Company }>('/api/companies.php', {
       method: 'POST',
@@ -57,5 +57,10 @@ export function useSuperAdmin() {
     }
   }
 
-  return { companies, loading, error, fetchCompanies, createCompany, updateCompany }
+  async function fetchBusinessId(companyId: number): Promise<string> {
+    const data = await apiFetch<{ business_id: string }>(`/api/fetch_business_id.php?company_id=${companyId}`)
+    return data.business_id
+  }
+
+  return { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId }
 }

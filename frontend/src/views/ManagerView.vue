@@ -164,7 +164,7 @@ function getCfg(status: string) {
                     {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
                   </span>
                   <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"> &middot; {{ entry.km }} km</span>
+                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
                 </p>
                 <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
                 <p v-if="entry.comment" class="text-xs text-muted-foreground italic">{{ entry.comment }}</p>
@@ -234,7 +234,7 @@ function getCfg(status: string) {
                     {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
                   </span>
                   <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"> &middot; {{ entry.km }} km</span>
+                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
                 </p>
                 <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
               </div>
@@ -265,7 +265,7 @@ function getCfg(status: string) {
                     {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
                   </span>
                   <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"> &middot; {{ entry.km }} km</span>
+                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
                 </p>
                 <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
                 <p v-if="entry.comment" class="text-xs text-muted-foreground italic">{{ entry.comment }}</p>

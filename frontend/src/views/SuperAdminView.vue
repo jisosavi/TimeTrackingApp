@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
 
-const { companies, loading, error, fetchCompanies, createCompany, updateCompany } = useSuperAdmin()
+const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId } = useSuperAdmin()
 
 onMounted(fetchCompanies)
 
@@ -18,10 +18,6 @@ const createError = ref<string | null>(null)
 const creating = ref(false)
 
 const createSlugError = computed(() => validateSlug(createForm.value.slug))
-const createUrlPreview = computed(() => {
-  const s = createForm.value.slug.trim()
-  return s ? `/${s}` : '/…'
-})
 
 function openCreateForm() {
   createForm.value = { name: '', slug: '', email: '', password: '' }
@@ -65,9 +61,10 @@ async function submitCreate() {
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 const editingId = ref<number | null>(null)
-const editForm = ref({ name: '', slug: '', salaxy_company_id: '' })
+const editForm = ref({ name: '', slug: '', business_id: '' })
 const editError = ref<string | null>(null)
 const saving = ref(false)
+const fetchingBid = ref(false)
 
 const editSlugError = computed(() => editForm.value.slug ? validateSlug(editForm.value.slug) : null)
 
@@ -75,7 +72,7 @@ function openEdit(id: number) {
   const c = companies.value.find(c => c.id === id)
   if (!c) return
   editingId.value = id
-  editForm.value = { name: c.name, slug: c.slug, salaxy_company_id: c.salaxy_company_id ?? '' }
+  editForm.value = { name: c.name, slug: c.slug, business_id: c.business_id ?? '' }
   editError.value = null
   showCreateForm.value = false
 }
@@ -83,6 +80,20 @@ function openEdit(id: number) {
 function cancelEdit() {
   editingId.value = null
   editError.value = null
+}
+
+async function autoFetchBusinessId() {
+  if (!editingId.value) return
+  fetchingBid.value = true
+  editError.value = null
+  try {
+    const bid = await fetchBusinessId(editingId.value)
+    editForm.value.business_id = bid
+  } catch (e) {
+    editError.value = e instanceof Error ? e.message : 'Could not fetch Business ID'
+  } finally {
+    fetchingBid.value = false
+  }
 }
 
 async function submitEdit() {
@@ -96,7 +107,7 @@ async function submitEdit() {
     await updateCompany(editingId.value!, {
       name: editForm.value.name.trim(),
       slug: editForm.value.slug.trim(),
-      salaxy_company_id: editForm.value.salaxy_company_id.trim() || null,
+      business_id: editForm.value.business_id.trim() || null,
     })
     cancelEdit()
   } catch (e) {
@@ -189,10 +200,10 @@ async function toggleApprovals(id: number, currentValue: number) {
         <div class="space-y-0.5 min-w-0">
           <p class="font-medium text-sm">{{ company.name }}</p>
           <p class="text-xs text-muted-foreground font-mono">/{{ company.slug }}</p>
-          <p v-if="company.salaxy_company_id" class="text-xs text-muted-foreground font-mono">
-            Salaxy ID: {{ company.salaxy_company_id }}
+          <p v-if="company.business_id" class="text-xs text-muted-foreground font-mono">
+            Business ID: {{ company.business_id }}
           </p>
-          <p v-else class="text-xs text-muted-foreground italic">No Salaxy ID set</p>
+          <p v-else class="text-xs text-muted-foreground italic">No Business ID set</p>
         </div>
         <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
           <Badge variant="secondary" class="text-[10px]">{{ company.employee_count }} emp</Badge>
@@ -249,8 +260,19 @@ async function toggleApprovals(id: number, currentValue: number) {
             </p>
           </div>
           <div class="space-y-1 sm:col-span-2">
-            <Label class="text-xs">Salaxy Company ID</Label>
-            <Input v-model="editForm.salaxy_company_id" placeholder="e.g. 4cae3d5c-…" class="font-mono text-xs" />
+            <Label class="text-xs">Business ID (Y-tunnus)</Label>
+            <div class="flex gap-2">
+              <Input v-model="editForm.business_id" placeholder="e.g. 1234567-8" class="font-mono text-xs" />
+              <Button
+                size="sm"
+                variant="outline"
+                class="shrink-0 text-xs"
+                :disabled="fetchingBid"
+                @click="autoFetchBusinessId"
+              >
+                {{ fetchingBid ? 'Fetching…' : 'Fetch from Salaxy' }}
+              </Button>
+            </div>
           </div>
         </div>
         <p v-if="editError" class="text-xs text-destructive">{{ editError }}</p>

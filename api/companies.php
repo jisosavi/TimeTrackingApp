@@ -9,7 +9,8 @@ $db = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->query(
-        'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language, c.salaxy_company_id,
+        'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language,
+                c.salaxy_company_id AS business_id,
                 COUNT(e.id) AS employee_count
          FROM companies c
          LEFT JOIN employees e ON e.company_id = c.id AND e.active = 1
@@ -25,12 +26,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id) {
         // Update existing company
-        $name  = array_key_exists('name', $payload) ? trim((string) $payload['name']) : null;
-        $slug  = array_key_exists('slug', $payload) ? trim((string) $payload['slug']) : null;
+        $name   = array_key_exists('name', $payload) ? trim((string) $payload['name']) : null;
+        $slug   = array_key_exists('slug', $payload) ? trim((string) $payload['slug']) : null;
         $active = array_key_exists('active', $payload) ? (int) $payload['active'] : null;
-        $ae    = array_key_exists('approvals_enabled', $payload) ? (int) $payload['approvals_enabled'] : null;
-        $lang  = array_key_exists('ui_language', $payload) ? trim((string) $payload['ui_language']) : null;
-        $salaxyCompanyId = array_key_exists('salaxy_company_id', $payload) ? trim((string) $payload['salaxy_company_id']) : null;
+        $ae     = array_key_exists('approvals_enabled', $payload) ? (int) $payload['approvals_enabled'] : null;
+        $lang   = array_key_exists('ui_language', $payload) ? trim((string) $payload['ui_language']) : null;
+        // Accept both new key and legacy key
+        $businessId = null;
+        if (array_key_exists('business_id', $payload)) {
+            $businessId = trim((string) $payload['business_id']);
+        } elseif (array_key_exists('salaxy_company_id', $payload)) {
+            $businessId = trim((string) $payload['salaxy_company_id']);
+        }
 
         if ($slug !== null) {
             if (!preg_match('/^[a-z0-9-]+$/', $slug) || strlen($slug) < 2) {
@@ -58,13 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
                ->execute([':lang' => $lang, ':id' => $id]);
         }
-        if ($salaxyCompanyId !== null) {
+        if ($businessId !== null) {
             $db->prepare('UPDATE companies SET salaxy_company_id = :sid WHERE id = :id')
-               ->execute([':sid' => $salaxyCompanyId ?: null, ':id' => $id]);
+               ->execute([':sid' => $businessId ?: null, ':id' => $id]);
         }
 
         $stmt = $db->prepare(
             'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language,
+                    c.salaxy_company_id AS business_id,
                     COUNT(e.id) AS employee_count
              FROM companies c
              LEFT JOIN employees e ON e.company_id = c.id AND e.active = 1
