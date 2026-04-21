@@ -1,0 +1,15 @@
+<?php
+// Copy this file to config.local.php and fill in your values.
+// config.local.php is gitignored — never commit it.
+
+putenv('GEMINI_API_KEY=your-gemini-api-key');
+putenv('JWT_SECRET=your-jwt-secret-min-32-chars');
+putenv('APP_KEY=your-app-key');
+
+putenv('SALAXY_USERNAME=your-salaxy-username');
+putenv('SALAXY_PASSWORD=your-salaxy-password');
+putenv('SALAXY_EMPLOYMENT_ID=your-default-employment-id');
+
+// SALAXY_API_URL and SALAXY_TOKEN_URL have defaults — only set if using a different endpoint.
+// putenv('SALAXY_API_URL=https://test-api.salaxy.com/v03/api');
+// putenv('SALAXY_TOKEN_URL=https://test-api.salaxy.com/oauth2/token');
