@@ -43,8 +43,8 @@ const navLinks = computed(() => {
   }
   if (type === 'admin') {
     return [
-      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title') },
       { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title') },
+      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title') },
       { to: `/${slug}/admin/payroll-settings`, label: 'Payroll Settings' },
     ]
   }
