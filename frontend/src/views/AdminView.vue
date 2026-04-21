@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -279,12 +279,17 @@ function toggleExportEmployee(id: number) {
   else exportSelectedIds.value.push(id)
 }
 
+const exportAllEmployeeIds = computed(() =>
+  exportPeriods.value.flatMap(p => p.employees).map(e => e.employee_id),
+)
+
 async function doExport(force = false) {
   exportError.value = null
   exportResult.value = null
   exportLoading.value = true
+  const ids = force ? exportAllEmployeeIds.value : exportSelectedIds.value
   try {
-    exportResult.value = await submitExport(exportDateFrom.value, exportDateTo.value, exportSelectedIds.value, force)
+    exportResult.value = await submitExport(exportDateFrom.value, exportDateTo.value, ids, force)
     exportPeriods.value = []
   } catch (e) {
     exportError.value = e instanceof Error ? e.message : 'Export failed'
@@ -695,7 +700,7 @@ async function doExport(force = false) {
                 <Button
                   size="sm"
                   variant="outline"
-                  :disabled="exportLoading || exportSelectedIds.length === 0"
+                  :disabled="exportLoading || exportAllEmployeeIds.length === 0"
                   @click="doExport(true)"
                 >
                   Re-export all
