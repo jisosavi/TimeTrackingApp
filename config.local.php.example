@@ -4,7 +4,6 @@
 
 putenv('GEMINI_API_KEY=your-gemini-api-key');
 putenv('JWT_SECRET=your-jwt-secret-min-32-chars');
-putenv('APP_KEY=your-app-key');
 
 putenv('SALAXY_USERNAME=your-salaxy-username');
 putenv('SALAXY_PASSWORD=your-salaxy-password');
