@@ -38,7 +38,7 @@ const title = computed(() => {
 })
 
 const subtitle = computed(() =>
-  slug ? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'TimeTrackingApp',
+  slug ? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '',
 )
 
 function clearError() {
@@ -135,9 +135,10 @@ async function loginWithPassword() {
   <div class="min-h-screen flex items-center justify-center bg-background p-4">
     <div class="w-full max-w-sm space-y-4">
 
-      <div class="text-center space-y-1">
+      <div class="text-center space-y-2">
+        <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto" />
         <h1 class="text-2xl font-semibold tracking-tight">{{ title }}</h1>
-        <p class="text-sm text-muted-foreground">{{ subtitle }}</p>
+        <p v-if="subtitle" class="text-sm text-muted-foreground">{{ subtitle }}</p>
       </div>
 
       <Card>
