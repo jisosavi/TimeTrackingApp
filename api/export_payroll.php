@@ -62,6 +62,26 @@ function getPeriodForDate(string $dateYmd, array $settings): array
 }
 
 // ----------------------------------------------------------------
+// Return all periods that fall within a date range.
+// Advances period-by-period so biweekly always yields 2 per month.
+// ----------------------------------------------------------------
+function getPeriodsForRange(string $dateFrom, string $dateTo, array $settings): array
+{
+    $periods = [];
+    $ts      = strtotime($dateFrom);
+    $endTs   = strtotime($dateTo);
+    while ($ts <= $endTs) {
+        $p  = getPeriodForDate(date('Y-m-d', $ts), $settings);
+        $pk = $p['start'];
+        if (!isset($periods[$pk])) {
+            $periods[$pk] = $p;
+        }
+        $ts = strtotime($p['end']) + 86400; // jump to first day of next period
+    }
+    return $periods;
+}
+
+// ----------------------------------------------------------------
 // GET — preview approved entries grouped by period then employee
 // ----------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -74,6 +94,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $settings = getCompanyPayrollSettings($db, (int) $admin['company_id']);
 
+    // Pre-populate ALL periods in range (including empty ones)
+    $byPeriod = [];
+    foreach (getPeriodsForRange($dateFrom, $dateTo, $settings) as $pk => $p) {
+        $ex = $db->prepare(
+            'SELECT salaxy_payroll_id FROM payroll_exports
+             WHERE company_id = ? AND period_start = ? AND period_end = ?'
+        );
+        $ex->execute([$admin['company_id'], $p['start'], $p['end']]);
+        $ex = $ex->fetch();
+        $byPeriod[$pk] = [
+            'period_start'        => $p['start'],
+            'period_end'          => $p['end'],
+            'period_label'        => $p['label'],
+            'existing_payroll_id' => $ex ? $ex['salaxy_payroll_id'] : null,
+            'employees'           => [],
+        ];
+    }
+
+    // Fill entries into the correct period slot
     $stmt = $db->prepare(
         "SELECT te.*, e.name AS employee_name, e.salaxy_employment_id
          FROM time_entries te
@@ -85,30 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
          ORDER BY te.entry_date ASC, e.name ASC"
     );
     $stmt->execute([':cid' => $admin['company_id'], ':df' => $dateFrom, ':dt' => $dateTo]);
-    $rows = $stmt->fetchAll();
-
-    // Group by period → employee
-    $byPeriod = [];
-    foreach ($rows as $row) {
-        $p  = getPeriodForDate($row['entry_date'], $settings);
-        $pk = $p['start'];
-        if (!isset($byPeriod[$pk])) {
-            // Check if a payroll already exists for this period
-            $existing = $db->prepare(
-                'SELECT salaxy_payroll_id FROM payroll_exports
-                 WHERE company_id = ? AND period_start = ? AND period_end = ?'
-            );
-            $existing->execute([$admin['company_id'], $p['start'], $p['end']]);
-            $ex = $existing->fetch();
-
-            $byPeriod[$pk] = [
-                'period_start'       => $p['start'],
-                'period_end'         => $p['end'],
-                'period_label'       => $p['label'],
-                'existing_payroll_id'=> $ex ? $ex['salaxy_payroll_id'] : null,
-                'employees'          => [],
-            ];
-        }
+    foreach ($stmt->fetchAll() as $row) {
+        $pk  = getPeriodForDate($row['entry_date'], $settings)['start'];
         $eid = $row['employee_id'];
         if (!isset($byPeriod[$pk]['employees'][$eid])) {
             $byPeriod[$pk]['employees'][$eid] = [
@@ -122,8 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'entries'              => [],
             ];
         }
-        $byPeriod[$pk]['employees'][$eid]['total_hours']  += (float) $row['hours'];
-        $byPeriod[$pk]['employees'][$eid]['total_km']     += (float) $row['km'];
+        $byPeriod[$pk]['employees'][$eid]['total_hours'] += (float) $row['hours'];
+        $byPeriod[$pk]['employees'][$eid]['total_km']    += (float) $row['km'];
         if (!(int) $row['exported_to_salaxy']) {
             $byPeriod[$pk]['employees'][$eid]['pending_hours'] += (float) $row['hours'];
             $byPeriod[$pk]['employees'][$eid]['pending_km']    += (float) $row['km'];
@@ -131,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $byPeriod[$pk]['employees'][$eid]['entries'][] = $row;
     }
 
-    // Re-index employees arrays
     foreach ($byPeriod as &$pd) {
         $pd['employees'] = array_values($pd['employees']);
     }
@@ -150,75 +166,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $employeeIds = array_map('intval', (array) ($payload['employee_ids'] ?? []));
     $force       = (bool) ($payload['force'] ?? false);
 
-    if (!$dateFrom || !$dateTo || empty($employeeIds)) {
-        sendJson(['success' => false, 'error' => 'date_from, date_to ja employee_ids vaaditaan'], 400);
+    if (!$dateFrom || !$dateTo) {
+        sendJson(['success' => false, 'error' => 'date_from ja date_to vaaditaan'], 400);
     }
 
-    $settings = getCompanyPayrollSettings($db, (int) $admin['company_id']);
+    $settings   = getCompanyPayrollSettings($db, (int) $admin['company_id']);
+    $allPeriods = getPeriodsForRange($dateFrom, $dateTo, $settings);
 
-    $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
-    $exportedFilter = $force ? '' : "AND te.exported_to_salaxy = 0";
-    $stmt = $db->prepare(
-        "SELECT te.*, e.name AS employee_name, e.salaxy_employment_id
-         FROM time_entries te
-         JOIN employees e ON e.id = te.employee_id
-         WHERE te.company_id = ?
-           AND te.status = 'approved'
-           $exportedFilter
-           AND te.entry_date >= ?
-           AND te.entry_date <= ?
-           AND te.employee_id IN ($placeholders)
-         ORDER BY te.entry_date ASC, e.name ASC"
-    );
-    $stmt->execute([$admin['company_id'], $dateFrom, $dateTo, ...$employeeIds]);
-    $rows = $stmt->fetchAll();
-
-    if (empty($rows)) {
-        sendJson(['success' => false, 'error' => 'Ei hyväksyttyjä kirjauksia valitulle ajanjaksolle'], 400);
-    }
-
-    // Group by period → salaxy_employment_id
-    $byPeriod = [];
-    foreach ($rows as $row) {
-        $p   = getPeriodForDate($row['entry_date'], $settings);
-        $pk  = $p['start'];
-        $eid = $row['salaxy_employment_id'] ?: SALAXY_EMPLOYMENT_ID;
-
-        if (!isset($byPeriod[$pk])) {
-            $byPeriod[$pk] = [
-                'start'      => $p['start'],
-                'end'        => $p['end'],
-                'label'      => $p['label'],
-                'paydayDate' => $p['paydayDate'],
-                'employees'  => [],
+    // Load entries grouped by period → salaxy_employment_id
+    $entriesByPeriod = [];
+    if (!empty($employeeIds)) {
+        $placeholders   = implode(',', array_fill(0, count($employeeIds), '?'));
+        $exportedFilter = $force ? '' : "AND te.exported_to_salaxy = 0";
+        $stmt = $db->prepare(
+            "SELECT te.*, e.salaxy_employment_id
+             FROM time_entries te
+             JOIN employees e ON e.id = te.employee_id
+             WHERE te.company_id = ?
+               AND te.status = 'approved'
+               $exportedFilter
+               AND te.entry_date >= ?
+               AND te.entry_date <= ?
+               AND te.employee_id IN ($placeholders)
+             ORDER BY te.entry_date ASC"
+        );
+        $stmt->execute([$admin['company_id'], $dateFrom, $dateTo, ...$employeeIds]);
+        foreach ($stmt->fetchAll() as $row) {
+            $pk  = getPeriodForDate($row['entry_date'], $settings)['start'];
+            $eid = $row['salaxy_employment_id'] ?: SALAXY_EMPLOYMENT_ID;
+            if (!isset($entriesByPeriod[$pk])) $entriesByPeriod[$pk] = [];
+            if (!isset($entriesByPeriod[$pk][$eid])) $entriesByPeriod[$pk][$eid] = [];
+            $parts    = explode('-', $row['entry_date']);
+            $ddmmyyyy = count($parts) === 3 ? "{$parts[2]}-{$parts[1]}-{$parts[0]}" : $row['entry_date'];
+            $entriesByPeriod[$pk][$eid][] = [
+                'id'      => (int) $row['id'],
+                'date'    => $ddmmyyyy,
+                'start'   => $row['start_time'],
+                'end'     => $row['end_time'],
+                'hours'   => (float) $row['hours'],
+                'mileage' => (float) $row['km'],
+                'project' => $row['project'],
+                'notes'   => $row['comment'],
             ];
         }
-        if (!isset($byPeriod[$pk]['employees'][$eid])) {
-            $byPeriod[$pk]['employees'][$eid] = [];
-        }
-
-        // Convert YYYY-MM-DD → DD-MM-YYYY for salaxy_sync helpers
-        $parts    = explode('-', $row['entry_date']);
-        $ddmmyyyy = count($parts) === 3
-            ? "{$parts[2]}-{$parts[1]}-{$parts[0]}"
-            : $row['entry_date'];
-
-        $byPeriod[$pk]['employees'][$eid][] = [
-            'id'      => (int) $row['id'],
-            'date'    => $ddmmyyyy,
-            'start'   => $row['start_time'],
-            'end'     => $row['end_time'],
-            'hours'   => (float) $row['hours'],
-            'mileage' => (float) $row['km'],
-            'project' => $row['project'],
-            'notes'   => $row['comment'],
-        ];
     }
 
-    // Load Salaxy API helpers
-    if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
-        define('SALAXY_SYNC_AS_LIBRARY', true);
-    }
+    // Fallback employment ID for creating empty payroll drafts
+    $fallbackRow = $db->prepare(
+        'SELECT salaxy_employment_id FROM employees
+         WHERE company_id = ? AND salaxy_employment_id IS NOT NULL AND active = 1 LIMIT 1'
+    );
+    $fallbackRow->execute([$admin['company_id']]);
+    $fallbackEmpId = ($fallbackRow->fetch()['salaxy_employment_id']) ?? null;
+
+    if (!defined('SALAXY_SYNC_AS_LIBRARY')) define('SALAXY_SYNC_AS_LIBRARY', true);
     require_once __DIR__ . '/../salaxy_sync.php';
 
     $totalSent    = 0;
@@ -226,13 +227,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $totalAlready = 0;
     $errors       = [];
     $exportedIds  = [];
-    $payrollLinks = []; // period_start → salaxy_payroll_id
+    $payrollLinks = [];
 
-    foreach ($byPeriod as $pk => $pd) {
-        $periodStart  = $pd['start'];
-        $periodEnd    = $pd['end'];
-        $periodLabel  = $pd['label'];
-        $paydayDate   = $pd['paydayDate'];
+    foreach ($allPeriods as $pk => $p) {
+        $periodStart = $p['start'];
+        $periodEnd   = $p['end'];
+        $periodLabel = $p['label'];
+        $paydayDate  = $p['paydayDate'];
+        $empEntries  = $entriesByPeriod[$pk] ?? [];
 
         // ---- Get or create the Salaxy payroll for this period ----
         $exportRow = $db->prepare(
@@ -244,41 +246,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $needCreate = true;
         if ($exportRow) {
-            // Verify the stored payroll still exists in Salaxy
             $checkResp = salaxyRequest('GET', '/payroll/' . $exportRow['salaxy_payroll_id']);
             if ($checkResp['success'] && isset($checkResp['data']['id'])) {
                 $payrollId  = $exportRow['salaxy_payroll_id'];
                 $exportId   = (int) $exportRow['id'];
                 $needCreate = false;
             }
-            // Salaxy no longer has it — fall through to create a new one
         }
 
         if ($needCreate) {
-            $firstEmpId = array_key_first($pd['employees']);
+            // Use first entry's employment ID, fall back to any active employee
+            $refEmpId = array_key_first($empEntries) ?? $fallbackEmpId;
+            if (!$refEmpId) {
+                $errors[] = ['period' => $periodStart, 'error' => 'No Salaxy employment ID available to create payroll'];
+                continue;
+            }
             $createResp = salaxyRequest('POST', '/payroll', [
-                'employmentId' => $firstEmpId,
+                'employmentId' => $refEmpId,
                 'status'       => 'Draft',
                 'input'        => ['title' => $periodLabel, 'payDay' => $paydayDate],
             ]);
-
             if (!$createResp['success'] || !isset($createResp['data']['id'])) {
-                foreach ($pd['employees'] as $entries) {
-                    foreach ($entries as $e) {
-                        $errors[] = ['entry' => $e, 'error' => 'Palkkalistan luonti epäonnistui', 'detail' => $createResp['data'] ?? null];
-                    }
-                }
+                $errors[] = ['period' => $periodStart, 'error' => 'Palkkalistan luonti epäonnistui', 'detail' => $createResp['data'] ?? null];
                 continue;
             }
-
             $payrollId = $createResp['data']['id'];
-
             if ($exportRow) {
-                // Update existing DB record in place — preserves the row id
                 $exportId = (int) $exportRow['id'];
                 $db->prepare('UPDATE payroll_exports SET salaxy_payroll_id = ? WHERE id = ?')
                    ->execute([$payrollId, $exportId]);
-                // Stale calculation IDs are invalid for the new payroll — clear them
                 $db->prepare('DELETE FROM payroll_export_calculations WHERE payroll_export_id = ?')
                    ->execute([$exportId]);
             } else {
@@ -292,9 +288,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $payrollLinks[$periodStart] = $payrollId;
 
-        // ---- Process each employee in this period (one API call per employee) ----
-        foreach ($pd['employees'] as $empSalaxyId => $entries) {
-
+        // ---- Add entries to this payroll (period may be empty — that is fine) ----
+        foreach ($empEntries as $empSalaxyId => $entries) {
             $calcRow = $db->prepare(
                 'SELECT salaxy_calculation_id FROM payroll_export_calculations
                  WHERE payroll_export_id = ? AND salaxy_employment_id = ?'
@@ -302,11 +297,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $calcRow->execute([$exportId, $empSalaxyId]);
             $existingCalcId = ($calcRow->fetch()['salaxy_calculation_id']) ?? null;
 
-            // All entries for this employee are exported in a single calculation
             $r      = exportEmployeeEntries($payrollId, $entries, $existingCalcId, $empSalaxyId);
             $funcOk = $r['success'] ?? false;
             $saveOk = $r['saveResponse']['success'] ?? false;
-            // add-calc is best-effort; info.payrollId in the save already links the calc
 
             if ($funcOk && $saveOk) {
                 $newCalcId = $r['finalCalculationId'] ?? null;
@@ -317,9 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          VALUES (?, ?, ?)'
                     )->execute([$exportId, $empSalaxyId, $newCalcId]);
                 }
-                foreach ($entries as $entry) {
-                    $exportedIds[] = (int) $entry['id'];
-                }
+                foreach ($entries as $entry) $exportedIds[] = (int) $entry['id'];
                 $totalSent    += count($entries);
                 $totalAdded   += $r['newEntryCount']  ?? count($entries);
                 $totalAlready += $r['skipEntryCount'] ?? 0;
@@ -337,7 +328,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Mark successfully sent entries as exported
     if (!empty($exportedIds)) {
         $ph  = implode(',', array_fill(0, count($exportedIds), '?'));
         $now = gmdate('c');
@@ -354,9 +344,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'errors'        => count($errors),
         'errors_detail' => $errors,
         'payrolls'      => array_map(fn($start, $id) => [
-            'period_start'     => $start,
-            'salaxy_payroll_id'=> $id,
-            'url'              => 'https://test.salaxy.fi/payroll/' . $id,
+            'period_start'      => $start,
+            'salaxy_payroll_id' => $id,
+            'url'               => 'https://test.salaxy.fi/payroll/' . $id,
         ], array_keys($payrollLinks), array_values($payrollLinks)),
     ]);
 }

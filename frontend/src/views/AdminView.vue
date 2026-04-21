@@ -673,6 +673,9 @@ async function doExport(force = false) {
                   {{ period.period_label }}
                   <span v-if="period.existing_payroll_id" class="normal-case text-orange-500 ml-2">(previously exported)</span>
                 </p>
+                <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
+                  No entries yet — payroll draft will still be created
+                </p>
                 <div v-for="emp in period.employees" :key="emp.employee_id" class="flex items-center gap-3 text-sm py-1 border-b last:border-0">
                   <input
                     type="checkbox"
@@ -692,7 +695,7 @@ async function doExport(force = false) {
               <div class="flex gap-2 pt-1">
                 <Button
                   size="sm"
-                  :disabled="exportLoading || exportSelectedIds.length === 0"
+                  :disabled="exportLoading || exportPeriods.length === 0"
                   @click="doExport(false)"
                 >
                   {{ exportLoading ? 'Exporting…' : 'Export to Salaxy' }}
