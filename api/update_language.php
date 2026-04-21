@@ -21,69 +21,35 @@ $langValue = $isClear ? null : $lang;
 
 $db = getDb();
 
-// Company admin updating company default language
-if ($targetType === 'company') {
-    $admin = requireAdmin();
-    $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $lang, ':id' => (int) $admin['company_id']]);
-    sendJson(['success' => true]);
-}
-
-// Company admin or supervisor updating employee language
+// Employee updating their own language
 if ($targetType === 'employee') {
-    if (isset($_SESSION['admin_id'])) {
-        $admin = requireAdmin();
-        $stmt  = $db->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id AND company_id = :cid');
-        $stmt->execute([':lang' => $langValue, ':id' => $targetId, ':cid' => (int) $admin['company_id']]);
-    } elseif (isset($_SESSION['supervisor_id'])) {
-        // Supervisor may only update employees in their team
-        $supId = (int) $_SESSION['supervisor_id'];
-        $check = $db->prepare('SELECT employee_id FROM supervisor_employees WHERE supervisor_id = :sid AND employee_id = :eid');
-        $check->execute([':sid' => $supId, ':eid' => $targetId]);
-        if (!$check->fetch()) {
-            sendJson(['success' => false, 'error' => 'Not authorized'], 403);
-        }
-        $db->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id')
-           ->execute([':lang' => $langValue, ':id' => $targetId]);
-    } elseif (isset($_SESSION['employee_id'])) {
-        if ($isClear || $targetId !== (int) $_SESSION['employee_id']) {
-            sendJson(['success' => false, 'error' => 'Not authorized'], 403);
-        }
-        $db->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id')
-           ->execute([':lang' => $langValue, ':id' => $targetId]);
-    } else {
-        sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
-    }
+    $employee = requireEmployee();
+    $db->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id')
+       ->execute([':lang' => $langValue, ':id' => (int) $employee['id']]);
     sendJson(['success' => true]);
 }
 
-// Company admin updating supervisor language
-if ($targetType === 'supervisor') {
-    $admin = requireAdmin();
-    $stmt  = $db->prepare('UPDATE supervisors SET ui_language = :lang WHERE id = :id AND company_id = :cid');
-    $stmt->execute([':lang' => $langValue, ':id' => $targetId, ':cid' => (int) $admin['company_id']]);
+// Supervisor updating their own language
+if ($targetType === 'supervisor_self') {
+    $supervisor = requireSupervisor();
+    $db->prepare('UPDATE supervisors SET ui_language = :lang WHERE id = :id')
+       ->execute([':lang' => $langValue, ':id' => (int) $supervisor['id']]);
     sendJson(['success' => true]);
 }
 
 // Admin updating their own language
 if ($targetType === 'admin') {
     $admin = requireAdmin();
-    if ($targetId && $targetId !== (int) $admin['id']) {
-        sendJson(['success' => false, 'error' => 'Not authorized'], 403);
-    }
     $db->prepare('UPDATE company_admins SET ui_language = :lang WHERE id = :id')
        ->execute([':lang' => $lang, ':id' => (int) $admin['id']]);
     sendJson(['success' => true]);
 }
 
-// Supervisor updating their own language
-if ($targetType === 'supervisor_self') {
-    if (!isset($_SESSION['supervisor_id'])) {
-        sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
-    }
-    $supId = (int) $_SESSION['supervisor_id'];
-    $db->prepare('UPDATE supervisors SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $lang, ':id' => $supId]);
+// Company admin updating company default language
+if ($targetType === 'company') {
+    $admin = requireAdmin();
+    $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
+       ->execute([':lang' => $lang, ':id' => (int) $admin['company_id']]);
     sendJson(['success' => true]);
 }
 

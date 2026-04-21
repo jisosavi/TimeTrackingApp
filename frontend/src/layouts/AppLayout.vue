@@ -3,12 +3,35 @@ import { computed } from 'vue'
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 import { Button } from '@/components/ui/button'
 
 const { t } = useI18n()
 
 const auth = useAuthStore()
 const router = useRouter()
+const { apiFetch } = useApi()
+
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa',
+}
+
+async function changeLanguage(lang: string) {
+  const user = auth.user!
+  const targetType =
+    user.type === 'employee'   ? 'employee' :
+    user.type === 'supervisor' ? 'supervisor_self' : 'admin'
+
+  const body: Record<string, unknown> = { lang, target_type: targetType }
+  if (targetType === 'employee' || targetType === 'admin') body.target_id = user.id
+
+  await apiFetch('/api/update_language.php', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }).catch(() => {})
+
+  auth.setAuth(auth.token!, { ...user, uiLanguage: lang })
+}
 
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}
@@ -60,6 +83,13 @@ async function logout() {
         </div>
         <div class="flex items-center gap-3">
           <span class="text-sm text-muted-foreground">{{ auth.user?.name }}</span>
+          <select
+            :value="auth.user?.uiLanguage ?? 'en'"
+            class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+            @change="changeLanguage(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
+          </select>
           <Button variant="outline" size="sm" @click="logout">{{ t('common.logout') }}</Button>
         </div>
       </div>
