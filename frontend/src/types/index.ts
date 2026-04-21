@@ -21,6 +21,10 @@ export interface TimeEntry {
   exported_at: string | null
 }
 
+export interface ReviewEntry extends TimeEntry {
+  employee_name: string
+}
+
 export interface LlmEntry {
   date: string
   start: string
