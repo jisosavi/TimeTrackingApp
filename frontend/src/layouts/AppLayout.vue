@@ -84,7 +84,9 @@ async function logout() {
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <span class="font-semibold text-sm">TimeTrackingApp</span>
         <div class="flex items-center gap-3">
-          <span class="text-sm text-muted-foreground">{{ auth.user?.name }}</span>
+          <span class="text-sm text-muted-foreground">
+            {{ auth.user?.type === 'admin' ? t('admin.employees_title') : auth.user?.name }}
+          </span>
           <select
             :value="auth.user?.uiLanguage ?? 'en'"
             class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
