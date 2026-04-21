@@ -65,7 +65,7 @@ async function submitCreate() {
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 const editingId = ref<number | null>(null)
-const editForm = ref({ name: '', slug: '' })
+const editForm = ref({ name: '', slug: '', salaxy_company_id: '' })
 const editError = ref<string | null>(null)
 const saving = ref(false)
 
@@ -75,7 +75,7 @@ function openEdit(id: number) {
   const c = companies.value.find(c => c.id === id)
   if (!c) return
   editingId.value = id
-  editForm.value = { name: c.name, slug: c.slug }
+  editForm.value = { name: c.name, slug: c.slug, salaxy_company_id: c.salaxy_company_id ?? '' }
   editError.value = null
   showCreateForm.value = false
 }
@@ -96,6 +96,7 @@ async function submitEdit() {
     await updateCompany(editingId.value!, {
       name: editForm.value.name.trim(),
       slug: editForm.value.slug.trim(),
+      salaxy_company_id: editForm.value.salaxy_company_id.trim() || null,
     })
     cancelEdit()
   } catch (e) {
@@ -188,6 +189,10 @@ async function toggleApprovals(id: number, currentValue: number) {
         <div class="space-y-0.5 min-w-0">
           <p class="font-medium text-sm">{{ company.name }}</p>
           <p class="text-xs text-muted-foreground font-mono">/{{ company.slug }}</p>
+          <p v-if="company.salaxy_company_id" class="text-xs text-muted-foreground font-mono">
+            Salaxy ID: {{ company.salaxy_company_id }}
+          </p>
+          <p v-else class="text-xs text-muted-foreground italic">No Salaxy ID set</p>
         </div>
         <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
           <Badge variant="secondary" class="text-[10px]">{{ company.employee_count }} emp</Badge>
@@ -203,7 +208,7 @@ async function toggleApprovals(id: number, currentValue: number) {
             class="cursor-pointer text-[10px]"
             @click="toggleApprovals(company.id, company.approvals_enabled)"
           >
-            {{ company.approvals_enabled ? 'Approvals on' : 'Approvals off' }}
+            {{ company.approvals_enabled ? 'Supervisor approvals: on' : 'Supervisor approvals: off' }}
           </Badge>
         </div>
       </div>
@@ -242,6 +247,10 @@ async function toggleApprovals(id: number, currentValue: number) {
             <p v-else-if="editForm.slug.trim()" class="text-xs text-muted-foreground font-mono">
               /{{ editForm.slug.trim() }}
             </p>
+          </div>
+          <div class="space-y-1 sm:col-span-2">
+            <Label class="text-xs">Salaxy Company ID</Label>
+            <Input v-model="editForm.salaxy_company_id" placeholder="e.g. 4cae3d5c-…" class="font-mono text-xs" />
           </div>
         </div>
         <p v-if="editError" class="text-xs text-destructive">{{ editError }}</p>

@@ -151,6 +151,9 @@ function initializeDatabase(PDO $db): void
     if (!in_array('ui_language', $cols)) {
         $db->exec("ALTER TABLE companies ADD COLUMN ui_language TEXT NOT NULL DEFAULT 'en'");
     }
+    if (!in_array('salaxy_company_id', $cols)) {
+        $db->exec('ALTER TABLE companies ADD COLUMN salaxy_company_id TEXT');
+    }
 
     $empCols = array_column($db->query('PRAGMA table_info(employees)')->fetchAll(), 'name');
     if (!in_array('ui_language', $empCols)) {

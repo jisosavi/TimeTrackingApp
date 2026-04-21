@@ -9,7 +9,7 @@ $db = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->query(
-        'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language,
+        'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language, c.salaxy_company_id,
                 COUNT(e.id) AS employee_count
          FROM companies c
          LEFT JOIN employees e ON e.company_id = c.id AND e.active = 1
@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $active = array_key_exists('active', $payload) ? (int) $payload['active'] : null;
         $ae    = array_key_exists('approvals_enabled', $payload) ? (int) $payload['approvals_enabled'] : null;
         $lang  = array_key_exists('ui_language', $payload) ? trim((string) $payload['ui_language']) : null;
+        $salaxyCompanyId = array_key_exists('salaxy_company_id', $payload) ? trim((string) $payload['salaxy_company_id']) : null;
 
         if ($slug !== null) {
             if (!preg_match('/^[a-z0-9-]+$/', $slug) || strlen($slug) < 2) {
@@ -56,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($lang !== null && in_array($lang, ['en', 'fi', 'sv', 'et', 'uk', 'xh'], true)) {
             $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
                ->execute([':lang' => $lang, ':id' => $id]);
+        }
+        if ($salaxyCompanyId !== null) {
+            $db->prepare('UPDATE companies SET salaxy_company_id = :sid WHERE id = :id')
+               ->execute([':sid' => $salaxyCompanyId ?: null, ':id' => $id]);
         }
 
         $stmt = $db->prepare(

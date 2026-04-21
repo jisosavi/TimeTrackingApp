@@ -36,9 +36,14 @@ if (!$supervisor) {
     sendJson(['success' => false, 'error' => 'Väärä PIN'], 401);
 }
 
-$compLangStmt = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
+$compLangStmt = $db->prepare('SELECT ui_language, approvals_enabled FROM companies WHERE id = :id LIMIT 1');
 $compLangStmt->execute([':id' => (int) $supervisor['company_id']]);
-$compRow       = $compLangStmt->fetch();
+$compRow = $compLangStmt->fetch();
+
+if (!$compRow || !(int) $compRow['approvals_enabled']) {
+    sendJson(['success' => false, 'error' => 'Supervisor approvals are not enabled for this company.'], 403);
+}
+
 $companyLang   = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';
 $supLang       = $supervisor['ui_language'] ?? null;
 $effectiveLang = $supLang ?: $companyLang;

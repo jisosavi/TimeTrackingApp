@@ -39,13 +39,13 @@ export function useSuperAdmin() {
       method: 'POST',
       body: JSON.stringify(payload),
     })
-    companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0 })
+    companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0, salaxy_company_id: null })
     return data.company
   }
 
   async function updateCompany(
     id: number,
-    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled'>>,
+    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled' | 'salaxy_company_id'>>,
   ) {
     const data = await apiFetch<{ company: Company }>('/api/companies.php', {
       method: 'POST',

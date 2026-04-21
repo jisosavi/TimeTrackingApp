@@ -29,6 +29,7 @@ export interface Company {
   approvals_enabled: number
   ui_language: string
   employee_count: number
+  salaxy_company_id: string | null
 }
 
 export interface Employee {
