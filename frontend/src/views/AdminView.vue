@@ -568,7 +568,7 @@ async function doExport(force = false) {
 
           <!-- Export to Salaxy -->
           <div class="rounded-lg border p-4 space-y-4 bg-card">
-            <p class="text-sm font-semibold">Vie kirjaukset Salaxyyn</p>
+            <p class="text-sm font-semibold">Export entries to Salaxy</p>
 
             <div class="flex gap-3 flex-wrap items-end">
               <div class="space-y-1">

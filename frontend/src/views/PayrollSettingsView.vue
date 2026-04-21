@@ -63,7 +63,7 @@ async function doSave() {
         </label>
         <label class="flex items-center gap-2 text-sm cursor-pointer">
           <input type="radio" value="biweekly" v-model="settings.payroll_period" />
-          Biweekly (1–15 / 16–end)
+          Fortnightly (1–15 / 16–end)
         </label>
       </div>
 
