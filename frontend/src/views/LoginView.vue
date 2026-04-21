@@ -137,7 +137,6 @@ async function loginWithPassword() {
 
       <div class="text-center space-y-1">
         <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-2" />
-        <h1 class="text-2xl font-semibold tracking-tight">TimeTrackingApp</h1>
         <p v-if="loginType === 'employee' && companyName" class="text-sm text-muted-foreground">{{ companyName }}</p>
         <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
       </div>
@@ -207,6 +206,8 @@ async function loginWithPassword() {
 
         </CardContent>
       </Card>
+
+      <p class="text-center text-xs text-muted-foreground/50">TimeTrackingApp</p>
 
     </div>
   </div>
