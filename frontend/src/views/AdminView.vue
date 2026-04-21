@@ -20,16 +20,20 @@ onMounted(() => {
 })
 
 // ── Employee section ──────────────────────────────────────────────────────────
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa',
+}
+
 const showEmpForm = ref(false)
 const editingEmpId = ref<number | null>(null)
-const empForm = ref({ name: '', pin: '', active: 1 })
+const empForm = ref({ name: '', pin: '', active: 1, ui_language: 'en' })
 const empFormError = ref<string | null>(null)
 const empSaving = ref(false)
 const syncing = ref(false)
 
 function openAddEmp() {
   editingEmpId.value = null
-  empForm.value = { name: '', pin: '', active: 1 }
+  empForm.value = { name: '', pin: '', active: 1, ui_language: 'en' }
   empFormError.value = null
   showEmpForm.value = true
 }
@@ -38,7 +42,7 @@ function openEditEmp(id: number) {
   const emp = employees.value.find(e => e.id === id)
   if (!emp) return
   editingEmpId.value = id
-  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active }
+  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en' }
   empFormError.value = null
   showEmpForm.value = false
 }
@@ -57,7 +61,7 @@ async function submitEmpForm() {
   try {
     const payload = editingEmpId.value
       ? { id: editingEmpId.value, ...empForm.value }
-      : { name: empForm.value.name, pin: empForm.value.pin }
+      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language }
     await saveEmployee(payload)
     cancelEmpForm()
   } catch (e) {
@@ -243,6 +247,12 @@ async function submitTeam() {
                 <Label class="text-xs">PIN (3–6 digits)</Label>
                 <Input v-model="empForm.pin" placeholder="e.g. 1234" maxlength="6" />
               </div>
+              <div class="space-y-1">
+                <Label class="text-xs">Language</Label>
+                <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
+                </select>
+              </div>
             </div>
             <p v-if="empFormError" class="text-xs text-destructive">{{ empFormError }}</p>
             <div class="flex gap-2">
@@ -287,6 +297,12 @@ async function submitTeam() {
                 <div class="space-y-1">
                   <Label class="text-xs">PIN</Label>
                   <Input v-model="empForm.pin" maxlength="6" />
+                </div>
+                <div class="space-y-1">
+                  <Label class="text-xs">Language</Label>
+                  <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
+                  </select>
                 </div>
               </div>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
