@@ -32,6 +32,11 @@ function lastFirst(name: string): string {
   return `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`
 }
 
+function empFirstNames(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2 ? parts.slice(0, -1).join(' ') : ''
+}
+
 function infoLine(fields: (string | null | undefined)[]): string {
   return fields.filter(Boolean).join(' · ')
 }
@@ -326,7 +331,7 @@ async function submitTeam() {
             class="rounded-lg border px-3 py-2.5 bg-card"
           >
             <div class="flex items-center justify-between gap-2">
-              <p class="font-medium text-sm">{{ lastFirst(emp.name) }}</p>
+              <p class="font-medium text-sm"><span class="font-bold">{{ empLastName(emp.name) }}</span><template v-if="empFirstNames(emp.name)">, {{ empFirstNames(emp.name) }}</template></p>
               <div class="flex items-center gap-1.5 shrink-0">
                 <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
                   {{ emp.pending_hours }}h pending
@@ -460,7 +465,7 @@ async function submitTeam() {
             class="rounded-lg border px-3 py-2.5 bg-card"
           >
             <div class="flex items-center justify-between gap-2">
-              <p class="font-medium text-sm">{{ sup.last_name }} {{ sup.first_name }}</p>
+              <p class="font-medium text-sm"><span class="font-bold">{{ sup.last_name }}</span>, {{ sup.first_name }}</p>
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                 <Badge variant="secondary" class="text-[10px]">Team: {{ sup.team_size }}</Badge>
                 <Badge :variant="sup.active ? 'default' : 'outline'" class="text-[10px]">
@@ -547,7 +552,7 @@ async function submitTeam() {
                     :checked="teamSelectedIds.includes(member.id)"
                     @change="toggleTeamMember(member.id)"
                   />
-                  <span>{{ lastFirst(member.name) }}</span>
+                  <span><span class="font-bold">{{ empLastName(member.name) }}</span><template v-if="empFirstNames(member.name)">, {{ empFirstNames(member.name) }}</template></span>
                   <span v-if="member.other_supervisors" class="text-xs text-muted-foreground">
                     (also: {{ member.other_supervisors }})
                   </span>

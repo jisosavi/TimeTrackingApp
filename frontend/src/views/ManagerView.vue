@@ -35,6 +35,11 @@ function teamLastFirst(name: string): string {
   return `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`
 }
 
+function teamFirstNames(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2 ? parts.slice(0, -1).join(' ') : ''
+}
+
 const sortedFilteredTeamMembers = computed(() => {
   const q = teamSearch.value.trim().toLowerCase()
   return [...teamMembers.value]
@@ -324,7 +329,7 @@ function getCfg(status: string) {
               :key="member.id"
               class="rounded-lg border px-3 py-2.5 bg-card"
             >
-              <p class="font-medium text-sm">{{ teamLastFirst(member.name) }}</p>
+              <p class="font-medium text-sm"><span class="font-bold">{{ teamLastName(member.name) }}</span><template v-if="teamFirstNames(member.name)">, {{ teamFirstNames(member.name) }}</template></p>
               <p class="text-xs text-muted-foreground mt-0.5">
                 {{ [member.email, member.phone, member.birth_year ? 'b. ' + member.birth_year : null].filter(Boolean).join(' · ') || 'No contact details on file.' }}
               </p>
