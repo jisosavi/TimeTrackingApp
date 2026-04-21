@@ -4,7 +4,6 @@ declare(strict_types=1);
 $allowedOrigins = [
     'https://isosavi.com',
     'https://www.isosavi.com',
-    'https://isosavi.com/test/TimeTrackingAppVue',
     'http://localhost:5173',
     'http://localhost:3000',
 ];

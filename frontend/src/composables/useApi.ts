@@ -1,5 +1,7 @@
 import { useAuthStore } from '@/stores/auth'
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
+
 export function useApi() {
   const auth = useAuthStore()
 
@@ -12,7 +14,7 @@ export function useApi() {
       headers['Authorization'] = `Bearer ${auth.token}`
     }
 
-    const response = await fetch(path, { ...options, headers })
+    const response = await fetch(`${API_BASE}${path}`, { ...options, headers })
     const data = await response.json()
 
     if (!response.ok) {

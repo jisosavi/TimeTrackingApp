@@ -14,6 +14,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
 type LoginType = 'employee' | 'supervisor' | 'admin' | 'superadmin'
 const loginType = route.meta.loginType as LoginType
@@ -59,7 +60,7 @@ async function submit() {
 }
 
 async function loginEmployee() {
-  const res = await fetch('/validate_pin.php', {
+  const res = await fetch(`${apiBase}/validate_pin.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: pin.value, slug }),
@@ -80,7 +81,7 @@ async function loginEmployee() {
 }
 
 async function loginSupervisor() {
-  const res = await fetch('/api/supervisor_login.php', {
+  const res = await fetch(`${apiBase}/api/supervisor_login.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: pin.value, slug }),
@@ -101,7 +102,7 @@ async function loginSupervisor() {
 }
 
 async function loginWithPassword() {
-  const res = await fetch('/api/admin_login.php', {
+  const res = await fetch(`${apiBase}/api/admin_login.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.value, password: password.value }),

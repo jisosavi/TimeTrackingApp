@@ -25,6 +25,7 @@ export function useChat() {
   const lastSavedIds = ref<number[]>([])
   const auth = useAuthStore()
   const { apiFetch } = useApi()
+  const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
   async function send(text: string): Promise<void> {
     history.value.push({ role: 'user', content: text })
@@ -33,7 +34,7 @@ export function useChat() {
     try {
       const recentHistory = history.value.slice(-12).map(({ role, content }) => ({ role, content }))
 
-      const res = await fetch('/llm_proxy.php', {
+      const res = await fetch(`${apiBase}/llm_proxy.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

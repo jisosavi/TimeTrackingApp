@@ -1,6 +1,9 @@
 # API keys and secrets
 config.php
 
+# Frontend production env — contains Railway URL, fill in from .env.production.example
+frontend/.env.production
+
 # Data directory (user data)
 data/
 
