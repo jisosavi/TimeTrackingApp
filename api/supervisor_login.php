@@ -33,23 +33,21 @@ if ($slug !== '') {
 $supervisor = $stmt->fetch();
 
 if (!$supervisor) {
-    http_response_code(401);
-    sendJson(['success' => false, 'error' => 'Väärä PIN']);
+    sendJson(['success' => false, 'error' => 'Väärä PIN'], 401);
 }
 
-$_SESSION['supervisor_id']         = (int) $supervisor['id'];
-$_SESSION['supervisor_company_id'] = (int) $supervisor['company_id'];
-
-// Resolve effective language: supervisor personal → company default → 'en'
 $compLangStmt = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
 $compLangStmt->execute([':id' => (int) $supervisor['company_id']]);
-$compRow      = $compLangStmt->fetch();
-$companyLang  = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';
-$supLang      = $supervisor['ui_language'] ?? null;
+$compRow       = $compLangStmt->fetch();
+$companyLang   = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';
+$supLang       = $supervisor['ui_language'] ?? null;
 $effectiveLang = $supLang ?: $companyLang;
 
+$token = generateToken((int) $supervisor['id'], 'supervisor', (int) $supervisor['company_id']);
+
 sendJson([
-    'success' => true,
+    'success'    => true,
+    'token'      => $token,
     'supervisor' => [
         'id'         => (int) $supervisor['id'],
         'first_name' => $supervisor['first_name'],

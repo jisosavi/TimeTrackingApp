@@ -1,12 +1,21 @@
 <?php
 declare(strict_types=1);
-error_reporting(0);  // Move this AFTER declare
+
+require_once __DIR__ . '/api/cors.php';
+require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/api/jwt.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/config.php';
-$apiKey = GEMINI_API_KEY;
+$token  = getBearerToken();
+$claims = $token ? verifyToken($token) : null;
+if (!$claims) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
 
-$raw = file_get_contents('php://input');
+$raw     = file_get_contents('php://input');
 $payload = json_decode($raw, true);
 
 if (!$payload || !isset($payload['history'])) {
@@ -17,7 +26,7 @@ if (!$payload || !isset($payload['history'])) {
 
 $messages = $payload['history'];
 
-$today = date('d-m-Y');
+$today        = date('d-m-Y');
 $systemPrompt = "Olet TimeAppin tuntikirjausassistentti. Tänään on {$today}. Keskustele suomeksi.
 
 TULKINTAOHJEET:
@@ -77,41 +86,37 @@ JSON-muoto (käytä TARKALLEEN kolme backtick-merkkiä):
 ```' . "
 ";
 
-// Muunna OpenAI-muotoiset viestit Gemini-muotoon
 $geminiContents = [];
 foreach ($messages as $msg) {
     if ($msg['role'] === 'system') {
-        // Gemini käsittelee system promptin erikseen
         continue;
     }
-    $role = $msg['role'] === 'assistant' ? 'model' : 'user';
+    $role             = $msg['role'] === 'assistant' ? 'model' : 'user';
     $geminiContents[] = [
-        'role' => $role,
-        'parts' => [['text' => $msg['content']]]
+        'role'  => $role,
+        'parts' => [['text' => $msg['content']]],
     ];
 }
 
 $body = [
     'system_instruction' => [
-        'parts' => [['text' => $systemPrompt]]
+        'parts' => [['text' => $systemPrompt]],
     ],
-    'contents' => $geminiContents,
+    'contents'         => $geminiContents,
     'generationConfig' => [
         'temperature' => 0.2,
     ],
 ];
 
-$url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' . $apiKey;
+$url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' . GEMINI_API_KEY;
 
 $ch = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => [
-        'Content-Type: application/json',
-    ],
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => json_encode($body),
-    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => json_encode($body),
+    CURLOPT_TIMEOUT        => 30,
 ]);
 
 $response = curl_exec($ch);
@@ -124,15 +129,14 @@ if (curl_errno($ch)) {
 }
 
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-//curl_close($ch);
+curl_close($ch);
 
 $data = json_decode($response, true);
 
 if ($httpCode >= 400) {
     http_response_code($httpCode);
     $errorMsg = $data['error']['message'] ?? 'Tuntematon virhe';
-    
-    // Käyttäjäystävälliset virheilmoitukset
+
     if ($httpCode === 429 || strpos($errorMsg, 'Resource exhausted') !== false) {
         $errorMsg = 'Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen, tai luo uusi API-avain.';
     } elseif ($httpCode === 401 || $httpCode === 403 || strpos($errorMsg, 'API key') !== false) {
@@ -140,7 +144,7 @@ if ($httpCode >= 400) {
     } elseif ($httpCode === 404) {
         $errorMsg = 'Tekoälymallia ei löydy. Tarkista mallin nimi llm_proxy.php:ssä.';
     }
-    
+
     echo json_encode(['error' => $errorMsg]);
     exit;
 }

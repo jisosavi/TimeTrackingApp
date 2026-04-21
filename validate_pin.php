@@ -2,13 +2,11 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
+require_once __DIR__ . '/api/cors.php';
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/api/jwt.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$raw    = file_get_contents('php://input');
+$raw     = file_get_contents('php://input');
 $payload = json_decode($raw, true);
 
 if (!$payload || !isset($payload['pin'])) {
@@ -51,24 +49,22 @@ try {
     $employee = $stmt->fetch();
 
     if ($employee) {
-        $_SESSION['employee_id']         = (int) $employee['id'];
-        $_SESSION['employee_company_id'] = (int) $employee['companyId'];
-
-        // Resolve effective language: employee personal → company default → 'en'
         $empRow = $db->prepare('SELECT ui_language FROM employees WHERE id = :id LIMIT 1');
         $empRow->execute([':id' => (int) $employee['id']]);
-        $empData   = $empRow->fetch();
-        $empLang   = ($empData && $empData['ui_language']) ? $empData['ui_language'] : null;
+        $empData = $empRow->fetch();
+        $empLang = ($empData && $empData['ui_language']) ? $empData['ui_language'] : null;
 
         $compRow = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
         $compRow->execute([':id' => (int) $employee['companyId']]);
-        $compData  = $compRow->fetch();
-        $compLang  = ($compData && $compData['ui_language']) ? $compData['ui_language'] : 'en';
-
+        $compData      = $compRow->fetch();
+        $compLang      = ($compData && $compData['ui_language']) ? $compData['ui_language'] : 'en';
         $effectiveLang = $empLang ?: $compLang;
+
+        $token = generateToken((int) $employee['id'], 'employee', (int) $employee['companyId']);
 
         echo json_encode([
             'valid'        => true,
+            'token'        => $token,
             'id'           => (int) $employee['id'],
             'name'         => $employee['name'],
             'companyId'    => (int) $employee['companyId'],

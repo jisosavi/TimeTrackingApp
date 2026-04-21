@@ -1,11 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/../bootstrap.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/jwt.php';
 
 function getJsonPayload(): array
 {
@@ -33,10 +31,12 @@ function getAdminById(int $id): ?array
 
 function requireAdmin(): array
 {
-    if (!isset($_SESSION['admin_id'])) {
+    $token  = getBearerToken();
+    $claims = $token ? verifyToken($token) : null;
+    if (!$claims || $claims['user_type'] !== 'admin') {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
     }
-    $admin = getAdminById((int) $_SESSION['admin_id']);
+    $admin = getAdminById((int) $claims['user_id']);
     if (!$admin) {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
     }
@@ -45,12 +45,14 @@ function requireAdmin(): array
 
 function requireSupervisor(): array
 {
-    if (!isset($_SESSION['supervisor_id'])) {
+    $token  = getBearerToken();
+    $claims = $token ? verifyToken($token) : null;
+    if (!$claims || $claims['user_type'] !== 'supervisor') {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
     }
     $db   = getDb();
     $stmt = $db->prepare('SELECT * FROM supervisors WHERE id = :id AND active = 1');
-    $stmt->execute([':id' => (int) $_SESSION['supervisor_id']]);
+    $stmt->execute([':id' => (int) $claims['user_id']]);
     $sup  = $stmt->fetch();
     if (!$sup) {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
@@ -60,12 +62,14 @@ function requireSupervisor(): array
 
 function requireEmployee(): array
 {
-    if (!isset($_SESSION['employee_id'])) {
+    $token  = getBearerToken();
+    $claims = $token ? verifyToken($token) : null;
+    if (!$claims || $claims['user_type'] !== 'employee') {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
     }
     $db   = getDb();
     $stmt = $db->prepare('SELECT * FROM employees WHERE id = :id AND active = 1');
-    $stmt->execute([':id' => (int) $_SESSION['employee_id']]);
+    $stmt->execute([':id' => (int) $claims['user_id']]);
     $emp  = $stmt->fetch();
     if (!$emp) {
         sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
@@ -75,16 +79,21 @@ function requireEmployee(): array
 
 function requireAdminOrSupervisor(): array
 {
-    if (isset($_SESSION['admin_id'])) {
-        $admin = getAdminById((int) $_SESSION['admin_id']);
+    $token  = getBearerToken();
+    $claims = $token ? verifyToken($token) : null;
+    if (!$claims) {
+        sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
+    }
+    if ($claims['user_type'] === 'admin') {
+        $admin = getAdminById((int) $claims['user_id']);
         if ($admin) {
             return ['type' => 'admin', 'id' => (int) $admin['id'], 'company_id' => (int) $admin['company_id']];
         }
     }
-    if (isset($_SESSION['supervisor_id'])) {
+    if ($claims['user_type'] === 'supervisor') {
         $db   = getDb();
         $stmt = $db->prepare('SELECT * FROM supervisors WHERE id = :id AND active = 1');
-        $stmt->execute([':id' => (int) $_SESSION['supervisor_id']]);
+        $stmt->execute([':id' => (int) $claims['user_id']]);
         $sup  = $stmt->fetch();
         if ($sup) {
             return ['type' => 'supervisor', 'id' => (int) $sup['id'], 'company_id' => (int) $sup['company_id']];

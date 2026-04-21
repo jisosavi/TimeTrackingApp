@@ -5,9 +5,11 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 header('Content-Type: application/json; charset=utf-8');
 
+require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/jwt.php';
 
-$raw = file_get_contents('php://input');
+$raw     = file_get_contents('php://input');
 $payload = json_decode($raw, true);
 
 if (!$payload || !isset($payload['email'], $payload['password'])) {
@@ -16,11 +18,11 @@ if (!$payload || !isset($payload['email'], $payload['password'])) {
     exit;
 }
 
-$email = trim($payload['email']);
+$email    = trim($payload['email']);
 $password = $payload['password'];
 
 try {
-    $db = getDb();
+    $db   = getDb();
     $stmt = $db->prepare('SELECT * FROM company_admins WHERE email = :email AND active = 1');
     $stmt->execute([':email' => $email]);
     $admin = $stmt->fetch();
@@ -31,40 +33,31 @@ try {
         exit;
     }
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-
-    $_SESSION['admin_id'] = $admin['id'];
-    $_SESSION['admin_email'] = $admin['email'];
-    $_SESSION['admin_name'] = $admin['name'];
-    $_SESSION['admin_role'] = $admin['role'];
-    $_SESSION['company_id'] = $admin['company_id'];
-
-    // Fetch company settings
     $compStmt = $db->prepare('SELECT active, approvals_enabled, ui_language FROM companies WHERE id = :id');
     $compStmt->execute([':id' => $admin['company_id']]);
     $company = $compStmt->fetch() ?: [];
 
-    // Resolve effective language: admin personal → company default → 'en'
-    $companyLang  = $company['ui_language'] ?? 'en';
-    $adminLang    = $admin['ui_language'] ?? null;
+    $companyLang   = $company['ui_language'] ?? 'en';
+    $adminLang     = $admin['ui_language'] ?? null;
     $effectiveLang = $adminLang ?: $companyLang ?: 'en';
+
+    $token = generateToken((int) $admin['id'], 'admin', (int) $admin['company_id']);
 
     echo json_encode([
         'success' => true,
-        'admin' => [
-            'id'         => (int) $admin['id'],
-            'email'      => $admin['email'],
-            'name'       => $admin['name'],
-            'role'       => $admin['role'],
-            'company_id' => (int) $admin['company_id'],
-            'ui_language'=> $effectiveLang,
+        'token'   => $token,
+        'admin'   => [
+            'id'          => (int) $admin['id'],
+            'email'       => $admin['email'],
+            'name'        => $admin['name'],
+            'role'        => $admin['role'],
+            'company_id'  => (int) $admin['company_id'],
+            'ui_language' => $effectiveLang,
         ],
         'company' => [
-            'active'             => (int) ($company['active'] ?? 1),
-            'approvals_enabled'  => (int) ($company['approvals_enabled'] ?? 0),
-            'ui_language'        => $companyLang,
+            'active'            => (int) ($company['active'] ?? 1),
+            'approvals_enabled' => (int) ($company['approvals_enabled'] ?? 0),
+            'ui_language'       => $companyLang,
         ],
         'ui_language' => $effectiveLang,
     ]);
