@@ -63,12 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä toisella esihenkilöllä.'], 409);
         }
 
-        // Check uniqueness across employees in the same company
-        $empStmt = $db->prepare('SELECT id FROM employees WHERE pin = :pin AND company_id = :cid');
-        $empStmt->execute([':pin' => $pin, ':cid' => $admin['company_id']]);
-        if ($empStmt->fetch()) {
-            sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä työntekijällä.'], 409);
-        }
     }
 
     if ($id) {

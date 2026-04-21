@@ -106,7 +106,7 @@ function openEditSup(id: number) {
     last_name: sup.last_name,
     email: sup.email,
     phone: sup.phone,
-    pin: '',
+    pin: sup.pin ?? '',
     active: sup.active,
   }
   supFormError.value = null
@@ -454,6 +454,9 @@ async function doExport(force = false) {
                 <p class="font-medium text-sm">{{ sup.first_name }} {{ sup.last_name }}</p>
                 <p class="text-xs text-muted-foreground">{{ sup.email }}</p>
                 <p class="text-xs text-muted-foreground">{{ sup.phone }}</p>
+                <p class="text-xs text-muted-foreground">
+                  PIN: <span class="font-mono">{{ sup.pin || '—' }}</span>
+                </p>
               </div>
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                 <Badge variant="secondary" class="text-[10px]">Team: {{ sup.team_size }}</Badge>
@@ -506,8 +509,8 @@ async function doExport(force = false) {
                   <Input v-model="supForm.phone" type="tel" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">New PIN (leave blank to keep)</Label>
-                  <Input v-model="supForm.pin" maxlength="6" />
+                  <Label class="text-xs">PIN</Label>
+                  <Input v-model="supForm.pin" maxlength="6" placeholder="Leave blank to keep current" />
                 </div>
               </div>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
