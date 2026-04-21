@@ -21,6 +21,38 @@ export interface TimeEntry {
   exported_at: string | null
 }
 
+export interface Employee {
+  id: number
+  name: string
+  pin: string
+  ssn: string | null
+  employmentId: string | null
+  active: number
+  ui_language: string | null
+  pending_hours: number
+}
+
+export interface Supervisor {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  pin: string
+  ssn: string | null
+  salaxy_id: string | null
+  active: number
+  ui_language: string | null
+  team_size: number
+}
+
+export interface TeamMember {
+  id: number
+  name: string
+  in_team: number
+  other_supervisors: string | null
+}
+
 export interface ReviewEntry extends TimeEntry {
   employee_name: string
 }
