@@ -77,6 +77,23 @@ function requireEmployee(): array
     return $emp;
 }
 
+function requireSuperAdmin(): array
+{
+    $token  = getBearerToken();
+    $claims = $token ? verifyToken($token) : null;
+    if (!$claims || $claims['user_type'] !== 'superadmin') {
+        sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
+    }
+    $db   = getDb();
+    $stmt = $db->prepare("SELECT * FROM company_admins WHERE id = :id AND role = 'superadmin' AND active = 1");
+    $stmt->execute([':id' => (int) $claims['user_id']]);
+    $admin = $stmt->fetch();
+    if (!$admin) {
+        sendJson(['success' => false, 'error' => 'Unauthorized'], 401);
+    }
+    return $admin;
+}
+
 function requireAdminOrSupervisor(): array
 {
     $token  = getBearerToken();

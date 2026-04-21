@@ -166,6 +166,7 @@ function initializeDatabase(PDO $db): void
 
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);
+    ensureDefaultSuperAdmin($db);
 }
 
 function ensureDefaultCompany(PDO $db): int
@@ -220,6 +221,25 @@ function ensureDefaultAdmin(PDO $db): void
         ':password_hash' => $passwordHash,
         ':name' => 'Prototype Admin',
         ':role' => 'company_admin',
+    ]);
+}
+
+function ensureDefaultSuperAdmin(PDO $db): void
+{
+    $defaultEmail = 'superadmin@timeapp.local';
+    $stmt = $db->prepare('SELECT id FROM company_admins WHERE email = :email');
+    $stmt->execute([':email' => $defaultEmail]);
+    if ($stmt->fetch()) return;
+
+    $passwordHash = password_hash('SuperAdmin123!', PASSWORD_DEFAULT);
+    $db->prepare(
+        'INSERT INTO company_admins (company_id, email, password_hash, name, role, active)
+         VALUES (NULL, :email, :hash, :name, :role, 1)'
+    )->execute([
+        ':email' => $defaultEmail,
+        ':hash'  => $passwordHash,
+        ':name'  => 'Super Admin',
+        ':role'  => 'superadmin',
     ]);
 }
 

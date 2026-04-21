@@ -21,6 +21,16 @@ export interface TimeEntry {
   exported_at: string | null
 }
 
+export interface Company {
+  id: number
+  name: string
+  slug: string
+  active: number
+  approvals_enabled: number
+  ui_language: string
+  employee_count: number
+}
+
 export interface Employee {
   id: number
   name: string

@@ -41,7 +41,10 @@ try {
     $adminLang     = $admin['ui_language'] ?? null;
     $effectiveLang = $adminLang ?: $companyLang ?: 'en';
 
-    $token = generateToken((int) $admin['id'], 'admin', (int) $admin['company_id']);
+    $isSuperAdmin = ($admin['role'] === 'superadmin');
+    $userType     = $isSuperAdmin ? 'superadmin' : 'admin';
+    $companyId    = $isSuperAdmin ? 0 : (int) $admin['company_id'];
+    $token        = generateToken((int) $admin['id'], $userType, $companyId);
 
     echo json_encode([
         'success' => true,
