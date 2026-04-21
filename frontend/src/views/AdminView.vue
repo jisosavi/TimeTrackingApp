@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
-import type { TeamMember, PayrollSettings, ExportPeriod, ExportResult } from '@/types'
+import type { TeamMember, ExportPeriod, ExportResult } from '@/types'
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
   fetchEmployees, saveEmployee, syncFromSalaxy,
   fetchSupervisors, saveSupervisor, deleteSupervisor, fetchTeam, saveTeam,
-  fetchPayrollSettings, savePayrollSettings, fetchExportPreview, submitExport,
+  fetchExportPreview, submitExport,
 } = useAdminData()
 
 onMounted(() => {
@@ -202,43 +202,6 @@ async function submitTeam() {
   }
 }
 
-// ── Payroll settings ──────────────────────────────────────────────────────────
-const payrollSettings = ref<PayrollSettings>({ payroll_period: 'monthly', payday_1: 15, payday_2: 0 })
-const payrollSettingsLoading = ref(false)
-const payrollSettingsSaved = ref(false)
-const payrollSettingsError = ref<string | null>(null)
-
-const DAY_OPTIONS = [
-  { value: 0, label: 'Last day' },
-  ...Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1) })),
-]
-
-async function loadPayrollSettings() {
-  payrollSettingsLoading.value = true
-  try {
-    payrollSettings.value = await fetchPayrollSettings()
-  } catch (e) {
-    payrollSettingsError.value = e instanceof Error ? e.message : 'Failed to load'
-  } finally {
-    payrollSettingsLoading.value = false
-  }
-}
-
-async function doSavePayrollSettings() {
-  payrollSettingsLoading.value = true
-  payrollSettingsSaved.value = false
-  payrollSettingsError.value = null
-  try {
-    await savePayrollSettings(payrollSettings.value)
-    payrollSettingsSaved.value = true
-    setTimeout(() => { payrollSettingsSaved.value = false }, 2000)
-  } catch (e) {
-    payrollSettingsError.value = e instanceof Error ? e.message : 'Save failed'
-  } finally {
-    payrollSettingsLoading.value = false
-  }
-}
-
 // ── Salaxy export ─────────────────────────────────────────────────────────────
 const exportDateFrom = ref('')
 const exportDateTo = ref('')
@@ -304,7 +267,7 @@ async function doExport(force = false) {
     <h2 class="text-lg font-semibold">Admin Dashboard</h2>
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-    <Tabs default-value="employees" class="w-full" @update:model-value="(v) => { if (v === 'payroll') loadPayrollSettings() }">
+    <Tabs default-value="employees" class="w-full">
       <TabsList class="grid w-full grid-cols-3 mb-4">
         <TabsTrigger value="employees">
           Employees ({{ employees.length }})
@@ -599,52 +562,6 @@ async function doExport(force = false) {
       <!-- ── Payroll tab ── -->
       <TabsContent value="payroll">
         <div class="space-y-6">
-
-          <!-- Payroll period settings -->
-          <div class="rounded-lg border p-4 space-y-4 bg-card">
-            <p class="text-sm font-semibold">Payroll Period Settings</p>
-
-            <div class="flex gap-6">
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" value="monthly" v-model="payrollSettings.payroll_period" />
-                Monthly
-              </label>
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="radio" value="biweekly" v-model="payrollSettings.payroll_period" />
-                Biweekly (1–15 / 16–end)
-              </label>
-            </div>
-
-            <div v-if="payrollSettings.payroll_period === 'monthly'" class="space-y-1">
-              <Label class="text-xs">Payday</Label>
-              <select v-model.number="payrollSettings.payday_1" class="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                <option v-for="opt in DAY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
-            </div>
-
-            <div v-else class="flex gap-4">
-              <div class="space-y-1">
-                <Label class="text-xs">Payday (1–15)</Label>
-                <select v-model.number="payrollSettings.payday_1" class="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                  <option v-for="opt in DAY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
-              <div class="space-y-1">
-                <Label class="text-xs">Payday (16–end)</Label>
-                <select v-model.number="payrollSettings.payday_2" class="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                  <option v-for="opt in DAY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
-            </div>
-
-            <p v-if="payrollSettingsError" class="text-xs text-destructive">{{ payrollSettingsError }}</p>
-            <div class="flex items-center gap-3">
-              <Button size="sm" :disabled="payrollSettingsLoading" @click="doSavePayrollSettings">
-                {{ payrollSettingsLoading ? 'Saving…' : 'Save Settings' }}
-              </Button>
-              <span v-if="payrollSettingsSaved" class="text-xs text-green-600">Saved!</span>
-            </div>
-          </div>
 
           <!-- Export to Salaxy -->
           <div class="rounded-lg border p-4 space-y-4 bg-card">

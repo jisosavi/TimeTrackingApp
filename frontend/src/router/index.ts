@@ -62,6 +62,12 @@ const router = createRouter({
           component: () => import('@/views/ManagerView.vue'),
           meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
         },
+        {
+          path: ':slug/admin/payroll-settings',
+          name: 'admin-payroll-settings',
+          component: () => import('@/views/PayrollSettingsView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['admin'] },
+        },
       ],
     },
 
