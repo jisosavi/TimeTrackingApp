@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -207,11 +208,20 @@ async function toggleApprovals(id: number, currentValue: number) {
         </div>
       </div>
 
-      <!-- URL preview (always shown) -->
-      <div class="text-xs text-muted-foreground font-mono space-y-0.5">
-        <p>Employee: /{{ company.slug }}</p>
-        <p>Admin: /{{ company.slug }}/admin</p>
-        <p>Approvals: /{{ company.slug }}/approval</p>
+      <!-- URL preview (always shown, clickable) -->
+      <div class="text-xs font-mono space-y-0.5">
+        <p>
+          <span class="text-muted-foreground">Employee: </span>
+          <RouterLink :to="`/${company.slug}`" target="_blank" class="text-primary hover:underline">/{{ company.slug }}</RouterLink>
+        </p>
+        <p>
+          <span class="text-muted-foreground">Admin: </span>
+          <RouterLink :to="`/${company.slug}/admin`" target="_blank" class="text-primary hover:underline">/{{ company.slug }}/admin</RouterLink>
+        </p>
+        <p>
+          <span class="text-muted-foreground">Approvals: </span>
+          <RouterLink :to="`/${company.slug}/approval`" target="_blank" class="text-primary hover:underline">/{{ company.slug }}/approval</RouterLink>
+        </p>
       </div>
 
       <Button variant="outline" size="sm" class="h-7 text-xs" @click="openEdit(company.id)">
