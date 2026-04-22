@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { Building2 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
 import { useRefresh } from '@/composables/useRefresh'
+
+const { t } = useI18n({ useScope: 'global' })
 
 const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId } = useSuperAdmin()
 const { refreshTick } = useRefresh()
@@ -285,8 +290,12 @@ async function toggleApprovals(id: number, currentValue: number) {
       </div>
     </div>
 
-    <p v-if="!loading && companies.length === 0" class="text-sm text-muted-foreground text-center py-8">
-      No companies yet. Create the first one.
-    </p>
+    <EmptyState
+      v-if="!loading && companies.length === 0"
+      :title="t('empty.companies')"
+      :body="t('empty.companies_body')"
+    >
+      <Building2 class="size-10" />
+    </EmptyState>
   </div>
 </template>

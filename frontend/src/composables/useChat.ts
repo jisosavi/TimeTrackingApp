@@ -1,12 +1,17 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
-import type { LlmParsedResponse } from '@/types'
+import type { LlmParsedResponse, LlmEntry } from '@/types'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   savedCount?: number
+}
+
+export interface ChatPreview {
+  parsed: LlmParsedResponse
+  messageIndex: number
 }
 
 export function parseEntriesFromText(text: string): LlmParsedResponse | null {
@@ -23,6 +28,7 @@ export function useChat() {
   const history = ref<ChatMessage[]>([])
   const loading = ref(false)
   const lastSavedIds = ref<number[]>([])
+  const pendingPreview = ref<ChatPreview | null>(null)
   const auth = useAuthStore()
   const { apiFetch } = useApi()
   const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -51,16 +57,32 @@ export function useChat() {
 
       const reply = data.reply ?? ''
       const parsed = parseEntriesFromText(reply)
-      let savedCount: number | undefined
+
+      history.value.push({ role: 'assistant', content: reply })
 
       if (parsed?.entries?.length) {
-        savedCount = await saveEntries(parsed)
+        pendingPreview.value = {
+          parsed,
+          messageIndex: history.value.length - 1,
+        }
       }
-
-      history.value.push({ role: 'assistant', content: reply, savedCount })
     } finally {
       loading.value = false
     }
+  }
+
+  async function confirmPreview(entries: LlmEntry[]): Promise<void> {
+    const preview = pendingPreview.value
+    if (!preview) return
+    const payload: LlmParsedResponse = { action: preview.parsed.action, entries }
+    const savedCount = await saveEntries(payload)
+    const msg = history.value[preview.messageIndex]
+    if (msg) msg.savedCount = savedCount
+    pendingPreview.value = null
+  }
+
+  function cancelPreview(): void {
+    pendingPreview.value = null
   }
 
   async function saveEntries(parsed: LlmParsedResponse): Promise<number> {
@@ -87,7 +109,8 @@ export function useChat() {
   function reset() {
     history.value = []
     lastSavedIds.value = []
+    pendingPreview.value = null
   }
 
-  return { history, loading, send, reset }
+  return { history, loading, send, reset, pendingPreview, confirmPreview, cancelPreview }
 }

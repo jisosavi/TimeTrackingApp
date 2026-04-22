@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Clock } from 'lucide-vue-next'
 import { useTimeEntries } from '@/composables/useTimeEntries'
 import { useRefresh } from '@/composables/useRefresh'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import EntryCard from './EntryCard.vue'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -21,9 +23,13 @@ defineExpose({ refresh: fetchEntries })
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-    <p v-if="!loading && entries.length === 0" class="text-sm text-muted-foreground text-center py-8">
-      {{ t('entries.empty') }}
-    </p>
+    <EmptyState
+      v-if="!loading && entries.length === 0"
+      :title="t('empty.my_entries')"
+      :body="t('empty.my_entries_body')"
+    >
+      <Clock class="size-10" />
+    </EmptyState>
 
     <EntryCard
       v-for="entry in entries"

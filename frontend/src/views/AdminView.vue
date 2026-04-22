@@ -2,12 +2,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { Users, Search } from 'lucide-vue-next'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
 import { useRefresh } from '@/composables/useRefresh'
@@ -514,9 +516,16 @@ async function submitAddForm() {
       </template>
     </div>
 
-    <p v-if="!loadingEmps && !loadingSups && sortedFilteredPeople.length === 0" class="text-sm text-muted-foreground text-center py-8">
-      {{ search ? t('approval.search_no_results') : t('admin.people.no_results') }}
-    </p>
+    <EmptyState
+      v-if="!loadingEmps && !loadingSups && sortedFilteredPeople.length === 0"
+      :title="search ? t('empty.search') : t('empty.people')"
+      :body="search ? t('empty.search_body') : t('empty.people_body')"
+      :action-label="!search ? t('admin.people.add_person') : undefined"
+      :on-action="!search ? openAddDrawer : undefined"
+    >
+      <Search v-if="search" class="size-10" />
+      <Users v-else class="size-10" />
+    </EmptyState>
 
     <!-- Add person drawer -->
     <Sheet v-model:open="showAddDrawer">
