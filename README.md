@@ -15,15 +15,17 @@ Support for multiple UI languages, easy to add more locales when needed.
 ## Key Features
 
 ### Very Easy Login and Time Entry
-- **Login with PIN**: Employees login with PIN. Works with simple URL on any phone. Nothing else needed!
+- **Kiosk PIN Pad**: Full-viewport numeric keypad with live clock — works on a shared tablet behind a counter, a phone in portrait, or any browser. Physical keyboard fully supported.
 - **Voice & Text Input**: Employees log hours using conversational AI (text or speech)
 - **Smart Interpretation**: AI understands natural language entries like "worked 8 hours on client project today"
-- **Confirmation Flow**: Interactive dialogue ensures accuracy before submission
+- **Preview & Confirm**: AI parses the entry and shows an editable preview card before saving — employees can adjust date, hours, project, or notes before confirming
 
 ### Streamlined Approval Workflow
 - **Very Easy to Use for Supervisors/Managers**: Manager login with PIN. Works with simple URL on any phone!
 - **Manager Review**: Company managers can approve, reject, or request clarification on entries
+- **Bulk Actions**: Select multiple entries and approve or reject them in one click with an optional shared rejection note
 - **Independent Hours/Mileage Approval**: Entries with both hours and km can be approved or rejected independently
+- **Employee Rejection View**: Rejected entries appear in a dedicated tab in the employee UI — employees can read the rejection note and submit a clarification reply for both hours and km rejections independently
 - **Expense Management**: Handle both time and expense submissions in one workflow
 - **Audit Trail**: Complete history of all submissions and approvals
 
@@ -57,17 +59,20 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 ## Features
 
 **Employee** (`/{slug}/`)
-- PIN-based login at a company-specific URL
+- Kiosk-style full-viewport PIN pad with live clock; physical keyboard support, auto-submit on last digit, haptic feedback on mobile
 - Voice or text input — natural language like *"Yesterday 2h on project Alpha"*
-- Gemini AI interprets entries, asks follow-up questions if details are missing, and shows a summary before sending
+- Gemini AI interprets entries, asks follow-up questions if details are missing, then shows an editable preview card (date, hours, project, notes) before saving
+- Three tabs: **Log hours** (AI chat), **My entries** (full history), **Rejected** (entries needing attention — badge count)
+- Rejected tab shows the manager's rejection note per entry; employee can submit a clarification reply for hours and km rejections independently
 - Entries exported to Salaxy payroll via API — one payroll created per day, entries added as payslip items
 - Mileage allowance (km-korvaus) support with per-type approval tracking
 - Type pills on each entry row identify hours vs. kilometre entries at a glance
 
 **Company supervisor** (`/{slug}/approval/`)
-- Manage approval of entries: approve / reject / ask clarification
+- Four tabs: **Needs Review** (pending), **Approved**, **Rejected**, **Your Team**
+- Checkbox selection for bulk approve/reject with optional rejection note; 3-second toast confirmation after bulk action
 - Hours and kilometres on the same entry appear as separate approval cards — each can be approved or rejected independently
-- Rejected entries carry a per-type rejection note visible to the employee
+- Rejected entries carry a per-type rejection note visible to the employee; employee clarification responses are shown on re-review
 
 **Company admin** (`/{slug}/admin/`)
 - Manage employees: add, edit, deactivate, reset PIN, set UI language per employee
@@ -293,7 +298,7 @@ npm run lint         # ESLint + Oxlint
 │   ├── supervisor_team.php               # Supervisor ↔ employee assignments
 │   ├── time_entries.php                  # Time entry read/write/delete
 │   ├── review_entries.php                # Approve / reject / clarify (per-field support)
-│   ├── clarify_entry.php                 # Employee clarification response
+│   ├── clarify_entry.php                 # Employee clarification response (hours and km, independent)
 │   ├── export_payroll.php                # Export approved entries to Salaxy payroll
 │   ├── payroll_settings.php              # Payroll period settings per company
 │   ├── fetch_business_id.php             # Fetch business ID from Salaxy
@@ -328,26 +333,29 @@ npm run lint         # ESLint + Oxlint
 │   │   ├── layouts/
 │   │   │   └── AppLayout.vue             # Shell: header, nav tabs, language switcher
 │   │   ├── views/
-│   │   │   ├── LoginView.vue             # PIN login (all roles, detected from route meta)
-│   │   │   ├── EmployeeView.vue          # Employee: AI chat + entry list tabs
-│   │   │   ├── ManagerView.vue           # Supervisor/admin: approval tabs (VirtualCard pattern)
+│   │   │   ├── LoginView.vue             # PIN login — kiosk keypad for employee/supervisor, email+password for admin
+│   │   │   ├── EmployeeView.vue          # Employee: Log hours / My entries / Rejected tabs
+│   │   │   ├── ManagerView.vue           # Supervisor/admin: Needs Review / Approved / Rejected / Team tabs, bulk actions
 │   │   │   ├── AdminView.vue             # Company admin: employees + supervisors management
 │   │   │   ├── PayrollView.vue           # Payroll export preview and Salaxy push
 │   │   │   ├── PayrollSettingsView.vue   # Payroll period and payday configuration
 │   │   │   └── SuperAdminView.vue        # Super-admin: company creation and management
 │   │   ├── components/
 │   │   │   ├── employee/
-│   │   │   │   ├── ChatPanel.vue         # Gemini AI chat input and message history
-│   │   │   │   ├── EntryList.vue         # Submitted time entry list with refresh
-│   │   │   │   └── EntryCard.vue         # Single entry: status badge, type pills, clarify/delete
-│   │   │   └── ui/                       # shadcn-vue primitives (Badge, Button, Input, …)
+│   │   │   │   ├── ChatPanel.vue         # AI chat: message history, editable preview card, recent entries strip
+│   │   │   │   ├── EntryList.vue         # Entry list (all entries or rejected-only mode via prop)
+│   │   │   │   └── EntryCard.vue         # Single entry: status badge, type pills, rejection notes, clarify/delete
+│   │   │   └── ui/
+│   │   │       ├── EmptyState.vue        # Reusable empty state (icon slot, title, body, action link/callback)
+│   │   │       └── …                     # shadcn-vue primitives (Badge, Button, Input, …)
 │   │   └── composables/
 │   │       ├── useApi.ts                 # Authenticated fetch wrapper (injects JWT header)
 │   │       ├── useApproval.ts            # Approval state + reviewEntries (supports per-field)
 │   │       ├── useAdminData.ts           # Employee/supervisor CRUD, sync, payroll export
-│   │       ├── useChat.ts                # Gemini AI chat session state
-│   │       ├── useTimeEntries.ts         # Employee entry list state and actions
+│   │       ├── useChat.ts                # Gemini AI chat — send, preview state, confirm/cancel
+│   │       ├── useTimeEntries.ts         # Employee entry list, rejected count, clarify (hours + km)
 │   │       ├── useLocale.ts              # Watches auth.user.uiLanguage → sets global i18n locale
+│   │       ├── useRefresh.ts             # Singleton refresh tick — cross-component data refresh signal
 │   │       └── useSuperAdmin.ts          # Super-admin company management
 │   └── dist/                             # Production build output (not in git)
 │
