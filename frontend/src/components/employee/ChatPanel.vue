@@ -88,10 +88,6 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-function useExample(text: string) {
-  inputText.value = text
-}
-
 function startVoice() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
@@ -127,23 +123,10 @@ function formatDate(iso: string): string {
     <!-- Chat history -->
     <div ref="chatEl" class="flex-1 min-h-0 overflow-y-auto space-y-3 pb-4">
 
-      <!-- Empty state with example prompts -->
-      <div v-if="history.length === 0 && !pendingPreview" class="py-8 space-y-4">
-        <div class="text-center text-sm text-muted-foreground">
-          <p class="font-medium">{{ t('chat.title') }}</p>
-        </div>
-        <div class="grid grid-cols-1 gap-2">
-          <Button
-            v-for="key in ['employee.example_1', 'employee.example_2', 'employee.example_3']"
-            :key="key"
-            variant="outline"
-            size="sm"
-            class="h-auto py-2 px-3 text-sm text-left justify-start whitespace-normal"
-            @click="useExample(t(key))"
-          >
-            {{ t(key) }}
-          </Button>
-        </div>
+      <!-- Empty state: guidance text -->
+      <div v-if="history.length === 0 && !pendingPreview" class="py-6 space-y-1 text-center">
+        <p class="text-sm font-medium text-foreground">{{ t('chat.title') }}</p>
+        <p class="text-xs text-muted-foreground max-w-sm mx-auto">{{ t('chat.guidance') }}</p>
       </div>
 
       <!-- Messages -->
@@ -221,7 +204,7 @@ function formatDate(iso: string): string {
       <Textarea
         v-model="inputText"
         :placeholder="t('chat.placeholder')"
-        class="min-h-16 resize-none"
+        class="min-h-[8rem] resize-none"
         :disabled="loading"
         @keydown="onKeydown"
       />

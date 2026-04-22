@@ -39,6 +39,12 @@
   "login.error_general": "Login error. Please try again.",
   "login.error_failed": "Login failed.",
   "login.error_missing_credentials": "Please enter your email and password.",
+  "login.role_employee": "Employee",
+  "login.role_supervisor": "Supervisor",
+  "login.role_admin": "Company Admin",
+  "login.role_superadmin": "Super Admin",
+  "login.clear": "CLR",
+  "login.announce_digits": "{count} digits entered",
 
   "nav.log_hours": "Log hours",
   "nav.my_entries": "My entries",
@@ -46,6 +52,7 @@
   "nav.settings": "Settings",
 
   "chat.title": "Work hours log",
+  "chat.guidance": "Type date, time and project — e.g. «15.4 8–16 Project Alpha». For mileage add km — e.g. «15.4 drove 45 km to client».",
   "chat.placeholder": "Type or dictate e.g. 15.11 8–12 Project Alpha.",
   "chat.record_button": "🎙 Dictate / Record",
   "chat.send_button": "➤ Send",

@@ -39,6 +39,12 @@
   "login.error_general": "Virhe kirjautumisessa. Yritä uudelleen.",
   "login.error_failed": "Kirjautuminen epäonnistui.",
   "login.error_missing_credentials": "Syötä sähköposti ja salasana.",
+  "login.role_employee": "Työntekijä",
+  "login.role_supervisor": "Esimies",
+  "login.role_admin": "Yrityksen pääkäyttäjä",
+  "login.role_superadmin": "Superkäyttäjä",
+  "login.clear": "TYHJENNÄ",
+  "login.announce_digits": "{count} numeroa syötetty",
 
   "nav.log_hours": "Kirjaa tunteja",
   "nav.my_entries": "Tuntikirjaukset",
@@ -46,6 +52,7 @@
   "nav.settings": "Asetukset",
 
   "chat.title": "Työtuntien kirjaus",
+  "chat.guidance": "Kirjoita päivämäärä, aika ja projekti — esim. «15.4 8–16 Projekti Alpha». Kilometreille lisää km — esim. «15.4 ajoin 45 km asiakkaalle».",
   "chat.placeholder": "Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa.",
   "chat.record_button": "🎙 Sanele / nauhoita",
   "chat.send_button": "➤ Lähetä",

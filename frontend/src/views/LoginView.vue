@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -7,7 +7,6 @@ import type { AuthUser } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const { t } = useI18n({ useScope: 'global' })
 
@@ -20,20 +19,30 @@ type LoginType = 'employee' | 'supervisor' | 'admin' | 'superadmin'
 const loginType = route.meta.loginType as LoginType
 const slug = (route.params.slug as string) ?? ''
 
+const PIN_MAX = 6
+
 const pin = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const shaking = ref(false)
+const announcement = ref('')
+
+function formatClock() {
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
+}
+const clockStr = ref(formatClock())
+let clockInterval: ReturnType<typeof setInterval> | null = null
 
 const isPinLogin = computed(() => loginType === 'employee' || loginType === 'supervisor')
 
 const loginTypeLabel = computed(() => {
   switch (loginType) {
-    case 'employee':   return 'Employee Login'
-    case 'supervisor': return 'Supervisor Admin Login'
-    case 'admin':      return 'Company Admin Login'
-    case 'superadmin': return 'Super Admin Login'
+    case 'employee':   return t('login.role_employee')
+    case 'supervisor': return t('login.role_supervisor')
+    case 'admin':      return t('login.role_admin')
+    case 'superadmin': return t('login.role_superadmin')
     default:           return ''
   }
 })
@@ -42,11 +51,69 @@ const companyName = computed(() =>
   slug ? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '',
 )
 
+onMounted(() => {
+  clockInterval = setInterval(() => { clockStr.value = formatClock() }, 30000)
+  if (isPinLogin.value) window.addEventListener('keydown', onGlobalKeydown)
+})
+
+onUnmounted(() => {
+  if (clockInterval) clearInterval(clockInterval)
+  window.removeEventListener('keydown', onGlobalKeydown)
+})
+
+function onGlobalKeydown(e: KeyboardEvent) {
+  if (/^[0-9]$/.test(e.key)) {
+    appendDigit(e.key)
+  } else if (e.key === 'Backspace') {
+    e.preventDefault()
+    popDigit()
+  } else if (e.key === 'Escape') {
+    clearPin()
+  } else if (e.key === 'Enter') {
+    submit()
+  }
+}
+
+function appendDigit(d: string) {
+  if (loading.value || pin.value.length >= PIN_MAX) return
+  pin.value += d
+  error.value = ''
+  announcement.value = t('login.announce_digits', { count: pin.value.length })
+  if (pin.value.length === PIN_MAX) submit()
+}
+
+function popDigit() {
+  pin.value = pin.value.slice(0, -1)
+  error.value = ''
+}
+
+function clearPin() {
+  pin.value = ''
+  error.value = ''
+}
+
+function handleKeypadPress(key: string) {
+  navigator.vibrate?.(10)
+  if (key === 'clear') clearPin()
+  else if (key === 'back') popDigit()
+  else appendDigit(key)
+}
+
 function clearError() {
   error.value = ''
 }
 
+function triggerShake() {
+  shaking.value = true
+  setTimeout(() => { shaking.value = false }, 600)
+}
+
 async function submit() {
+  if (loading.value) return
+  if (isPinLogin.value && pin.value.length === 0) return
+  if (!isPinLogin.value && (!email.value || !password.value)) return
+
+  announcement.value = t('login.logging_in')
   error.value = ''
   loading.value = true
   try {
@@ -55,6 +122,11 @@ async function submit() {
     else await loginWithPassword()
   } catch (e) {
     error.value = (e as Error).message
+    if (isPinLogin.value) {
+      triggerShake()
+      setTimeout(() => clearPin(), 300)
+      announcement.value = t('login.error_wrong_pin')
+    }
   } finally {
     loading.value = false
   }
@@ -67,7 +139,7 @@ async function loginEmployee() {
     body: JSON.stringify({ pin: pin.value, slug }),
   })
   const data = await res.json()
-  if (!data.valid) throw new Error(data.error ?? 'Väärä PIN')
+  if (!data.valid) throw new Error(data.error ?? t('login.error_wrong_pin'))
 
   const user: AuthUser = {
     id: data.id,
@@ -88,7 +160,7 @@ async function loginSupervisor() {
     body: JSON.stringify({ pin: pin.value, slug }),
   })
   const data = await res.json()
-  if (!data.success) throw new Error(data.error ?? 'Väärä PIN')
+  if (!data.success) throw new Error(data.error ?? t('login.error_wrong_pin'))
 
   const user: AuthUser = {
     id: data.supervisor.id,
@@ -112,7 +184,6 @@ async function loginWithPassword() {
   const data = await res.json()
   if (!data.success) throw new Error(data.error ?? 'Invalid credentials')
 
-  // Distinguish super-admin from company admin by role field
   const isSuperAdmin = loginType === 'superadmin'
   const user: AuthUser = {
     id: data.admin.id,
@@ -135,83 +206,142 @@ async function loginWithPassword() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background p-4">
-    <div class="w-full max-w-sm space-y-4">
+
+  <!-- ── PIN login (employee / supervisor) ──────────────────────────────── -->
+  <div v-if="isPinLogin" class="min-h-screen flex flex-col bg-background select-none">
+
+    <!-- Header -->
+    <header class="flex-none pt-10 pb-2 px-6 text-center space-y-1">
+      <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-3" />
+      <p v-if="companyName" class="text-lg font-semibold tracking-tight">{{ companyName }}</p>
+      <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
+      <p class="text-3xl font-mono tabular-nums text-muted-foreground/50 pt-1">{{ clockStr }}</p>
+    </header>
+
+    <!-- PIN dots -->
+    <div
+      class="flex-none flex justify-center gap-4 py-6"
+      :class="shaking ? 'shake' : ''"
+      aria-hidden="true"
+    >
+      <span
+        v-for="i in PIN_MAX"
+        :key="i"
+        class="w-3.5 h-3.5 rounded-full border-2 transition-all duration-100"
+        :class="i <= pin.length
+          ? 'bg-primary border-primary scale-110'
+          : 'bg-transparent border-muted-foreground/30'"
+      />
+    </div>
+
+    <!-- Error / spacer -->
+    <div class="flex-none min-h-[1.5rem] text-center px-6">
+      <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+    </div>
+
+    <!-- Keypad -->
+    <div class="flex-1 flex items-center justify-center px-6 py-2">
+      <div class="grid grid-cols-3 gap-3 w-full max-w-[340px]">
+        <Button
+          v-for="key in ['1','2','3','4','5','6','7','8','9','clear','0','back']"
+          :key="key"
+          variant="outline"
+          class="h-[72px] text-xl font-medium rounded-2xl active:scale-95 transition-transform"
+          :disabled="loading"
+          @click="handleKeypadPress(key)"
+        >
+          <span v-if="key === 'back'">⌫</span>
+          <span v-else-if="key === 'clear'" class="text-sm font-normal text-muted-foreground">
+            {{ t('login.clear') }}
+          </span>
+          <span v-else>{{ key }}</span>
+        </Button>
+      </div>
+    </div>
+
+    <!-- Hidden input: surfaces numeric keyboard on mobile -->
+    <input
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      :value="pin"
+      maxlength="6"
+      class="sr-only"
+      aria-hidden="true"
+      tabindex="-1"
+    />
+
+    <!-- aria-live region for screen readers -->
+    <div role="status" aria-live="polite" aria-atomic="true" class="sr-only">
+      {{ announcement }}
+    </div>
+
+    <!-- Footer -->
+    <footer class="flex-none text-center py-4">
+      <p class="text-xs text-muted-foreground/30">TimeTrackingApp</p>
+    </footer>
+
+  </div>
+
+  <!-- ── Password login (admin / superadmin) ────────────────────────────── -->
+  <div v-else class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div class="w-full max-w-sm space-y-6">
 
       <div class="text-center space-y-1">
         <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-2" />
-        <p v-if="loginType === 'employee' && companyName" class="text-sm text-muted-foreground">{{ companyName }}</p>
         <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
       </div>
 
-      <Card>
-        <CardHeader class="pb-2">
-          <CardTitle class="text-base sr-only">Sign in</CardTitle>
-          <CardDescription v-if="isPinLogin">{{ t('login.subtitle') }}</CardDescription>
-          <CardDescription v-else>{{ t('login.error_missing_credentials') }}</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-4">
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="email">{{ t('login.email_label') }}</Label>
+          <Input
+            id="email"
+            v-model="email"
+            type="email"
+            placeholder="admin@example.com"
+            autofocus
+            @input="clearError"
+            @keyup.enter="submit"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="password">{{ t('login.password_label') }}</Label>
+          <Input
+            id="password"
+            v-model="password"
+            type="password"
+            placeholder="••••••••"
+            @input="clearError"
+            @keyup.enter="submit"
+          />
+        </div>
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <Button
+          class="w-full"
+          :disabled="loading || !email || !password"
+          @click="submit"
+        >
+          {{ loading ? t('login.logging_in') : t('login.sign_in_button') }}
+        </Button>
+      </div>
 
-          <!-- PIN login (employee + supervisor) -->
-          <template v-if="isPinLogin">
-            <div class="space-y-2">
-              <Label for="pin">{{ t('login.pin_label') }}</Label>
-              <Input
-                id="pin"
-                v-model="pin"
-                type="password"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="••••••"
-                class="text-center text-xl tracking-widest"
-                autofocus
-                @keyup.enter="submit"
-                @input="clearError"
-              />
-            </div>
-          </template>
-
-          <!-- Password login (admin + superadmin) -->
-          <template v-else>
-            <div class="space-y-2">
-              <Label for="email">{{ t('login.email_label') }}</Label>
-              <Input
-                id="email"
-                v-model="email"
-                type="email"
-                placeholder="admin@example.com"
-                autofocus
-                @input="clearError"
-              />
-            </div>
-            <div class="space-y-2">
-              <Label for="password">{{ t('login.password_label') }}</Label>
-              <Input
-                id="password"
-                v-model="password"
-                type="password"
-                placeholder="••••••••"
-                @keyup.enter="submit"
-                @input="clearError"
-              />
-            </div>
-          </template>
-
-          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-
-          <Button
-            class="w-full"
-            :disabled="loading || (isPinLogin ? !pin : !email || !password)"
-            @click="submit"
-          >
-            {{ loading ? t('login.logging_in') : t('login.sign_in_button') }}
-          </Button>
-
-        </CardContent>
-      </Card>
-
-      <p class="text-center text-xs text-muted-foreground/50">TimeTrackingApp</p>
+      <p class="text-center text-xs text-muted-foreground/30">TimeTrackingApp</p>
 
     </div>
   </div>
+
 </template>
+
+<style scoped>
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-8px); }
+  30%       { transform: translateX(8px); }
+  45%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+  75%       { transform: translateX(-3px); }
+  90%       { transform: translateX(3px); }
+}
+.shake { animation: shake 0.6s ease-in-out; }
+</style>
