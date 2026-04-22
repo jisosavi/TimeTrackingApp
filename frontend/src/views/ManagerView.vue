@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -15,8 +16,10 @@ const { t } = useI18n({ useScope: 'global' })
 const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
 const auth = useAuthStore()
 const { apiFetch } = useApi()
+const route = useRoute()
 
 const isSupervisor = computed(() => auth.user?.type === 'supervisor')
+const filterEmployeeId = computed(() => route.query.employee ? Number(route.query.employee) : null)
 
 const teamMembers = ref<TeamMemberDetail[]>([])
 const teamLoading = ref(false)
@@ -102,6 +105,11 @@ function cardSortFn(a: VirtualCard, b: VirtualCard): number {
 }
 
 const sortedNeedsReviewCards = computed(() => [...needsReviewCards.value].sort(cardSortFn))
+const visibleNeedsReviewCards = computed(() =>
+  filterEmployeeId.value
+    ? sortedNeedsReviewCards.value.filter(c => c.entry.employee_id === filterEmployeeId.value)
+    : sortedNeedsReviewCards.value,
+)
 const sortedApprovedCards = computed(() => [...approvedCards.value].sort(cardSortFn))
 
 interface CardGroup { name: string; cards: VirtualCard[] }
@@ -212,13 +220,21 @@ function cardTypePill(card: VirtualCard): string {
 
       <!-- Needs Review tab -->
       <TabsContent value="review">
-        <div v-if="!loading && needsReviewCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
+        <!-- Employee filter banner -->
+        <div v-if="filterEmployeeId" class="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-1.5 mb-3">
+          <span>{{ t('admin.filter_employee') }} <strong>{{ visibleNeedsReviewCards[0]?.entry.employee_name ?? filterEmployeeId }}</strong></span>
+          <RouterLink :to="{ name: 'supervisor-home', params: { slug: auth.user?.companySlug } }" class="text-primary hover:underline">
+            {{ t('admin.filter_clear') }}
+          </RouterLink>
+        </div>
+
+        <div v-if="!loading && visibleNeedsReviewCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
           {{ t('approval.no_team_entries') }}
         </div>
 
         <div class="space-y-2">
           <div
-            v-for="card in sortedNeedsReviewCards"
+            v-for="card in visibleNeedsReviewCards"
             :key="card.key"
             class="rounded-lg border p-4 space-y-2 bg-card"
           >

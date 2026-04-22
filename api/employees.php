@@ -21,7 +21,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
              FROM time_entries te
              WHERE te.employee_id = e.id
                AND te.status IN ('pending', 'clarified')
-           ), 0) AS pending_km
+           ), 0) AS pending_km,
+           COALESCE((
+             SELECT ROUND(SUM(te.hours), 1)
+             FROM time_entries te
+             WHERE te.employee_id = e.id
+               AND te.status = 'approved'
+               AND strftime('%Y-%m', te.entry_date) = strftime('%Y-%m', 'now')
+           ), 0) AS hours_this_period,
+           (
+             SELECT te.entry_date
+             FROM time_entries te
+             WHERE te.employee_id = e.id
+             ORDER BY te.entry_date DESC, te.submitted_at DESC
+             LIMIT 1
+           ) AS last_entry_at
          FROM employees e
          WHERE e.company_id = :company_id
          ORDER BY e.name ASC"

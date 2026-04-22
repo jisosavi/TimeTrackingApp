@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -7,9 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
+import { useAuthStore } from '@/stores/auth'
 import type { TeamMember } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
+const auth = useAuthStore()
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
@@ -42,6 +45,11 @@ function empFirstNames(name: string): string {
 
 function infoLine(fields: (string | null | undefined)[]): string {
   return fields.filter(Boolean).join(' · ')
+}
+
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
 }
 
 // ── Employee section ──────────────────────────────────────────────────────────
@@ -336,12 +344,22 @@ async function submitTeam() {
             <div class="flex items-center justify-between gap-2">
               <p class="font-medium text-sm"><span class="font-bold">{{ empLastName(emp.name) }}</span><template v-if="empFirstNames(emp.name)">, {{ empFirstNames(emp.name) }}</template></p>
               <div class="flex items-center gap-1.5 shrink-0">
-                <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
-                  {{ emp.pending_hours }}{{ t('admin.hours_pending') }}
-                </Badge>
-                <Badge v-if="emp.pending_km > 0" variant="secondary" class="text-[10px]">
-                  {{ emp.pending_km }} {{ t('admin.km_pending') }}
-                </Badge>
+                <RouterLink
+                  v-if="emp.pending_hours > 0"
+                  :to="{ name: 'supervisor-home', params: { slug: auth.user?.companySlug }, query: { employee: emp.id } }"
+                >
+                  <Badge variant="secondary" class="text-[10px] cursor-pointer hover:opacity-80">
+                    {{ emp.pending_hours }}{{ t('admin.hours_pending') }}
+                  </Badge>
+                </RouterLink>
+                <RouterLink
+                  v-if="emp.pending_km > 0"
+                  :to="{ name: 'supervisor-home', params: { slug: auth.user?.companySlug }, query: { employee: emp.id } }"
+                >
+                  <Badge variant="secondary" class="text-[10px] cursor-pointer hover:opacity-80">
+                    {{ emp.pending_km }} {{ t('admin.km_pending') }}
+                  </Badge>
+                </RouterLink>
                 <Badge :variant="emp.active ? 'default' : 'outline'" class="text-[10px]">
                   {{ emp.active ? t('admin.active') : t('admin.inactive') }}
                 </Badge>
@@ -351,10 +369,7 @@ async function submitTeam() {
               </div>
             </div>
             <p class="text-xs text-muted-foreground mt-0.5">
-              {{ infoLine([emp.email, emp.phone, emp.birth_year ? t('admin.birth_year_prefix') + ' ' + emp.birth_year : null, 'PIN: ●●●●']) }}
-            </p>
-            <p v-if="emp.employmentId" class="text-xs text-muted-foreground font-mono truncate">
-              Salaxy ID: {{ emp.employmentId }}
+              {{ t('admin.this_period_hours', { hours: emp.hours_this_period }) }}<template v-if="emp.last_entry_at"> · {{ t('admin.last_entry_date', { date: formatDate(emp.last_entry_at) }) }}</template>
             </p>
 
             <!-- Inline edit form -->

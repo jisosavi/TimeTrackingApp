@@ -34,6 +34,7 @@ const loginTypeLabel = computed(() => {
     case 'supervisor': return 'Supervisor Admin Login'
     case 'admin':      return 'Company Admin Login'
     case 'superadmin': return 'Super Admin Login'
+    default:           return ''
   }
 })
 

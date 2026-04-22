@@ -44,6 +44,8 @@ export interface Employee {
   ui_language: string | null
   pending_hours: number
   pending_km: number
+  hours_this_period: number
+  last_entry_at: string | null
   email: string | null
   phone: string | null
   birth_year: number | null

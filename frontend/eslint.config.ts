@@ -34,5 +34,17 @@ export default defineConfigWithVueTs(
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
+  {
+    // shadcn-vue primitives use single-word names by convention
+    files: ['src/components/ui/**/*.vue'],
+    rules: { 'vue/multi-word-component-names': 'off' },
+  },
+
+  {
+    // i18n bootstrap uses a runtime cast that can't be typed without the full schema
+    files: ['src/i18n.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
+
   skipFormatting,
 )
