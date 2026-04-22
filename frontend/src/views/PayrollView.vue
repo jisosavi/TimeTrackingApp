@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { useAdminData } from '@/composables/useAdminData'
 import type { ExportPeriod, ExportResult } from '@/types'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const { fetchExportPreview, submitExport } = useAdminData()
 

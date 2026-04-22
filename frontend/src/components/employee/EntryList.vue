@@ -3,7 +3,7 @@ import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTimeEntries } from '@/composables/useTimeEntries'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 import EntryCard from './EntryCard.vue'
 import { Button } from '@/components/ui/button'
 

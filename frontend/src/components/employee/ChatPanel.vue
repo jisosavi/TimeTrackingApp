@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const emit = defineEmits<{ entriesSaved: [] }>()
 

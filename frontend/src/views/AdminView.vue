@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import type { TeamMember } from '@/types'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,

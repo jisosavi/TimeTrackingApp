@@ -12,7 +12,7 @@ const emit = defineEmits<{
   delete: [id: number]
 }>()
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const clarificationText = ref('')
 const showClarifyForm = ref(false)

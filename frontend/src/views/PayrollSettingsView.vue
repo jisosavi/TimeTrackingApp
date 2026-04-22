@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { useAdminData } from '@/composables/useAdminData'
 import type { PayrollSettings } from '@/types'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const { fetchPayrollSettings, savePayrollSettings } = useAdminData()
 
 const settings = ref<PayrollSettings>({ payroll_period: 'monthly', payday_1: 15, payday_2: 0 })

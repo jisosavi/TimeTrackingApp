@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
 const auth = useAuthStore()
 const { apiFetch } = useApi()

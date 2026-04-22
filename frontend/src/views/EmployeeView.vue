@@ -7,7 +7,7 @@ import { useTimeEntries } from '@/composables/useTimeEntries'
 import ChatPanel from '@/components/employee/ChatPanel.vue'
 import EntryList from '@/components/employee/EntryList.vue'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const { rejectedCount, fetchEntries } = useTimeEntries()
 const entryListRef = ref<InstanceType<typeof EntryList> | null>(null)
 const activeTab = ref('chat')
