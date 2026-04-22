@@ -417,7 +417,7 @@ async function submitTeam() {
 
           <!-- Header actions -->
           <div class="flex items-center gap-2">
-            <Button size="sm" @click="openAddSup">+ {{ t('admin.add_supervisor') }}</Button>
+            <Button size="sm" @click="openAddSup">{{ t('admin.add_supervisor') }}</Button>
             <Button variant="ghost" size="sm" :disabled="loadingSups" @click="fetchSupervisors">
               {{ loadingSups ? t('common.loading') : t('approval.refresh') }}
             </Button>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminData } from '@/composables/useAdminData'
 import type { ExportPeriod, ExportResult } from '@/types'
+
+const { t } = useI18n()
 
 const { fetchExportPreview, submitExport } = useAdminData()
 
@@ -68,22 +71,22 @@ async function doExport(force = false) {
 
 <template>
   <div class="space-y-4">
-    <h2 class="text-lg font-semibold">Payroll</h2>
+    <h2 class="text-lg font-semibold">{{ t('payroll.title') }}</h2>
 
     <div class="rounded-lg border p-4 space-y-4 bg-card">
-      <p class="text-sm font-semibold">Export entries to Salaxy</p>
+      <p class="text-sm font-semibold">{{ t('payroll.export_section_title') }}</p>
 
       <div class="flex gap-3 flex-wrap items-end">
         <div class="space-y-1">
-          <Label class="text-xs">From</Label>
+          <Label class="text-xs">{{ t('payroll.date_from_label') }}</Label>
           <Input v-model="exportDateFrom" type="date" class="w-36" />
         </div>
         <div class="space-y-1">
-          <Label class="text-xs">To</Label>
+          <Label class="text-xs">{{ t('payroll.date_to_label') }}</Label>
           <Input v-model="exportDateTo" type="date" class="w-36" />
         </div>
         <Button size="sm" :disabled="exportLoading || !exportDateFrom || !exportDateTo" @click="doFetchPreview">
-          {{ exportLoading && !exportPeriods.length ? 'Loading…' : 'Fetch approved entries' }}
+          {{ exportLoading && !exportPeriods.length ? t('payroll.fetching') : t('payroll.fetch_button') }}
         </Button>
       </div>
 
@@ -93,10 +96,10 @@ async function doExport(force = false) {
         <div v-for="period in exportPeriods" :key="period.period_start" class="space-y-2">
           <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             {{ period.period_label }}
-            <span v-if="period.existing_payroll_id" class="normal-case text-orange-500 ml-2">(previously exported)</span>
+            <span v-if="period.existing_payroll_id" class="normal-case text-orange-500 ml-2">{{ t('payroll.previously_exported') }}</span>
           </p>
           <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
-            No entries yet — payroll draft will still be created
+            {{ t('payroll.no_entries_empty') }}
           </p>
           <div
             v-for="emp in period.employees"
@@ -112,9 +115,9 @@ async function doExport(force = false) {
             <span class="flex-1">{{ emp.employee_name }}</span>
             <span class="text-muted-foreground text-xs">
               {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
-              <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">({{ emp.pending_hours }}h new)</span>
+              <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
             </span>
-            <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">no Salaxy ID</span>
+            <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
           </div>
         </div>
 
@@ -124,7 +127,7 @@ async function doExport(force = false) {
             :disabled="exportLoading || exportPeriods.length === 0"
             @click="doExport(false)"
           >
-            {{ exportLoading ? 'Exporting…' : 'Export to Salaxy' }}
+            {{ exportLoading ? t('payroll.exporting') : t('payroll.export_button') }}
           </Button>
           <Button
             size="sm"
@@ -132,18 +135,18 @@ async function doExport(force = false) {
             :disabled="exportLoading || exportAllEmployeeIds.length === 0"
             @click="doExport(true)"
           >
-            Re-export all
+            {{ t('payroll.reexport_button') }}
           </Button>
         </div>
       </div>
 
       <div v-if="exportResult" class="rounded-md bg-muted p-3 text-sm space-y-1">
-        <p class="font-medium text-green-700">Export complete</p>
-        <p>Sent: {{ exportResult.total_sent }} entries · Added: {{ exportResult.total_added }} · Already exported: {{ exportResult.total_already }}</p>
-        <p v-if="exportResult.errors > 0" class="text-destructive">Errors: {{ exportResult.errors }}</p>
+        <p class="font-medium text-green-700">{{ t('payroll.export_complete') }}</p>
+        <p>{{ t('payroll.export_summary', { sent: exportResult.total_sent, added: exportResult.total_added, already: exportResult.total_already }) }}</p>
+        <p v-if="exportResult.errors > 0" class="text-destructive">{{ t('payroll.export_errors', { count: exportResult.errors }) }}</p>
         <div v-for="payroll in exportResult.payrolls" :key="payroll.period_start">
           <a :href="payroll.url" target="_blank" class="text-primary hover:underline text-xs">
-            Open {{ payroll.period_start }} in Salaxy ↗
+            {{ t('payroll.open_in_salaxy', { period: payroll.period_start }) }}
           </a>
         </div>
       </div>
