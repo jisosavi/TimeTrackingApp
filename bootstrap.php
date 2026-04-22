@@ -179,6 +179,15 @@ function initializeDatabase(PDO $db): void
         $db->exec('ALTER TABLE company_admins ADD COLUMN ui_language TEXT');
     }
 
+    $teCols = array_column($db->query('PRAGMA table_info(time_entries)')->fetchAll(), 'name');
+    if (!in_array('km_status', $teCols)) {
+        $db->exec("ALTER TABLE time_entries ADD COLUMN km_status TEXT NOT NULL DEFAULT 'pending'");
+        $db->exec("UPDATE time_entries SET km_status = status WHERE status != 'pending'");
+    }
+    if (!in_array('km_rejection_note', $teCols)) {
+        $db->exec('ALTER TABLE time_entries ADD COLUMN km_rejection_note TEXT');
+    }
+
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);
     ensureDefaultSuperAdmin($db);

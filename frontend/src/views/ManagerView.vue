@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { useApproval, groupByEmployee } from '@/composables/useApproval'
+import { useApproval } from '@/composables/useApproval'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
-import type { TeamMemberDetail } from '@/types'
+import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
 const { t } = useI18n()
 const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
@@ -64,32 +64,65 @@ async function loadTeam() {
 
 onMounted(fetchEntries)
 
-const needsReview = computed(() =>
-  entries.value.filter(e => e.status === 'pending' || e.status === 'clarified'),
-)
-const approvedEntries = computed(() =>
-  entries.value.filter(e => e.status === 'approved'),
-)
-const rejectedEntries = computed(() =>
-  entries.value.filter(e => e.status === 'rejected'),
-)
-const grouped = computed(() => groupByEmployee(needsReview.value))
-const rejectedGrouped = computed(() => groupByEmployee(rejectedEntries.value))
+interface VirtualCard {
+  key: string
+  id: number
+  field: 'status' | 'km_status'
+  entry: ReviewEntry
+  cardStatus: string
+  isDual: boolean
+}
 
-const sortedNeedsReview = computed(() =>
-  [...needsReview.value].sort((a, b) => {
-    const nameCmp = teamLastName(a.employee_name).localeCompare(
-      teamLastName(b.employee_name), 'fi', { sensitivity: 'base' },
-    )
-    return nameCmp !== 0 ? nameCmp : a.entry_date.localeCompare(b.entry_date)
-  }),
-)
+function makeVirtualCards(rawEntries: ReviewEntry[]): VirtualCard[] {
+  const cards: VirtualCard[] = []
+  for (const e of rawEntries) {
+    const isDual = e.hours > 0 && e.km > 0
+    if (isDual) {
+      cards.push({ key: `${e.id}-status`, id: e.id, field: 'status', entry: e, cardStatus: e.status, isDual: true })
+      cards.push({ key: `${e.id}-km_status`, id: e.id, field: 'km_status', entry: e, cardStatus: e.km_status ?? 'pending', isDual: true })
+    } else {
+      cards.push({ key: `${e.id}-status`, id: e.id, field: 'status', entry: e, cardStatus: e.status, isDual: false })
+    }
+  }
+  return cards
+}
 
-const rejectingId = ref<number | null>(null)
+const allCards = computed(() => makeVirtualCards(entries.value))
+const needsReviewCards = computed(() =>
+  allCards.value.filter(c => c.cardStatus === 'pending' || c.cardStatus === 'clarified'),
+)
+const approvedCards = computed(() => allCards.value.filter(c => c.cardStatus === 'approved'))
+const rejectedCards = computed(() => allCards.value.filter(c => c.cardStatus === 'rejected'))
+
+function cardSortFn(a: VirtualCard, b: VirtualCard): number {
+  const nameCmp = teamLastName(a.entry.employee_name).localeCompare(
+    teamLastName(b.entry.employee_name), 'fi', { sensitivity: 'base' },
+  )
+  return nameCmp !== 0 ? nameCmp : a.entry.entry_date.localeCompare(b.entry.entry_date)
+}
+
+const sortedNeedsReviewCards = computed(() => [...needsReviewCards.value].sort(cardSortFn))
+const sortedApprovedCards = computed(() => [...approvedCards.value].sort(cardSortFn))
+
+interface CardGroup { name: string; cards: VirtualCard[] }
+const rejectedCardGroups = computed<CardGroup[]>(() => {
+  const map = new Map<string, VirtualCard[]>()
+  for (const c of rejectedCards.value) {
+    const name = c.entry.employee_name
+    const group = map.get(name)
+    if (group) group.push(c)
+    else map.set(name, [c])
+  }
+  return [...map.entries()]
+    .map(([name, cards]) => ({ name, cards }))
+    .sort((a, b) => teamLastName(a.name).localeCompare(teamLastName(b.name), 'fi', { sensitivity: 'base' }))
+})
+
+const rejectingId = ref<string | null>(null)
 const rejectNote = ref('')
 
-function startReject(id: number) {
-  rejectingId.value = id
+function startReject(key: string) {
+  rejectingId.value = key
   rejectNote.value = ''
 }
 
@@ -98,17 +131,14 @@ function cancelReject() {
   rejectNote.value = ''
 }
 
-async function submitReject(id: number) {
+async function submitReject(key: string) {
   if (!rejectNote.value.trim()) return
-  await reviewEntries([id], 'reject', rejectNote.value.trim())
+  const dashIdx = key.indexOf('-')
+  const id = parseInt(key.slice(0, dashIdx))
+  const field = key.slice(dashIdx + 1) as 'status' | 'km_status'
+  await reviewEntries([id], 'reject', rejectNote.value.trim(), field)
   rejectingId.value = null
   rejectNote.value = ''
-}
-
-async function approveGroup(groupName: string) {
-  const group = grouped.value.find(g => g.name === groupName)
-  if (!group) return
-  await reviewEntries(group.entries.map(e => e.id), 'approve')
 }
 
 function formatDate(iso: string) {
@@ -157,17 +187,17 @@ function getCfg(status: string) {
       <TabsList :class="['grid w-full mb-4', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
         <TabsTrigger value="review" class="gap-1.5">
           Needs Review
-          <Badge v-if="needsReview.length > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
-            {{ needsReview.length }}
+          <Badge v-if="needsReviewCards.length > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
+            {{ needsReviewCards.length }}
           </Badge>
         </TabsTrigger>
         <TabsTrigger value="approved">
-          Approved ({{ approvedEntries.length }})
+          Approved ({{ approvedCards.length }})
         </TabsTrigger>
         <TabsTrigger value="rejected" class="gap-1.5">
           Rejected
-          <Badge v-if="rejectedEntries.length > 0" variant="outline" class="h-4 min-w-4 px-1 text-[10px]">
-            {{ rejectedEntries.length }}
+          <Badge v-if="rejectedCards.length > 0" variant="outline" class="h-4 min-w-4 px-1 text-[10px]">
+            {{ rejectedCards.length }}
           </Badge>
         </TabsTrigger>
         <TabsTrigger v-if="isSupervisor" value="team" @click="loadTeam">
@@ -177,49 +207,65 @@ function getCfg(status: string) {
 
       <!-- Needs Review tab -->
       <TabsContent value="review">
-        <div v-if="!loading && needsReview.length === 0" class="text-sm text-muted-foreground text-center py-8">
+        <div v-if="!loading && needsReviewCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
           {{ t('approval.no_team_entries') }}
         </div>
 
         <div class="space-y-2">
           <div
-            v-for="entry in sortedNeedsReview"
-            :key="entry.id"
+            v-for="card in sortedNeedsReviewCards"
+            :key="card.key"
             class="rounded-lg border p-4 space-y-2 bg-card"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5 flex-1">
                 <p class="font-semibold text-sm">
-                  <span class="font-bold">{{ teamLastName(entry.employee_name) }}</span><template v-if="teamFirstNames(entry.employee_name)">, {{ teamFirstNames(entry.employee_name) }}</template>
+                  <span class="font-bold">{{ teamLastName(card.entry.employee_name) }}</span><template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template>
                 </p>
-                <p class="font-medium text-sm">{{ formatDate(entry.entry_date) }}</p>
-                <p class="text-sm text-muted-foreground">
-                  <span v-if="entry.start_time && entry.end_time">
-                    {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
+                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
                   </span>
-                  <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
+                </div>
+                <p class="text-sm text-muted-foreground">
+                  <template v-if="!card.isDual">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                  </template>
+                  <template v-else-if="card.field === 'status'">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else>{{ card.entry.hours }}h</span>
+                  </template>
+                  <template v-else>
+                    {{ card.entry.km }} km
+                  </template>
                 </p>
-                <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
-                <p v-if="entry.comment" class="text-xs text-muted-foreground italic">{{ entry.comment }}</p>
+                <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
+                <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic">{{ card.entry.comment }}</p>
               </div>
-              <Badge :variant="getCfg(entry.status).variant" class="shrink-0">
-                {{ getCfg(entry.status).label }}
+              <Badge :variant="getCfg(card.cardStatus).variant" class="shrink-0">
+                {{ getCfg(card.cardStatus).label }}
               </Badge>
             </div>
 
             <!-- Employee clarification -->
             <div
-              v-if="entry.status === 'clarified' && entry.employee_clarification"
+              v-if="card.cardStatus === 'clarified' && card.entry.employee_clarification"
               class="rounded-md bg-muted px-3 py-2 text-sm"
             >
-              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ entry.employee_clarification }}
+              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
             </div>
 
             <!-- Action buttons -->
-            <div v-if="rejectingId !== entry.id" class="flex gap-2 pt-1">
-              <Button size="sm" @click="reviewEntries([entry.id], 'approve')">Approve</Button>
-              <Button size="sm" variant="outline" @click="startReject(entry.id)">Reject</Button>
+            <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
+              <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">Approve</Button>
+              <Button size="sm" variant="outline" @click="startReject(card.key)">Reject</Button>
             </div>
 
             <!-- Inline rejection form -->
@@ -235,7 +281,7 @@ function getCfg(status: string) {
                   size="sm"
                   variant="destructive"
                   :disabled="!rejectNote.trim()"
-                  @click="submitReject(entry.id)"
+                  @click="submitReject(card.key)"
                 >
                   Reject
                 </Button>
@@ -248,29 +294,43 @@ function getCfg(status: string) {
 
       <!-- Approved tab -->
       <TabsContent value="approved">
-        <div v-if="!loading && approvedEntries.length === 0" class="text-sm text-muted-foreground text-center py-8">
+        <div v-if="!loading && approvedCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
           No approved entries yet.
         </div>
 
         <div class="space-y-2">
           <div
-            v-for="entry in approvedEntries"
-            :key="entry.id"
+            v-for="card in sortedApprovedCards"
+            :key="card.key"
             class="rounded-lg border p-4 bg-card"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5">
-                <p class="font-medium text-sm">
-                  {{ entry.employee_name }} &middot; {{ formatDate(entry.entry_date) }}
-                </p>
-                <p class="text-sm text-muted-foreground">
-                  <span v-if="entry.start_time && entry.end_time">
-                    {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">{{ card.entry.employee_name }} &middot; {{ formatDate(card.entry.entry_date) }}</p>
+                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
                   </span>
-                  <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
+                </div>
+                <p class="text-sm text-muted-foreground">
+                  <template v-if="!card.isDual">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                  </template>
+                  <template v-else-if="card.field === 'status'">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else>{{ card.entry.hours }}h</span>
+                  </template>
+                  <template v-else>
+                    {{ card.entry.km }} km
+                  </template>
                 </p>
-                <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
+                <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
               </div>
               <Badge variant="default" class="shrink-0">Approved</Badge>
             </div>
@@ -279,40 +339,59 @@ function getCfg(status: string) {
       </TabsContent>
       <!-- Rejected tab -->
       <TabsContent value="rejected">
-        <div v-if="!loading && rejectedEntries.length === 0" class="text-sm text-muted-foreground text-center py-8">
+        <div v-if="!loading && rejectedCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
           No rejected entries.
         </div>
 
-        <div v-for="group in rejectedGrouped" :key="group.name" class="space-y-2 mb-6">
+        <div v-for="group in rejectedCardGroups" :key="group.name" class="space-y-2 mb-6">
           <h3 class="text-sm font-semibold">{{ group.name }}</h3>
 
           <div
-            v-for="entry in group.entries"
-            :key="entry.id"
+            v-for="card in group.cards"
+            :key="card.key"
             class="rounded-lg border p-4 space-y-2 bg-card"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5 flex-1">
-                <p class="font-medium text-sm">{{ formatDate(entry.entry_date) }}</p>
-                <p class="text-sm text-muted-foreground">
-                  <span v-if="entry.start_time && entry.end_time">
-                    {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
+                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
                   </span>
-                  <span v-else-if="entry.hours">{{ entry.hours }}h</span>
-                  <span v-if="entry.km > 0"><template v-if="entry.hours || (entry.start_time && entry.end_time)"> &middot; </template>{{ entry.km }} km</span>
+                </div>
+                <p class="text-sm text-muted-foreground">
+                  <template v-if="!card.isDual">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                  </template>
+                  <template v-else-if="card.field === 'status'">
+                    <span v-if="card.entry.start_time && card.entry.end_time">
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                    </span>
+                    <span v-else>{{ card.entry.hours }}h</span>
+                  </template>
+                  <template v-else>
+                    {{ card.entry.km }} km
+                  </template>
                 </p>
-                <p v-if="entry.project" class="text-xs text-muted-foreground">{{ entry.project }}</p>
-                <p v-if="entry.comment" class="text-xs text-muted-foreground italic">{{ entry.comment }}</p>
+                <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
+                <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic">{{ card.entry.comment }}</p>
               </div>
-              <Badge variant="destructive" class="shrink-0">{{ getCfg(entry.status).label }}</Badge>
+              <Badge variant="destructive" class="shrink-0">{{ getCfg(card.cardStatus).label }}</Badge>
             </div>
 
-            <div v-if="entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <span class="font-medium">Note: </span>{{ entry.rejection_note }}
+            <div v-if="card.field === 'status' && card.entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <span class="font-medium">Note: </span>{{ card.entry.rejection_note }}
+            </div>
+            <div v-else-if="card.field === 'km_status' && card.entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <span class="font-medium">Note: </span>{{ card.entry.km_rejection_note }}
             </div>
 
-            <div v-if="entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
-              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ entry.employee_clarification }}
+            <div v-if="card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
             </div>
           </div>
         </div>

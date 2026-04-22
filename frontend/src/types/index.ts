@@ -10,6 +10,8 @@ export interface TimeEntry {
   project: string | null
   comment: string | null
   status: 'pending' | 'approved' | 'rejected' | 'clarified' | 'deleted'
+  km_status: 'pending' | 'approved' | 'rejected'
+  km_rejection_note: string | null
   submitted_at: string
   reviewed_by_type: string | null
   reviewed_by_id: number | null

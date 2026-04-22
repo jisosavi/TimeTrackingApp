@@ -45,15 +45,22 @@ export function useApproval() {
     ids: number[],
     action: 'approve' | 'reject',
     rejectionNote = '',
+    field: 'status' | 'km_status' = 'status',
   ): Promise<number> {
     const result = await apiFetch<{ success: boolean; updated: number }>(
       '/api/review_entries.php',
       {
         method: 'POST',
-        body: JSON.stringify({ ids, action, rejection_note: rejectionNote }),
+        body: JSON.stringify({ ids, action, rejection_note: rejectionNote, field }),
       },
     )
-    if (action === 'approve') {
+    if (field === 'km_status') {
+      entries.value = entries.value.map(e =>
+        ids.includes(e.id)
+          ? { ...e, km_status: action === 'approve' ? 'approved' : 'rejected', km_rejection_note: action === 'reject' ? rejectionNote : null }
+          : e,
+      )
+    } else if (action === 'approve') {
       entries.value = entries.value.map(e =>
         ids.includes(e.id) ? { ...e, status: 'approved' } : e,
       )
