@@ -30,12 +30,22 @@ const recentEntries = computed(() => entries.value.slice(0, 3))
 interface PreviewRow { date: string; hours: string; project: string; notes: string }
 const previewRows = ref<PreviewRow[]>([])
 
+function toInputDate(raw: string): string {
+  if (!raw) return ''
+  // YYYY-MM-DD already fine for <input type="date">
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  // DD-MM-YYYY or DD.MM.YYYY → YYYY-MM-DD
+  const parts = raw.split(/[-.]/)
+  if (parts.length === 3 && parts[0]!.length === 2) return `${parts[2]}-${parts[1]}-${parts[0]}`
+  return raw
+}
+
 watch(
   () => pendingPreview.value,
   (preview) => {
     previewRows.value = preview
       ? preview.parsed.entries.map((e) => ({
-          date: e.date ?? '',
+          date: toInputDate(e.date ?? ''),
           hours: e.hours > 0 ? String(e.hours) : '',
           project: e.project ?? '',
           notes: e.notes ?? '',
