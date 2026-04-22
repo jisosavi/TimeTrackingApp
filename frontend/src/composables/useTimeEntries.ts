@@ -8,7 +8,9 @@ export function useTimeEntries() {
   const error = ref('')
   const { apiFetch } = useApi()
 
-  const rejectedCount = computed(() => entries.value.filter((e) => e.status === 'rejected').length)
+  const rejectedCount = computed(() =>
+    entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected').length,
+  )
 
   async function fetchEntries() {
     loading.value = true
@@ -33,6 +35,14 @@ export function useTimeEntries() {
     await fetchEntries()
   }
 
+  async function clarifyKmEntry(entryId: number, clarification: string) {
+    await apiFetch('/api/clarify_entry.php', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'clarify_km', id: entryId, clarification }),
+    })
+    await fetchEntries()
+  }
+
   async function deleteEntry(entryId: number) {
     const entry = entries.value.find((e) => e.id === entryId)
     if (!entry) return
@@ -53,5 +63,5 @@ export function useTimeEntries() {
     await fetchEntries()
   }
 
-  return { entries, loading, error, rejectedCount, fetchEntries, clarifyEntry, deleteEntry }
+  return { entries, loading, error, rejectedCount, fetchEntries, clarifyEntry, clarifyKmEntry, deleteEntry }
 }

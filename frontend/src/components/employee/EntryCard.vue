@@ -9,6 +9,7 @@ import type { TimeEntry } from '@/types'
 const props = defineProps<{ entry: TimeEntry }>()
 const emit = defineEmits<{
   clarify: [id: number, text: string]
+  clarifyKm: [id: number, text: string]
   delete: [id: number]
 }>()
 
@@ -16,6 +17,8 @@ const { t } = useI18n({ useScope: 'global' })
 
 const clarificationText = ref('')
 const showClarifyForm = ref(false)
+const kmClarificationText = ref('')
+const showKmClarifyForm = ref(false)
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending:   'secondary',
@@ -46,6 +49,13 @@ function submitClarification() {
   emit('clarify', props.entry.id, clarificationText.value.trim())
   clarificationText.value = ''
   showClarifyForm.value = false
+}
+
+function submitKmClarification() {
+  if (!kmClarificationText.value.trim()) return
+  emit('clarifyKm', props.entry.id, kmClarificationText.value.trim())
+  kmClarificationText.value = ''
+  showKmClarifyForm.value = false
 }
 
 const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.status)
@@ -113,9 +123,39 @@ const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.stat
       </div>
     </div>
 
-    <!-- Employee's previous clarification -->
+    <!-- Employee's previous hours clarification -->
     <div v-if="entry.status === 'clarified' && entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
       <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ entry.employee_clarification }}
+    </div>
+
+    <!-- Km rejection note -->
+    <div v-if="entry.km_status === 'rejected' && entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      <span class="font-medium">{{ t('entries.km_rejection_label') }} </span>{{ entry.km_rejection_note }}
+    </div>
+
+    <!-- Km clarification actions -->
+    <div v-if="entry.km_status === 'rejected'">
+      <Button v-if="!showKmClarifyForm" variant="outline" size="sm" @click="showKmClarifyForm = true">
+        {{ t('entries.add_km_clarification') }}
+      </Button>
+      <div v-else class="space-y-2">
+        <Textarea
+          v-model="kmClarificationText"
+          :placeholder="t('entries.clarification_placeholder')"
+          class="text-sm min-h-16"
+        />
+        <div class="flex gap-2">
+          <Button size="sm" :disabled="!kmClarificationText.trim()" @click="submitKmClarification">
+            {{ t('entries.submit_clarification') }}
+          </Button>
+          <Button size="sm" variant="ghost" @click="showKmClarifyForm = false">{{ t('common.cancel') }}</Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee's previous km clarification -->
+    <div v-if="entry.km_employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+      <span class="font-medium">{{ t('entries.km_clarification_label') }} </span>{{ entry.km_employee_clarification }}
     </div>
   </div>
 </template>

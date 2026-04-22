@@ -1,41 +1,53 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Clock } from 'lucide-vue-next'
+import { Clock, CheckCircle2 } from 'lucide-vue-next'
 import { useTimeEntries } from '@/composables/useTimeEntries'
 import { useRefresh } from '@/composables/useRefresh'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import EntryCard from './EntryCard.vue'
 
+const props = withDefaults(defineProps<{ showRejectedOnly?: boolean }>(), { showRejectedOnly: false })
+
 const { t } = useI18n({ useScope: 'global' })
-const { entries, loading, error, fetchEntries, clarifyEntry, deleteEntry } = useTimeEntries()
+const { entries, loading, error, fetchEntries, clarifyEntry, clarifyKmEntry, deleteEntry } = useTimeEntries()
 const { refreshTick } = useRefresh()
 
 onMounted(fetchEntries)
 watch(refreshTick, fetchEntries)
+
+const displayEntries = computed(() =>
+  props.showRejectedOnly
+    ? entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected')
+    : entries.value,
+)
 
 defineExpose({ refresh: fetchEntries })
 </script>
 
 <template>
   <div class="space-y-3">
-    <h3 class="text-sm font-medium text-muted-foreground">{{ t('entries.count', { count: entries.length }) }}</h3>
+    <h3 class="text-sm font-medium text-muted-foreground">
+      {{ t('entries.count', { count: displayEntries.length }) }}
+    </h3>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <EmptyState
-      v-if="!loading && entries.length === 0"
-      :title="t('empty.my_entries')"
-      :body="t('empty.my_entries_body')"
+      v-if="!loading && displayEntries.length === 0"
+      :title="t(showRejectedOnly ? 'empty.rejected' : 'empty.my_entries')"
+      :body="showRejectedOnly ? undefined : t('empty.my_entries_body')"
     >
-      <Clock class="size-10" />
+      <CheckCircle2 v-if="showRejectedOnly" class="size-10" />
+      <Clock v-else class="size-10" />
     </EmptyState>
 
     <EntryCard
-      v-for="entry in entries"
+      v-for="entry in displayEntries"
       :key="entry.id"
       :entry="entry"
       @clarify="clarifyEntry"
+      @clarify-km="clarifyKmEntry"
       @delete="deleteEntry"
     />
   </div>

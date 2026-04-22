@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Log hours",
   "nav.my_entries": "My entries",
+  "nav.rejected_tab": "Rejected",
   "nav.payroll": "Export Payroll",
   "nav.settings": "Settings",
 
@@ -86,6 +87,9 @@
   "entries.submit_clarification": "Submit clarification",
   "entries.delete_entry": "Delete entry",
   "entries.add_clarification": "⚠ Add clarification!",
+  "entries.add_km_clarification": "⚠ Respond to km rejection",
+  "entries.km_rejection_label": "Km rejection:",
+  "entries.km_clarification_label": "Km clarification:",
   "entries.confirm_delete": "Delete this entry?",
   "entries.exported_to_payroll": "Exported to payroll",
   "entries.exported_on": "Exported to payroll",

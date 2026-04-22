@@ -12,6 +12,7 @@ export interface TimeEntry {
   status: 'pending' | 'approved' | 'rejected' | 'clarified' | 'deleted'
   km_status: 'pending' | 'approved' | 'rejected'
   km_rejection_note: string | null
+  km_employee_clarification: string | null
   submitted_at: string
   reviewed_by_type: string | null
   reviewed_by_id: number | null

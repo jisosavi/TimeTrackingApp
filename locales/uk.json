@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Записати години",
   "nav.my_entries": "Мої записи",
+  "nav.rejected_tab": "Відхилені",
   "nav.payroll": "Експорт зарплати",
   "nav.settings": "Налаштування",
 
@@ -85,6 +86,9 @@
   "entries.submit_clarification": "Надіслати уточнення",
   "entries.delete_entry": "Видалити запис",
   "entries.add_clarification": "⚠ Додати уточнення!",
+  "entries.add_km_clarification": "⚠ Відповісти на відхилення км",
+  "entries.km_rejection_label": "Відхилення км:",
+  "entries.km_clarification_label": "Уточнення км:",
   "entries.confirm_delete": "Видалити цей запис?",
   "entries.exported_to_payroll": "Експортовано до платіжної відомості",
   "entries.exported_on": "Експортовано до платіжної відомості",

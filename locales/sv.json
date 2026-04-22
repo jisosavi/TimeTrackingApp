@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Registrera tid",
   "nav.my_entries": "Mina registreringar",
+  "nav.rejected_tab": "Avvisade",
   "nav.payroll": "Löneexport",
   "nav.settings": "Inställningar",
 
@@ -85,6 +86,9 @@
   "entries.submit_clarification": "Skicka förtydligande",
   "entries.delete_entry": "Ta bort registrering",
   "entries.add_clarification": "⚠ Lägg till förtydligande!",
+  "entries.add_km_clarification": "⚠ Svara på km-avvisning",
+  "entries.km_rejection_label": "Km-avvisning:",
+  "entries.km_clarification_label": "Km-förtydligande:",
   "entries.confirm_delete": "Ta bort denna registrering?",
   "entries.exported_to_payroll": "Exporterad till lönelistа",
   "entries.exported_on": "Exporterad till lönelista",

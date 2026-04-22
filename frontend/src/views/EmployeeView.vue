@@ -12,15 +12,17 @@ const { t } = useI18n({ useScope: 'global' })
 const { rejectedCount, fetchEntries } = useTimeEntries()
 const { refreshTick } = useRefresh()
 const entryListRef = ref<InstanceType<typeof EntryList> | null>(null)
+const rejectedListRef = ref<InstanceType<typeof EntryList> | null>(null)
 const activeTab = ref('chat')
 
 onMounted(fetchEntries)
 watch(refreshTick, fetchEntries)
 
-// When the AI saves entries, refresh the list if it's visible; otherwise show badge prompt
 function onEntriesSaved() {
   if (activeTab.value === 'entries') {
     entryListRef.value?.refresh()
+  } else if (activeTab.value === 'rejected') {
+    rejectedListRef.value?.refresh()
   } else {
     fetchEntries()
   }
@@ -29,10 +31,11 @@ function onEntriesSaved() {
 
 <template>
   <Tabs v-model="activeTab" class="w-full">
-    <TabsList class="grid w-full grid-cols-2 mb-4">
+    <TabsList class="grid w-full grid-cols-3 mb-4">
       <TabsTrigger value="chat">{{ t('nav.log_hours') }}</TabsTrigger>
-      <TabsTrigger value="entries" class="gap-1.5">
-        {{ t('nav.my_entries') }}
+      <TabsTrigger value="entries">{{ t('nav.my_entries') }}</TabsTrigger>
+      <TabsTrigger value="rejected" class="gap-1.5">
+        {{ t('nav.rejected_tab') }}
         <Badge v-if="rejectedCount > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
           {{ rejectedCount }}
         </Badge>
@@ -45,6 +48,10 @@ function onEntriesSaved() {
 
     <TabsContent value="entries">
       <EntryList ref="entryListRef" />
+    </TabsContent>
+
+    <TabsContent value="rejected">
+      <EntryList ref="rejectedListRef" :show-rejected-only="true" />
     </TabsContent>
   </Tabs>
 </template>

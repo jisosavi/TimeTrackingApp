@@ -187,6 +187,9 @@ function initializeDatabase(PDO $db): void
     if (!in_array('km_rejection_note', $teCols)) {
         $db->exec('ALTER TABLE time_entries ADD COLUMN km_rejection_note TEXT');
     }
+    if (!in_array('km_employee_clarification', $teCols)) {
+        $db->exec('ALTER TABLE time_entries ADD COLUMN km_employee_clarification TEXT');
+    }
 
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);

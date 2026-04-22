@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Registreeri tunde",
   "nav.my_entries": "Minu kirjed",
+  "nav.rejected_tab": "Tagasi lükatud",
   "nav.payroll": "Palga eksport",
   "nav.settings": "Seaded",
 
@@ -85,6 +86,9 @@
   "entries.submit_clarification": "Saada selgitus",
   "entries.delete_entry": "Kustuta kirje",
   "entries.add_clarification": "⚠ Lisa selgitus!",
+  "entries.add_km_clarification": "⚠ Vasta km-tagasilükkamisele",
+  "entries.km_rejection_label": "Km-tagasilükkamine:",
+  "entries.km_clarification_label": "Km-selgitus:",
   "entries.confirm_delete": "Kustuta see kirje?",
   "entries.exported_to_payroll": "Eksporditud palganimekirja",
   "entries.exported_on": "Eksporditud palganimekirja",

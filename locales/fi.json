@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Kirjaa tunteja",
   "nav.my_entries": "Tuntikirjaukset",
+  "nav.rejected_tab": "Hylätyt",
   "nav.payroll": "Palkkavienti",
   "nav.settings": "Asetukset",
 
@@ -86,6 +87,9 @@
   "entries.submit_clarification": "Lähetä selvitys",
   "entries.delete_entry": "Poista kirjaus",
   "entries.add_clarification": "⚠ Lisäselvitys!",
+  "entries.add_km_clarification": "⚠ Vastaa km-hylkäykseen",
+  "entries.km_rejection_label": "Km-hylkäys:",
+  "entries.km_clarification_label": "Km-selvitys:",
   "entries.confirm_delete": "Poistetaanko kirjaus?",
   "entries.exported_to_payroll": "Viety palkkalistalle",
   "entries.exported_on": "Viety palkkalistalle",

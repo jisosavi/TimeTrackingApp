@@ -48,6 +48,7 @@
 
   "nav.log_hours": "Rekhoda amaxesha",
   "nav.my_entries": "Izingeniso zam",
+  "nav.rejected_tab": "Zaligatyiweyo",
   "nav.payroll": "Thumela Intlawulo",
   "nav.settings": "Iinqobo",
 
@@ -85,6 +86,9 @@
   "entries.submit_clarification": "Thumela ingcaciso",
   "entries.delete_entry": "Cima ingeniso",
   "entries.add_clarification": "⚠ Faka ingcaciso!",
+  "entries.add_km_clarification": "⚠ Respond to km rejection",
+  "entries.km_rejection_label": "Km rejection:",
+  "entries.km_clarification_label": "Km clarification:",
   "entries.confirm_delete": "Ucima le ngeniso?",
   "entries.exported_to_payroll": "Ithunyelwe kwimvuzo",
   "entries.exported_on": "Ithunyelwe kwimvuzo",
