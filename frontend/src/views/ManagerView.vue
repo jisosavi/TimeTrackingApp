@@ -129,9 +129,12 @@ function getCfg(status: string) {
 
 <template>
   <div class="space-y-4">
-    <p v-if="auth.user?.companyName" class="text-xs text-muted-foreground -mb-2">
-      {{ auth.user.companyName }}
-    </p>
+    <div class="space-y-0.5">
+      <p v-if="auth.user?.companyName" class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        {{ auth.user.companyName }}
+      </p>
+      <p class="text-sm text-muted-foreground">{{ auth.user?.name }}</p>
+    </div>
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold">Approvals</h2>
       <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">

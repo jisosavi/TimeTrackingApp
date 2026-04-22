@@ -92,7 +92,7 @@ async function logout() {
           </span>
         </div>
         <div class="flex items-center gap-3">
-          <span v-if="auth.user?.type !== 'admin'" class="text-sm text-muted-foreground">
+          <span v-if="auth.user?.type === 'employee'" class="text-sm text-muted-foreground">
             {{ auth.user?.name }}
           </span>
           <select
