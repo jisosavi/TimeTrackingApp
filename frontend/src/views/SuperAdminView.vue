@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
+import { useRefresh } from '@/composables/useRefresh'
 
 const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId } = useSuperAdmin()
+const { refreshTick } = useRefresh()
 
 onMounted(fetchCompanies)
+watch(refreshTick, fetchCompanies)
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
@@ -142,9 +145,6 @@ async function toggleApprovals(id: number, currentValue: number) {
         <p class="text-sm text-muted-foreground">{{ companies.length }} {{ companies.length === 1 ? 'company' : 'companies' }}</p>
       </div>
       <div class="flex gap-2">
-        <Button variant="ghost" size="sm" :disabled="loading" @click="fetchCompanies">
-          {{ loading ? 'Loading…' : 'Refresh' }}
-        </Button>
         <Button size="sm" @click="openCreateForm">+ New Company</Button>
       </div>
     </div>

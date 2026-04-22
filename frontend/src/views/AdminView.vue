@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
+import { useRefresh } from '@/composables/useRefresh'
 import type { Employee, Supervisor, TeamMember } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -20,6 +21,9 @@ const {
   fetchEmployees, saveEmployee, syncFromSalaxy,
   fetchSupervisors, saveSupervisor, deleteSupervisor, fetchTeam, saveTeam,
 } = useAdminData()
+
+const { refreshTick } = useRefresh()
+watch(refreshTick, () => { fetchEmployees(); fetchSupervisors() })
 
 onMounted(() => {
   fetchEmployees()
@@ -283,9 +287,6 @@ async function submitAddForm() {
       <Button size="sm" @click="openAddDrawer">{{ t('admin.people.add_person') }}</Button>
       <Button variant="outline" size="sm" :disabled="syncing" @click="doSync">
         {{ syncing ? t('admin.syncing') : t('admin.sync_from_salaxy') }}
-      </Button>
-      <Button variant="ghost" size="sm" :disabled="loadingEmps || loadingSups" @click="() => { fetchEmployees(); fetchSupervisors() }">
-        {{ (loadingEmps || loadingSups) ? t('common.loading') : t('approval.refresh') }}
       </Button>
     </div>
 

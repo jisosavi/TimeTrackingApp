@@ -50,6 +50,7 @@ export function useTimeEntries() {
     }
 
     entries.value = entries.value.filter((e) => e.id !== entryId)
+    await fetchEntries()
   }
 
   return { entries, loading, error, rejectedCount, fetchEntries, clarifyEntry, deleteEntry }

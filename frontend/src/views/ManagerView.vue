@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useApproval } from '@/composables/useApproval'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
+import { useRefresh } from '@/composables/useRefresh'
 import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -17,6 +18,8 @@ const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
 const auth = useAuthStore()
 const { apiFetch } = useApi()
 const route = useRoute()
+const { refreshTick } = useRefresh()
+watch(refreshTick, fetchEntries)
 
 const isSupervisor = computed(() => auth.user?.type === 'supervisor')
 const filterEmployeeId = computed(() => route.query.employee ? Number(route.query.employee) : null)
@@ -187,12 +190,7 @@ function cardTypePill(card: VirtualCard): string {
       </p>
       <p class="text-sm text-muted-foreground">{{ auth.user?.name }}</p>
     </div>
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold">{{ t('approval.title') }}</h2>
-      <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">
-        {{ loading ? t('common.loading') : t('approval.refresh') }}
-      </Button>
-    </div>
+    <h2 class="text-lg font-semibold">{{ t('approval.title') }}</h2>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 

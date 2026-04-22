@@ -51,6 +51,7 @@ export function useAdminData() {
     } else {
       employees.value.push({ ...data.employee, pending_hours: 0 })
     }
+    await fetchEmployees()
     return data.employee
   }
 
@@ -100,6 +101,7 @@ export function useAdminData() {
     } else {
       supervisors.value.push({ ...data.supervisor, team_size: 0 })
     }
+    await fetchSupervisors()
     return data.supervisor
   }
 
@@ -109,6 +111,7 @@ export function useAdminData() {
       body: JSON.stringify({ id }),
     })
     supervisors.value = supervisors.value.filter(s => s.id !== id)
+    await fetchSupervisors()
   }
 
   async function fetchTeam(supervisorId: number): Promise<TeamMember[]> {

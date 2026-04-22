@@ -1,27 +1,23 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTimeEntries } from '@/composables/useTimeEntries'
+import { useRefresh } from '@/composables/useRefresh'
+import EntryCard from './EntryCard.vue'
 
 const { t } = useI18n({ useScope: 'global' })
-import EntryCard from './EntryCard.vue'
-import { Button } from '@/components/ui/button'
-
 const { entries, loading, error, fetchEntries, clarifyEntry, deleteEntry } = useTimeEntries()
+const { refreshTick } = useRefresh()
 
 onMounted(fetchEntries)
+watch(refreshTick, fetchEntries)
 
 defineExpose({ refresh: fetchEntries })
 </script>
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <h3 class="text-sm font-medium text-muted-foreground">{{ t('entries.count', { count: entries.length }) }}</h3>
-      <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">
-        {{ loading ? t('common.loading') : t('entries.refresh_button') }}
-      </Button>
-    </div>
+    <h3 class="text-sm font-medium text-muted-foreground">{{ t('entries.count', { count: entries.length }) }}</h3>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 

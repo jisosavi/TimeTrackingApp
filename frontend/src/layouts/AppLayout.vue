@@ -2,11 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { RefreshCw } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
+import { useRefresh } from '@/composables/useRefresh'
 import { Button } from '@/components/ui/button'
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
+const { triggerRefresh } = useRefresh()
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -102,6 +105,9 @@ async function logout() {
           >
             <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
           </select>
+          <Button variant="ghost" size="icon-sm" :title="t('approval.refresh')" @click="triggerRefresh">
+            <RefreshCw class="size-4" />
+          </Button>
           <Button variant="outline" size="sm" @click="logout">{{ t('common.logout') }}</Button>
         </div>
       </div>

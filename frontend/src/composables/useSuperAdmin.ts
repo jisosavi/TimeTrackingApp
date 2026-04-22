@@ -40,6 +40,7 @@ export function useSuperAdmin() {
       body: JSON.stringify(payload),
     })
     companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0, business_id: null })
+    await fetchCompanies()
     return data.company
   }
 

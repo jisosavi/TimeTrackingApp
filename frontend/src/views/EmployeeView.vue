@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { useTimeEntries } from '@/composables/useTimeEntries'
+import { useRefresh } from '@/composables/useRefresh'
 import ChatPanel from '@/components/employee/ChatPanel.vue'
 import EntryList from '@/components/employee/EntryList.vue'
 
 const { t } = useI18n({ useScope: 'global' })
 const { rejectedCount, fetchEntries } = useTimeEntries()
+const { refreshTick } = useRefresh()
 const entryListRef = ref<InstanceType<typeof EntryList> | null>(null)
 const activeTab = ref('chat')
 
 onMounted(fetchEntries)
+watch(refreshTick, fetchEntries)
 
 // When the AI saves entries, refresh the list if it's visible; otherwise show badge prompt
 function onEntriesSaved() {

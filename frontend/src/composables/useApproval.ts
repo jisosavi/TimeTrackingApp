@@ -69,6 +69,7 @@ export function useApproval() {
         ids.includes(e.id) ? { ...e, status: 'rejected', rejection_note: rejectionNote } : e,
       )
     }
+    await fetchEntries()
     return result.updated
   }
 
