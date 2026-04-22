@@ -343,5 +343,9 @@
   "admin.people.add_title": "Додати особу",
   "admin.people.no_results": "Осіб не знайдено.",
   "admin.people.badge_employee": "Працівник",
-  "admin.people.badge_supervisor": "Керівник"
+  "admin.people.badge_supervisor": "Керівник",
+  "payroll.summary_title": "Current pay period",
+  "payroll.pending_entries": "{count} pending approval",
+  "payroll.no_pending": "No entries pending",
+  "payroll.period_dates": "{from} – {to}"
 }

@@ -343,5 +343,9 @@
   "admin.people.add_title": "Lägg till person",
   "admin.people.no_results": "Inga personer hittades.",
   "admin.people.badge_employee": "Anställd",
-  "admin.people.badge_supervisor": "Handledare"
+  "admin.people.badge_supervisor": "Handledare",
+  "payroll.summary_title": "Current pay period",
+  "payroll.pending_entries": "{count} pending approval",
+  "payroll.no_pending": "No entries pending",
+  "payroll.period_dates": "{from} – {to}"
 }

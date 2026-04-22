@@ -343,5 +343,9 @@
   "admin.people.add_title": "Lisää henkilö",
   "admin.people.no_results": "Henkilöitä ei löydy.",
   "admin.people.badge_employee": "Työntekijä",
-  "admin.people.badge_supervisor": "Esimies"
+  "admin.people.badge_supervisor": "Esimies",
+  "payroll.summary_title": "Nykyinen palkkakausi",
+  "payroll.pending_entries": "{count} odottaa hyväksyntää",
+  "payroll.no_pending": "Ei odottavia kirjauksia",
+  "payroll.period_dates": "{from} – {to}"
 }

@@ -1,16 +1,48 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { useAdminData } from '@/composables/useAdminData'
-import type { ExportPeriod, ExportResult } from '@/types'
+import { useApproval } from '@/composables/useApproval'
+import type { ExportPeriod, ExportResult, PayrollSettings } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
 
-const { fetchExportPreview, submitExport } = useAdminData()
+const { fetchExportPreview, submitExport, fetchPayrollSettings } = useAdminData()
+const { entries: approvalEntries, fetchEntries: fetchApprovalEntries } = useApproval()
 
+// ── Current-period summary ────────────────────────────────────────────────────
+const settings = ref<PayrollSettings | null>(null)
+const settingsLoading = ref(true)
+
+function computeCurrentPeriod(s: PayrollSettings): { from: string; to: string; label: string } {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const mo = String(m + 1).padStart(2, '0')
+  const lastDay = new Date(y, m + 1, 0).toISOString().slice(0, 10)
+  if (s.payroll_period === 'monthly') {
+    return { from: `${y}-${mo}-01`, to: lastDay, label: `${mo}/${y}` }
+  }
+  // biweekly: 1–15 or 16–end
+  const day = now.getDate()
+  if (day <= 15) {
+    return { from: `${y}-${mo}-01`, to: `${y}-${mo}-15`, label: `${mo}/01–15 ${y}` }
+  }
+  return { from: `${y}-${mo}-16`, to: lastDay, label: `${mo}/16–${lastDay.slice(8)} ${y}` }
+}
+
+const currentPeriod = computed(() => settings.value ? computeCurrentPeriod(settings.value) : null)
+
+const pendingCount = computed(() =>
+  approvalEntries.value.filter(e => e.status === 'pending' || e.status === 'clarified').length,
+)
+
+// ── Export state ──────────────────────────────────────────────────────────────
 const exportDateFrom = ref('')
 const exportDateTo = ref('')
 const exportPeriods = ref<ExportPeriod[]>([])
@@ -19,11 +51,35 @@ const exportLoading = ref(false)
 const exportError = ref<string | null>(null)
 const exportResult = ref<ExportResult | null>(null)
 
-const now = new Date()
-const y = now.getFullYear()
-const mo = String(now.getMonth() + 1).padStart(2, '0')
-exportDateFrom.value = `${y}-${mo}-01`
-exportDateTo.value = new Date(y, now.getMonth() + 1, 0).toISOString().slice(0, 10)
+// Accordion: open new/unexported periods by default, collapse already-exported ones
+const accordionOpenItems = ref<string[]>([])
+watch(exportPeriods, (periods) => {
+  accordionOpenItems.value = periods
+    .filter(p => !p.existing_payroll_id)
+    .map(p => p.period_start)
+})
+
+onMounted(async () => {
+  try {
+    settings.value = await fetchPayrollSettings()
+  } catch {}
+  settingsLoading.value = false
+
+  // Seed date range from computed current period (falls back to monthly defaults)
+  const period = currentPeriod.value
+  if (period) {
+    exportDateFrom.value = period.from
+    exportDateTo.value = period.to
+  } else {
+    const now = new Date()
+    const y = now.getFullYear()
+    const mo = String(now.getMonth() + 1).padStart(2, '0')
+    exportDateFrom.value = `${y}-${mo}-01`
+    exportDateTo.value = new Date(y, now.getMonth() + 1, 0).toISOString().slice(0, 10)
+  }
+
+  fetchApprovalEntries()
+})
 
 async function doFetchPreview() {
   exportError.value = null
@@ -73,6 +129,23 @@ async function doExport(force = false) {
   <div class="space-y-4">
     <h2 class="text-lg font-semibold">{{ t('payroll.title') }}</h2>
 
+    <!-- ── Current period summary card ── -->
+    <div class="rounded-lg border px-4 py-3 bg-card space-y-1">
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('payroll.summary_title') }}</p>
+      <div v-if="settingsLoading" class="text-sm text-muted-foreground">{{ t('common.loading') }}</div>
+      <template v-else-if="currentPeriod">
+        <p class="text-base font-semibold">{{ currentPeriod.label }}</p>
+        <p class="text-xs text-muted-foreground">{{ t('payroll.period_dates', { from: currentPeriod.from, to: currentPeriod.to }) }}</p>
+        <div class="pt-1">
+          <Badge v-if="pendingCount > 0" variant="secondary" class="text-xs">
+            {{ t('payroll.pending_entries', { count: pendingCount }) }}
+          </Badge>
+          <span v-else class="text-xs text-muted-foreground">{{ t('payroll.no_pending') }}</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── Export section ── -->
     <div class="rounded-lg border p-4 space-y-4 bg-card">
       <p class="text-sm font-semibold">{{ t('payroll.export_section_title') }}</p>
 
@@ -92,52 +165,69 @@ async function doExport(force = false) {
 
       <p v-if="exportError" class="text-sm text-destructive">{{ exportError }}</p>
 
-      <div v-if="exportPeriods.length" class="space-y-4">
-        <div v-for="period in exportPeriods" :key="period.period_start" class="space-y-2">
-          <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            {{ period.period_label }}
-            <span v-if="period.existing_payroll_id" class="normal-case text-orange-500 ml-2">{{ t('payroll.previously_exported') }}</span>
-          </p>
-          <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
-            {{ t('payroll.no_entries_empty') }}
-          </p>
-          <div
-            v-for="emp in period.employees"
-            :key="emp.employee_id"
-            class="flex items-center gap-3 text-sm py-1 border-b last:border-0"
-          >
-            <input
-              type="checkbox"
-              :checked="exportSelectedIds.includes(emp.employee_id)"
-              @change="toggleExportEmployee(emp.employee_id)"
-              class="h-4 w-4"
-            />
-            <span class="flex-1">{{ emp.employee_name }}</span>
-            <span class="text-muted-foreground text-xs">
-              {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
-              <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
-            </span>
-            <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
-          </div>
-        </div>
+      <!-- Periods accordion -->
+      <Accordion
+        v-if="exportPeriods.length"
+        v-model="accordionOpenItems"
+        type="multiple"
+        class="space-y-2"
+      >
+        <AccordionItem
+          v-for="period in exportPeriods"
+          :key="period.period_start"
+          :value="period.period_start"
+          class="rounded-lg border px-3"
+        >
+          <AccordionTrigger class="gap-2">
+            <span>{{ period.period_label }}</span>
+            <Badge
+              v-if="period.existing_payroll_id"
+              variant="outline"
+              class="text-[10px] normal-case ml-1"
+            >{{ t('payroll.previously_exported') }}</Badge>
+          </AccordionTrigger>
+          <AccordionContent class="pb-3">
+            <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
+              {{ t('payroll.no_entries_empty') }}
+            </p>
+            <div
+              v-for="emp in period.employees"
+              :key="emp.employee_id"
+              class="flex items-center gap-3 text-sm py-1 border-b last:border-0"
+            >
+              <input
+                type="checkbox"
+                :checked="exportSelectedIds.includes(emp.employee_id)"
+                class="h-4 w-4"
+                @change="toggleExportEmployee(emp.employee_id)"
+              />
+              <span class="flex-1">{{ emp.employee_name }}</span>
+              <span class="text-muted-foreground text-xs">
+                {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
+                <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
+              </span>
+              <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-        <div class="flex gap-2 pt-1">
-          <Button
-            size="sm"
-            :disabled="exportLoading || exportPeriods.length === 0"
-            @click="doExport(false)"
-          >
-            {{ exportLoading ? t('payroll.exporting') : t('payroll.export_button') }}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="exportLoading || exportAllEmployeeIds.length === 0"
-            @click="doExport(true)"
-          >
-            {{ t('payroll.reexport_button') }}
-          </Button>
-        </div>
+      <div v-if="exportPeriods.length" class="flex gap-2 pt-1">
+        <Button
+          size="sm"
+          :disabled="exportLoading || exportPeriods.length === 0"
+          @click="doExport(false)"
+        >
+          {{ exportLoading ? t('payroll.exporting') : t('payroll.export_button') }}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          :disabled="exportLoading || exportAllEmployeeIds.length === 0"
+          @click="doExport(true)"
+        >
+          {{ t('payroll.reexport_button') }}
+        </Button>
       </div>
 
       <div v-if="exportResult" class="rounded-md bg-muted p-3 text-sm space-y-1">

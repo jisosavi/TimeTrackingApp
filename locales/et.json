@@ -343,5 +343,9 @@
   "admin.people.add_title": "Lisa isik",
   "admin.people.no_results": "Isikuid ei leitud.",
   "admin.people.badge_employee": "Töötaja",
-  "admin.people.badge_supervisor": "Juhendaja"
+  "admin.people.badge_supervisor": "Juhendaja",
+  "payroll.summary_title": "Current pay period",
+  "payroll.pending_entries": "{count} pending approval",
+  "payroll.no_pending": "No entries pending",
+  "payroll.period_dates": "{from} – {to}"
 }

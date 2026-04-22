@@ -343,5 +343,9 @@
   "admin.people.add_title": "Add person",
   "admin.people.no_results": "No people found.",
   "admin.people.badge_employee": "Employee",
-  "admin.people.badge_supervisor": "Supervisor"
+  "admin.people.badge_supervisor": "Supervisor",
+  "payroll.summary_title": "Current pay period",
+  "payroll.pending_entries": "{count} pending approval",
+  "payroll.no_pending": "No entries pending",
+  "payroll.period_dates": "{from} – {to}"
 }

@@ -63,10 +63,15 @@ const router = createRouter({
           meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
         },
         {
-          path: ':slug/admin/payroll',
-          name: 'admin-payroll',
+          path: ':slug/admin/payroll-summary',
+          name: 'admin-payroll-summary',
           component: () => import('@/views/PayrollView.vue'),
           meta: { requiresAuth: true, allowedTypes: ['admin'] },
+        },
+        {
+          path: ':slug/admin/payroll',
+          name: 'admin-payroll',
+          redirect: (to) => ({ name: 'admin-payroll-summary', params: to.params }),
         },
         {
           path: ':slug/admin/payroll-settings',
@@ -88,7 +93,7 @@ function authHome(user: AuthUser): RouteLocationRaw {
     case 'employee':
       return { name: 'employee-home', params: { slug: user.companySlug } }
     case 'admin':
-      return { name: 'admin-dashboard', params: { slug: user.companySlug } }
+      return { name: 'admin-payroll-summary', params: { slug: user.companySlug } }
     case 'supervisor':
       return { name: 'supervisor-home', params: { slug: user.companySlug } }
   }
@@ -98,7 +103,7 @@ function loginRouteForPath(to: { name: unknown; params: Record<string, unknown> 
   const slug = to.params.slug as string | undefined
   if (!slug) return { name: 'superadmin-login' }
   const name = to.name as string
-  if (name === 'admin-dashboard' || name === 'admin-payroll' || name === 'admin-payroll-settings') return { name: 'admin-login', params: { slug } }
+  if (['admin-dashboard', 'admin-payroll', 'admin-payroll-summary', 'admin-payroll-settings'].includes(name)) return { name: 'admin-login', params: { slug } }
   if (name === 'supervisor-home') return { name: 'supervisor-login', params: { slug } }
   return { name: 'employee-login', params: { slug } }
 }
