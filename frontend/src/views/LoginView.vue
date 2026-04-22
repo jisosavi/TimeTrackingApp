@@ -94,6 +94,7 @@ async function loginSupervisor() {
     type: 'supervisor',
     companyId: data.supervisor.company_id ?? 0,
     companySlug: slug,
+    companyName: data.company_name ?? '',
     name: `${data.supervisor.first_name} ${data.supervisor.last_name}`,
     uiLanguage: data.ui_language ?? 'en',
   }
@@ -117,6 +118,7 @@ async function loginWithPassword() {
     type: isSuperAdmin ? 'superadmin' : 'admin',
     companyId: data.admin.company_id ?? 0,
     companySlug: slug,
+    companyName: data.company?.name ?? '',
     name: data.admin.name,
     email: data.admin.email,
     uiLanguage: data.ui_language ?? 'en',

@@ -36,7 +36,7 @@ if (!$supervisor) {
     sendJson(['success' => false, 'error' => 'Väärä PIN'], 401);
 }
 
-$compLangStmt = $db->prepare('SELECT ui_language, approvals_enabled FROM companies WHERE id = :id LIMIT 1');
+$compLangStmt = $db->prepare('SELECT name, ui_language, approvals_enabled FROM companies WHERE id = :id LIMIT 1');
 $compLangStmt->execute([':id' => (int) $supervisor['company_id']]);
 $compRow = $compLangStmt->fetch();
 
@@ -51,13 +51,14 @@ $effectiveLang = $supLang ?: $companyLang;
 $token = generateToken((int) $supervisor['id'], 'supervisor', (int) $supervisor['company_id']);
 
 sendJson([
-    'success'    => true,
-    'token'      => $token,
-    'supervisor' => [
+    'success'      => true,
+    'token'        => $token,
+    'supervisor'   => [
         'id'         => (int) $supervisor['id'],
         'first_name' => $supervisor['first_name'],
         'last_name'  => $supervisor['last_name'],
         'email'      => $supervisor['email'],
     ],
-    'ui_language' => $effectiveLang,
+    'company_name' => $compRow['name'] ?? '',
+    'ui_language'  => $effectiveLang,
 ]);

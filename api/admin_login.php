@@ -33,7 +33,7 @@ try {
         exit;
     }
 
-    $compStmt = $db->prepare('SELECT active, approvals_enabled, ui_language FROM companies WHERE id = :id');
+    $compStmt = $db->prepare('SELECT name, slug, active, approvals_enabled, ui_language FROM companies WHERE id = :id');
     $compStmt->execute([':id' => $admin['company_id']]);
     $company = $compStmt->fetch() ?: [];
 
@@ -58,6 +58,8 @@ try {
             'ui_language' => $effectiveLang,
         ],
         'company' => [
+            'name'              => $company['name'] ?? '',
+            'slug'              => $company['slug'] ?? '',
             'active'            => (int) ($company['active'] ?? 1),
             'approvals_enabled' => (int) ($company['approvals_enabled'] ?? 0),
             'ui_language'       => $companyLang,

@@ -47,10 +47,7 @@ onMounted(async () => {
   }
 })
 
-const companyDisplayName = computed(() => {
-  const slug = auth.user?.companySlug ?? ''
-  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-})
+const companyDisplayName = computed(() => auth.user?.companyName ?? '')
 
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}

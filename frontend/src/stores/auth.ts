@@ -8,6 +8,7 @@ export interface AuthUser {
   type: UserType
   companyId: number
   companySlug: string
+  companyName?: string
   name: string
   email?: string
   uiLanguage: string
