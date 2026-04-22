@@ -332,5 +332,16 @@
   "payroll_settings.save_button": "Salvesta seaded",
   "payroll_settings.saving": "Salvestamine…",
   "payroll_settings.saved": "Salvestatud!",
-  "payroll_settings.last_saved": "Viimati salvestatud {time}"
+  "payroll_settings.last_saved": "Viimati salvestatud {time}",
+  "admin.people.filter_all": "Kõik",
+  "admin.people.filter_employee": "Töötajad",
+  "admin.people.filter_supervisor": "Juhendajad",
+  "admin.people.add_person": "+ Lisa isik",
+  "admin.people.role_label": "Roll",
+  "admin.people.role_employee": "Töötaja",
+  "admin.people.role_supervisor": "Juhendaja",
+  "admin.people.add_title": "Lisa isik",
+  "admin.people.no_results": "Isikuid ei leitud.",
+  "admin.people.badge_employee": "Töötaja",
+  "admin.people.badge_supervisor": "Juhendaja"
 }

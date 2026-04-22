@@ -25,7 +25,7 @@ function expand(flat: Record<string, string>): Record<string, unknown> {
 export const SUPPORTED_LOCALES = ['en', 'fi', 'sv', 'et', 'uk', 'xh'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const i18n = createI18n({
   legacy: false,
   locale: 'en',

@@ -332,5 +332,16 @@
   "payroll_settings.save_button": "Зберегти налаштування",
   "payroll_settings.saving": "Збереження…",
   "payroll_settings.saved": "Збережено!",
-  "payroll_settings.last_saved": "Останнє збереження {time}"
+  "payroll_settings.last_saved": "Останнє збереження {time}",
+  "admin.people.filter_all": "Всі",
+  "admin.people.filter_employee": "Працівники",
+  "admin.people.filter_supervisor": "Керівники",
+  "admin.people.add_person": "+ Додати особу",
+  "admin.people.role_label": "Роль",
+  "admin.people.role_employee": "Працівник",
+  "admin.people.role_supervisor": "Керівник",
+  "admin.people.add_title": "Додати особу",
+  "admin.people.no_results": "Осіб не знайдено.",
+  "admin.people.badge_employee": "Працівник",
+  "admin.people.badge_supervisor": "Керівник"
 }

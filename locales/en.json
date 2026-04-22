@@ -332,5 +332,16 @@
   "payroll_settings.save_button": "Save Settings",
   "payroll_settings.saving": "Saving…",
   "payroll_settings.saved": "Saved!",
-  "payroll_settings.last_saved": "Last saved {time}"
+  "payroll_settings.last_saved": "Last saved {time}",
+  "admin.people.filter_all": "All",
+  "admin.people.filter_employee": "Employees",
+  "admin.people.filter_supervisor": "Supervisors",
+  "admin.people.add_person": "+ Add person",
+  "admin.people.role_label": "Role",
+  "admin.people.role_employee": "Employee",
+  "admin.people.role_supervisor": "Supervisor",
+  "admin.people.add_title": "Add person",
+  "admin.people.no_results": "No people found.",
+  "admin.people.badge_employee": "Employee",
+  "admin.people.badge_supervisor": "Supervisor"
 }

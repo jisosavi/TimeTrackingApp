@@ -332,5 +332,16 @@
   "payroll_settings.save_button": "Spara inställningar",
   "payroll_settings.saving": "Sparar…",
   "payroll_settings.saved": "Sparat!",
-  "payroll_settings.last_saved": "Senast sparad {time}"
+  "payroll_settings.last_saved": "Senast sparad {time}",
+  "admin.people.filter_all": "Alla",
+  "admin.people.filter_employee": "Anställda",
+  "admin.people.filter_supervisor": "Handledare",
+  "admin.people.add_person": "+ Lägg till person",
+  "admin.people.role_label": "Roll",
+  "admin.people.role_employee": "Anställd",
+  "admin.people.role_supervisor": "Handledare",
+  "admin.people.add_title": "Lägg till person",
+  "admin.people.no_results": "Inga personer hittades.",
+  "admin.people.badge_employee": "Anställd",
+  "admin.people.badge_supervisor": "Handledare"
 }
