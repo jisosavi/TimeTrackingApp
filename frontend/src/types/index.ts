@@ -41,6 +41,7 @@ export interface Employee {
   active: number
   ui_language: string | null
   pending_hours: number
+  pending_km: number
   email: string | null
   phone: string | null
   birth_year: number | null

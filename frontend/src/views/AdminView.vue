@@ -336,6 +336,9 @@ async function submitTeam() {
                 <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
                   {{ emp.pending_hours }}h pending
                 </Badge>
+                <Badge v-if="emp.pending_km > 0" variant="secondary" class="text-[10px]">
+                  {{ emp.pending_km }} km pending
+                </Badge>
                 <Badge :variant="emp.active ? 'default' : 'outline'" class="text-[10px]">
                   {{ emp.active ? 'Active' : 'Inactive' }}
                 </Badge>

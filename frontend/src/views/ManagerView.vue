@@ -76,6 +76,15 @@ const rejectedEntries = computed(() =>
 const grouped = computed(() => groupByEmployee(needsReview.value))
 const rejectedGrouped = computed(() => groupByEmployee(rejectedEntries.value))
 
+const sortedNeedsReview = computed(() =>
+  [...needsReview.value].sort((a, b) => {
+    const nameCmp = teamLastName(a.employee_name).localeCompare(
+      teamLastName(b.employee_name), 'fi', { sensitivity: 'base' },
+    )
+    return nameCmp !== 0 ? nameCmp : a.entry_date.localeCompare(b.entry_date)
+  }),
+)
+
 const rejectingId = ref<number | null>(null)
 const rejectNote = ref('')
 
@@ -172,23 +181,17 @@ function getCfg(status: string) {
           {{ t('approval.no_team_entries') }}
         </div>
 
-        <div v-for="group in grouped" :key="group.name" class="space-y-2 mb-6">
-          <!-- Employee header -->
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold">{{ group.name }}</h3>
-            <Button variant="outline" size="sm" @click="approveGroup(group.name)">
-              Approve all ({{ group.entries.length }})
-            </Button>
-          </div>
-
-          <!-- Entry cards -->
+        <div class="space-y-2">
           <div
-            v-for="entry in group.entries"
+            v-for="entry in sortedNeedsReview"
             :key="entry.id"
             class="rounded-lg border p-4 space-y-2 bg-card"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5 flex-1">
+                <p class="font-semibold text-sm">
+                  <span class="font-bold">{{ teamLastName(entry.employee_name) }}</span><template v-if="teamFirstNames(entry.employee_name)">, {{ teamFirstNames(entry.employee_name) }}</template>
+                </p>
                 <p class="font-medium text-sm">{{ formatDate(entry.entry_date) }}</p>
                 <p class="text-sm text-muted-foreground">
                   <span v-if="entry.start_time && entry.end_time">

@@ -15,7 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
              FROM time_entries te
              WHERE te.employee_id = e.id
                AND te.status IN ('pending', 'clarified')
-           ), 0) AS pending_hours
+           ), 0) AS pending_hours,
+           COALESCE((
+             SELECT ROUND(SUM(te.km), 1)
+             FROM time_entries te
+             WHERE te.employee_id = e.id
+               AND te.status IN ('pending', 'clarified')
+           ), 0) AS pending_km
          FROM employees e
          WHERE e.company_id = :company_id
          ORDER BY e.name ASC"
