@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import type { TeamMember } from '@/types'
+
+const { t } = useI18n()
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
@@ -243,16 +246,16 @@ async function submitTeam() {
 
 <template>
   <div class="space-y-4">
-    <h2 class="text-lg font-semibold">Admin Dashboard</h2>
+    <h2 class="text-lg font-semibold">{{ t('admin.dashboard_title') }}</h2>
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <Tabs default-value="employees" class="w-full">
       <TabsList class="grid w-full grid-cols-2 mb-4">
         <TabsTrigger value="employees">
-          Employees ({{ employees.length }})
+          {{ t('admin.tab_employees', { count: employees.length }) }}
         </TabsTrigger>
         <TabsTrigger value="supervisors">
-          Supervisors ({{ supervisors.length }})
+          {{ t('admin.tab_supervisors', { count: supervisors.length }) }}
         </TabsTrigger>
       </TabsList>
 
@@ -262,12 +265,12 @@ async function submitTeam() {
 
           <!-- Header actions -->
           <div class="flex items-center gap-2 flex-wrap">
-            <Button size="sm" @click="openAddEmp">+ Add Employee</Button>
+            <Button size="sm" @click="openAddEmp">+ {{ t('admin.add_employee') }}</Button>
             <Button variant="outline" size="sm" :disabled="syncing" @click="doSync">
-              {{ syncing ? 'Syncing…' : 'Sync from Salaxy' }}
+              {{ syncing ? t('admin.syncing') : t('admin.sync_from_salaxy') }}
             </Button>
             <Button variant="ghost" size="sm" :disabled="loadingEmps" @click="fetchEmployees">
-              {{ loadingEmps ? 'Loading…' : 'Refresh' }}
+              {{ loadingEmps ? t('common.loading') : t('approval.refresh') }}
             </Button>
           </div>
 
@@ -276,51 +279,51 @@ async function submitTeam() {
           <!-- Search -->
           <Input
             v-model="empSearch"
-            placeholder="Search by name…"
+            :placeholder="t('approval.search_placeholder')"
             class="h-8 text-sm"
           />
 
           <!-- Add form -->
           <div v-if="showEmpForm" class="rounded-lg border p-4 space-y-3 bg-muted/40">
-            <p class="text-sm font-medium">New Employee</p>
+            <p class="text-sm font-medium">{{ t('admin.add_employee_title') }}</p>
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <Label class="text-xs">Name</Label>
-                <Input v-model="empForm.name" placeholder="Full name" />
+                <Label class="text-xs">{{ t('admin.col_name') }}</Label>
+                <Input v-model="empForm.name" :placeholder="t('admin.full_name_placeholder')" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">PIN (3–6 digits)</Label>
+                <Label class="text-xs">{{ t('admin.pin_digits_label') }}</Label>
                 <Input v-model="empForm.pin" placeholder="e.g. 1234" maxlength="6" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Language</Label>
+                <Label class="text-xs">{{ t('admin.language_label') }}</Label>
                 <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                 </select>
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Email</Label>
+                <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                 <Input v-model="empForm.email" type="email" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Phone</Label>
+                <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                 <Input v-model="empForm.phone" type="tel" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Year of birth</Label>
+                <Label class="text-xs">{{ t('admin.col_birth_year') }}</Label>
                 <Input v-model="empForm.birth_year" maxlength="4" placeholder="e.g. 1990" />
               </div>
               <div class="space-y-1 col-span-2">
-                <Label class="text-xs">Salaxy ID</Label>
+                <Label class="text-xs">{{ t('admin.col_employment_id') }}</Label>
                 <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
               </div>
             </div>
             <p v-if="empFormError" class="text-xs text-destructive">{{ empFormError }}</p>
             <div class="flex gap-2">
               <Button size="sm" :disabled="empSaving" @click="submitEmpForm">
-                {{ empSaving ? 'Saving…' : 'Save' }}
+                {{ empSaving ? t('common.saving') : t('common.save') }}
               </Button>
-              <Button size="sm" variant="ghost" @click="cancelEmpForm">Cancel</Button>
+              <Button size="sm" variant="ghost" @click="cancelEmpForm">{{ t('common.cancel') }}</Button>
             </div>
           </div>
 
@@ -334,21 +337,21 @@ async function submitTeam() {
               <p class="font-medium text-sm"><span class="font-bold">{{ empLastName(emp.name) }}</span><template v-if="empFirstNames(emp.name)">, {{ empFirstNames(emp.name) }}</template></p>
               <div class="flex items-center gap-1.5 shrink-0">
                 <Badge v-if="emp.pending_hours > 0" variant="secondary" class="text-[10px]">
-                  {{ emp.pending_hours }}h pending
+                  {{ emp.pending_hours }}{{ t('admin.hours_pending') }}
                 </Badge>
                 <Badge v-if="emp.pending_km > 0" variant="secondary" class="text-[10px]">
-                  {{ emp.pending_km }} km pending
+                  {{ emp.pending_km }} {{ t('admin.km_pending') }}
                 </Badge>
                 <Badge :variant="emp.active ? 'default' : 'outline'" class="text-[10px]">
-                  {{ emp.active ? 'Active' : 'Inactive' }}
+                  {{ emp.active ? t('admin.active') : t('admin.inactive') }}
                 </Badge>
                 <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEditEmp(emp.id)">
-                  Edit
+                  {{ t('common.edit') }}
                 </Button>
               </div>
             </div>
             <p class="text-xs text-muted-foreground mt-0.5">
-              {{ infoLine([emp.email, emp.phone, emp.birth_year ? 'b. ' + emp.birth_year : null, 'PIN: ●●●●']) }}
+              {{ infoLine([emp.email, emp.phone, emp.birth_year ? t('admin.birth_year_prefix') + ' ' + emp.birth_year : null, 'PIN: ●●●●']) }}
             </p>
             <p v-if="emp.employmentId" class="text-xs text-muted-foreground font-mono truncate">
               Salaxy ID: {{ emp.employmentId }}
@@ -358,52 +361,52 @@ async function submitTeam() {
             <div v-if="editingEmpId === emp.id" class="space-y-3 pt-2 mt-2 border-t">
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
-                  <Label class="text-xs">Name</Label>
+                  <Label class="text-xs">{{ t('admin.col_name') }}</Label>
                   <Input v-model="empForm.name" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">PIN</Label>
+                  <Label class="text-xs">{{ t('admin.col_pin') }}</Label>
                   <Input v-model="empForm.pin" maxlength="6" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Language</Label>
+                  <Label class="text-xs">{{ t('admin.language_label') }}</Label>
                   <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                     <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                   </select>
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Email</Label>
+                  <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                   <Input v-model="empForm.email" type="email" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Phone</Label>
+                  <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                   <Input v-model="empForm.phone" type="tel" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Year of birth</Label>
+                  <Label class="text-xs">{{ t('admin.col_birth_year') }}</Label>
                   <Input v-model="empForm.birth_year" maxlength="4" placeholder="e.g. 1990" />
                 </div>
                 <div class="space-y-1 col-span-2">
-                  <Label class="text-xs">Salaxy ID</Label>
+                  <Label class="text-xs">{{ t('admin.col_employment_id') }}</Label>
                   <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
                 </div>
               </div>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" :checked="empForm.active === 1" @change="empForm.active = ($event.target as HTMLInputElement).checked ? 1 : 0" />
-                Active
+                {{ t('admin.active') }}
               </label>
               <p v-if="empFormError" class="text-xs text-destructive">{{ empFormError }}</p>
               <div class="flex gap-2">
                 <Button size="sm" :disabled="empSaving" @click="submitEmpForm">
-                  {{ empSaving ? 'Saving…' : 'Save' }}
+                  {{ empSaving ? t('common.saving') : t('common.save') }}
                 </Button>
-                <Button size="sm" variant="ghost" @click="cancelEmpForm">Cancel</Button>
+                <Button size="sm" variant="ghost" @click="cancelEmpForm">{{ t('common.cancel') }}</Button>
               </div>
             </div>
           </div>
 
           <p v-if="!loadingEmps && sortedFilteredEmployees.length === 0" class="text-sm text-muted-foreground text-center py-8">
-            {{ empSearch ? 'No results.' : 'No employees yet. Add one or sync from Salaxy.' }}
+            {{ empSearch ? t('approval.search_no_results') : t('admin.no_employees_empty') }}
           </p>
         </div>
       </TabsContent>
@@ -414,50 +417,50 @@ async function submitTeam() {
 
           <!-- Header actions -->
           <div class="flex items-center gap-2">
-            <Button size="sm" @click="openAddSup">+ Add Supervisor</Button>
+            <Button size="sm" @click="openAddSup">+ {{ t('admin.add_supervisor') }}</Button>
             <Button variant="ghost" size="sm" :disabled="loadingSups" @click="fetchSupervisors">
-              {{ loadingSups ? 'Loading…' : 'Refresh' }}
+              {{ loadingSups ? t('common.loading') : t('approval.refresh') }}
             </Button>
           </div>
 
           <!-- Search -->
           <Input
             v-model="supSearch"
-            placeholder="Search by name…"
+            :placeholder="t('approval.search_placeholder')"
             class="h-8 text-sm"
           />
 
           <!-- Add form -->
           <div v-if="showSupForm" class="rounded-lg border p-4 space-y-3 bg-muted/40">
-            <p class="text-sm font-medium">New Supervisor</p>
+            <p class="text-sm font-medium">{{ t('admin.add_supervisor_title') }}</p>
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
-                <Label class="text-xs">First Name</Label>
+                <Label class="text-xs">{{ t('admin.first_name_label') }}</Label>
                 <Input v-model="supForm.first_name" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Last Name</Label>
+                <Label class="text-xs">{{ t('admin.last_name_label') }}</Label>
                 <Input v-model="supForm.last_name" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Email</Label>
+                <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                 <Input v-model="supForm.email" type="email" />
               </div>
               <div class="space-y-1">
-                <Label class="text-xs">Phone</Label>
+                <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                 <Input v-model="supForm.phone" type="tel" />
               </div>
               <div class="space-y-1 col-span-2 sm:col-span-1">
-                <Label class="text-xs">PIN (3–6 digits)</Label>
-                <Input v-model="supForm.pin" placeholder="Required for new" maxlength="6" />
+                <Label class="text-xs">{{ t('admin.pin_digits_label') }}</Label>
+                <Input v-model="supForm.pin" :placeholder="t('admin.sup_pin_placeholder')" maxlength="6" />
               </div>
             </div>
             <p v-if="supFormError" class="text-xs text-destructive">{{ supFormError }}</p>
             <div class="flex gap-2">
               <Button size="sm" :disabled="supSaving" @click="submitSupForm">
-                {{ supSaving ? 'Saving…' : 'Save' }}
+                {{ supSaving ? t('common.saving') : t('common.save') }}
               </Button>
-              <Button size="sm" variant="ghost" @click="cancelSupForm">Cancel</Button>
+              <Button size="sm" variant="ghost" @click="cancelSupForm">{{ t('common.cancel') }}</Button>
             </div>
           </div>
 
@@ -470,9 +473,9 @@ async function submitTeam() {
             <div class="flex items-center justify-between gap-2">
               <p class="font-medium text-sm"><span class="font-bold">{{ sup.last_name }}</span>, {{ sup.first_name }}</p>
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                <Badge variant="secondary" class="text-[10px]">Team: {{ sup.team_size }}</Badge>
+                <Badge variant="secondary" class="text-[10px]">{{ t('admin.team_badge', { count: sup.team_size }) }}</Badge>
                 <Badge :variant="sup.active ? 'default' : 'outline'" class="text-[10px]">
-                  {{ sup.active ? 'Active' : 'Inactive' }}
+                  {{ sup.active ? t('admin.active') : t('admin.inactive') }}
                 </Badge>
               </div>
             </div>
@@ -482,7 +485,7 @@ async function submitTeam() {
 
             <div class="flex gap-2 flex-wrap mt-2">
               <Button variant="outline" size="sm" class="h-7 text-xs" @click="openEditSup(sup.id)">
-                Edit
+                {{ t('common.edit') }}
               </Button>
               <Button
                 variant="outline"
@@ -491,7 +494,7 @@ async function submitTeam() {
                 :disabled="teamLoading && teamExpandedId === sup.id"
                 @click="toggleTeam(sup.id)"
               >
-                {{ teamExpandedId === sup.id ? 'Close Team' : 'Manage Team' }}
+                {{ teamExpandedId === sup.id ? t('admin.close_team') : t('admin.manage_team') }}
               </Button>
               <Button
                 variant="ghost"
@@ -499,7 +502,7 @@ async function submitTeam() {
                 class="h-7 text-xs text-muted-foreground hover:text-destructive"
                 @click="confirmDeleteSup(sup.id)"
               >
-                Delete
+                {{ t('common.delete') }}
               </Button>
             </div>
 
@@ -507,43 +510,43 @@ async function submitTeam() {
             <div v-if="editingSupId === sup.id" class="space-y-3 pt-2 mt-2 border-t">
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1">
-                  <Label class="text-xs">First Name</Label>
+                  <Label class="text-xs">{{ t('admin.first_name_label') }}</Label>
                   <Input v-model="supForm.first_name" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Last Name</Label>
+                  <Label class="text-xs">{{ t('admin.last_name_label') }}</Label>
                   <Input v-model="supForm.last_name" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Email</Label>
+                  <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                   <Input v-model="supForm.email" type="email" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">Phone</Label>
+                  <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                   <Input v-model="supForm.phone" type="tel" />
                 </div>
                 <div class="space-y-1">
-                  <Label class="text-xs">PIN</Label>
-                  <Input v-model="supForm.pin" maxlength="6" placeholder="Leave blank to keep current" />
+                  <Label class="text-xs">{{ t('admin.col_pin') }}</Label>
+                  <Input v-model="supForm.pin" maxlength="6" :placeholder="t('admin.pin_keep_blank')" />
                 </div>
               </div>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" :checked="supForm.active === 1" @change="supForm.active = ($event.target as HTMLInputElement).checked ? 1 : 0" />
-                Active
+                {{ t('admin.active') }}
               </label>
               <p v-if="supFormError" class="text-xs text-destructive">{{ supFormError }}</p>
               <div class="flex gap-2">
                 <Button size="sm" :disabled="supSaving" @click="submitSupForm">
-                  {{ supSaving ? 'Saving…' : 'Save' }}
+                  {{ supSaving ? t('common.saving') : t('common.save') }}
                 </Button>
-                <Button size="sm" variant="ghost" @click="cancelSupForm">Cancel</Button>
+                <Button size="sm" variant="ghost" @click="cancelSupForm">{{ t('common.cancel') }}</Button>
               </div>
             </div>
 
             <!-- Team assignment -->
             <div v-if="teamExpandedId === sup.id" class="space-y-2 pt-2 mt-2 border-t">
-              <p class="text-xs font-medium text-muted-foreground">Team members</p>
-              <div v-if="teamLoading" class="text-xs text-muted-foreground">Loading…</div>
+              <p class="text-xs font-medium text-muted-foreground">{{ t('admin.team_members_label') }}</p>
+              <div v-if="teamLoading" class="text-xs text-muted-foreground">{{ t('common.loading') }}</div>
               <div v-else class="space-y-1 max-h-48 overflow-y-auto">
                 <label
                   v-for="member in teamMembers"
@@ -557,22 +560,22 @@ async function submitTeam() {
                   />
                   <span><span class="font-bold">{{ empLastName(member.name) }}</span><template v-if="empFirstNames(member.name)">, {{ empFirstNames(member.name) }}</template></span>
                   <span v-if="member.other_supervisors" class="text-xs text-muted-foreground">
-                    (also: {{ member.other_supervisors }})
+                    ({{ t('admin.also') }} {{ member.other_supervisors }})
                   </span>
                 </label>
                 <p v-if="teamMembers.length === 0" class="text-xs text-muted-foreground py-2">
-                  No employees in this company yet.
+                  {{ t('admin.no_company_employees') }}
                 </p>
               </div>
               <div class="flex gap-2 pt-1">
-                <Button size="sm" :disabled="teamLoading" @click="submitTeam">Save Team</Button>
-                <Button size="sm" variant="ghost" @click="teamExpandedId = null">Cancel</Button>
+                <Button size="sm" :disabled="teamLoading" @click="submitTeam">{{ t('admin.save_team') }}</Button>
+                <Button size="sm" variant="ghost" @click="teamExpandedId = null">{{ t('common.cancel') }}</Button>
               </div>
             </div>
           </div>
 
           <p v-if="!loadingSups && sortedFilteredSupervisors.length === 0" class="text-sm text-muted-foreground text-center py-8">
-            {{ supSearch ? 'No results.' : 'No supervisors yet.' }}
+            {{ supSearch ? t('approval.search_no_results') : t('admin.no_supervisors_empty') }}
           </p>
         </div>
       </TabsContent>
