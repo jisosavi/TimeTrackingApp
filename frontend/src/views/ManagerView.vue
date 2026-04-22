@@ -129,6 +129,9 @@ function getCfg(status: string) {
 
 <template>
   <div class="space-y-4">
+    <p class="text-xs text-muted-foreground -mb-2">
+      {{ (auth.user?.companySlug ?? '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}
+    </p>
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold">Approvals</h2>
       <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">

@@ -47,6 +47,11 @@ onMounted(async () => {
   }
 })
 
+const companyDisplayName = computed(() => {
+  const slug = auth.user?.companySlug ?? ''
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+})
+
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}
   if (type === 'employee') {
@@ -83,10 +88,15 @@ async function logout() {
   <div class="min-h-screen flex flex-col bg-background">
     <header class="border-b sticky top-0 bg-background z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <img src="/salaxy-logo.png" alt="Salaxy" class="h-8" />
         <div class="flex items-center gap-3">
-          <span class="text-sm text-muted-foreground">
-            {{ auth.user?.type === 'admin' ? t('admin.employees_title') : auth.user?.name }}
+          <img src="/salaxy-logo.png" alt="Salaxy" class="h-8" />
+          <span v-if="auth.user?.type === 'admin'" class="text-sm font-medium text-foreground">
+            {{ companyDisplayName }}
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span v-if="auth.user?.type !== 'admin'" class="text-sm text-muted-foreground">
+            {{ auth.user?.name }}
           </span>
           <select
             :value="auth.user?.uiLanguage ?? 'en'"
