@@ -175,9 +175,9 @@ function getCfg(status: string) {
       <p class="text-sm text-muted-foreground">{{ auth.user?.name }}</p>
     </div>
     <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold">Approvals</h2>
+      <h2 class="text-lg font-semibold">{{ t('approval.title') }}</h2>
       <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">
-        {{ loading ? 'Loading…' : 'Refresh' }}
+        {{ loading ? t('common.loading') : t('approval.refresh') }}
       </Button>
     </div>
 
@@ -186,22 +186,22 @@ function getCfg(status: string) {
     <Tabs default-value="review" class="w-full">
       <TabsList :class="['grid w-full mb-4', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
         <TabsTrigger value="review" class="gap-1.5">
-          Needs Review
+          {{ t('approval.tab_review') }}
           <Badge v-if="needsReviewCards.length > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
             {{ needsReviewCards.length }}
           </Badge>
         </TabsTrigger>
         <TabsTrigger value="approved">
-          Approved ({{ approvedCards.length }})
+          {{ t('approval.tab_approved', { count: approvedCards.length }) }}
         </TabsTrigger>
         <TabsTrigger value="rejected" class="gap-1.5">
-          Rejected
+          {{ t('approval.tab_rejected') }}
           <Badge v-if="rejectedCards.length > 0" variant="outline" class="h-4 min-w-4 px-1 text-[10px]">
             {{ rejectedCards.length }}
           </Badge>
         </TabsTrigger>
         <TabsTrigger v-if="isSupervisor" value="team" @click="loadTeam">
-          Your Team
+          {{ t('approval.tab_team') }}
         </TabsTrigger>
       </TabsList>
 
@@ -225,7 +225,7 @@ function getCfg(status: string) {
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
                   <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
+                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
@@ -264,15 +264,15 @@ function getCfg(status: string) {
 
             <!-- Action buttons -->
             <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
-              <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">Approve</Button>
-              <Button size="sm" variant="outline" @click="startReject(card.key)">Reject</Button>
+              <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
+              <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
             </div>
 
             <!-- Inline rejection form -->
             <div v-else class="space-y-2 pt-1">
               <Textarea
                 v-model="rejectNote"
-                placeholder="Reason for rejection…"
+                :placeholder="t('approval.rejection_placeholder')"
                 class="text-sm min-h-14 resize-none"
                 autofocus
               />
@@ -283,9 +283,9 @@ function getCfg(status: string) {
                   :disabled="!rejectNote.trim()"
                   @click="submitReject(card.key)"
                 >
-                  Reject
+                  {{ t('approval.reject') }}
                 </Button>
-                <Button size="sm" variant="ghost" @click="cancelReject">Cancel</Button>
+                <Button size="sm" variant="ghost" @click="cancelReject">{{ t('common.cancel') }}</Button>
               </div>
             </div>
           </div>
@@ -295,7 +295,7 @@ function getCfg(status: string) {
       <!-- Approved tab -->
       <TabsContent value="approved">
         <div v-if="!loading && approvedCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
-          No approved entries yet.
+          {{ t('approval.no_approved') }}
         </div>
 
         <div class="space-y-2">
@@ -309,7 +309,7 @@ function getCfg(status: string) {
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ card.entry.employee_name }} &middot; {{ formatDate(card.entry.entry_date) }}</p>
                   <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
+                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
@@ -332,7 +332,7 @@ function getCfg(status: string) {
                 </p>
                 <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
               </div>
-              <Badge variant="default" class="shrink-0">Approved</Badge>
+              <Badge variant="default" class="shrink-0">{{ t('status.approved') }}</Badge>
             </div>
           </div>
         </div>
@@ -340,7 +340,7 @@ function getCfg(status: string) {
       <!-- Rejected tab -->
       <TabsContent value="rejected">
         <div v-if="!loading && rejectedCards.length === 0" class="text-sm text-muted-foreground text-center py-8">
-          No rejected entries.
+          {{ t('approval.no_rejected') }}
         </div>
 
         <div v-for="group in rejectedCardGroups" :key="group.name" class="space-y-2 mb-6">
@@ -356,7 +356,7 @@ function getCfg(status: string) {
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
                   <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? 'Hours' : 'Mileage' }}
+                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
@@ -384,10 +384,10 @@ function getCfg(status: string) {
             </div>
 
             <div v-if="card.field === 'status' && card.entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <span class="font-medium">Note: </span>{{ card.entry.rejection_note }}
+              <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.rejection_note }}
             </div>
             <div v-else-if="card.field === 'km_status' && card.entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <span class="font-medium">Note: </span>{{ card.entry.km_rejection_note }}
+              <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.km_rejection_note }}
             </div>
 
             <div v-if="card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
@@ -400,7 +400,7 @@ function getCfg(status: string) {
       <!-- Your Team tab -->
       <TabsContent v-if="isSupervisor" value="team">
         <div v-if="teamLoading" class="text-sm text-muted-foreground text-center py-8">
-          Loading…
+          {{ t('common.loading') }}
         </div>
         <div v-else-if="teamError" class="text-sm text-destructive text-center py-8">
           {{ teamError }}
@@ -409,7 +409,7 @@ function getCfg(status: string) {
           <div v-if="teamLoaded" class="space-y-2">
             <Input
               v-model="teamSearch"
-              placeholder="Search by name…"
+              :placeholder="t('approval.search_placeholder')"
               class="h-8 text-sm"
             />
             <div
@@ -419,14 +419,14 @@ function getCfg(status: string) {
             >
               <p class="font-medium text-sm"><span class="font-bold">{{ teamLastName(member.name) }}</span><template v-if="teamFirstNames(member.name)">, {{ teamFirstNames(member.name) }}</template></p>
               <p class="text-xs text-muted-foreground mt-0.5">
-                {{ [member.email, member.phone, member.birth_year ? 'b. ' + member.birth_year : null].filter(Boolean).join(' · ') || 'No contact details on file.' }}
+                {{ [member.email, member.phone, member.birth_year ? 'b. ' + member.birth_year : null].filter(Boolean).join(' · ') || t('approval.no_contact_details') }}
               </p>
             </div>
             <p v-if="sortedFilteredTeamMembers.length === 0 && teamSearch" class="text-sm text-muted-foreground text-center py-4">
-              No results.
+              {{ t('approval.search_no_results') }}
             </p>
             <p v-else-if="teamMembers.length === 0" class="text-sm text-muted-foreground text-center py-8">
-              No team members assigned yet.
+              {{ t('approval.no_team_members') }}
             </p>
           </div>
         </div>
