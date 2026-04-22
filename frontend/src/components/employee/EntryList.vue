@@ -17,7 +17,7 @@ defineExpose({ refresh: fetchEntries })
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-medium text-muted-foreground">{{ entries.length }} entries</h3>
+      <h3 class="text-sm font-medium text-muted-foreground">{{ t('entries.count', { count: entries.length }) }}</h3>
       <Button variant="ghost" size="sm" :disabled="loading" @click="fetchEntries">
         {{ loading ? t('common.loading') : t('entries.refresh_button') }}
       </Button>

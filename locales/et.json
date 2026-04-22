@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "Minu kirjed",
   "entries.refresh_button": "↺ Uuenda",
+  "entries.count": "{count} kirjet",
   "entries.empty": "Kirjeid ei ole.",
   "entries.select_all": "Vali kõik",
   "entries.approve_selected": "✓ Kinnita valitud",

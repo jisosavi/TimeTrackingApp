@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "My entries",
   "entries.refresh_button": "↺ Refresh",
+  "entries.count": "{count} entries",
   "entries.empty": "No entries.",
   "entries.select_all": "Select all",
   "entries.approve_selected": "✓ Approve selected",

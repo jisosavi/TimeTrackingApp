@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "Mina registreringar",
   "entries.refresh_button": "↺ Uppdatera",
+  "entries.count": "{count} poster",
   "entries.empty": "Inga registreringar.",
   "entries.select_all": "Välj alla",
   "entries.approve_selected": "✓ Godkänn valda",

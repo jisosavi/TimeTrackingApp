@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "Omat kirjaukseni",
   "entries.refresh_button": "↺ Päivitä",
+  "entries.count": "{count} kirjausta",
   "entries.empty": "Ei kirjauksia.",
   "entries.select_all": "Valitse kaikki",
   "entries.approve_selected": "✓ Hyväksy valitut",

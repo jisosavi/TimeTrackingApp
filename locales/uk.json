@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "Мої записи",
   "entries.refresh_button": "↺ Оновити",
+  "entries.count": "{count} записів",
   "entries.empty": "Записів немає.",
   "entries.select_all": "Вибрати всі",
   "entries.approve_selected": "✓ Схвалити вибрані",

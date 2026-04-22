@@ -66,6 +66,7 @@
 
   "entries.my_entries_title": "Izingeniso zam",
   "entries.refresh_button": "↺ Buyekeza",
+  "entries.count": "{count} iirekhodi",
   "entries.empty": "Akukho zingeniso.",
   "entries.select_all": "Khetha zonke",
   "entries.approve_selected": "✓ Vuma ezikhethiweyo",

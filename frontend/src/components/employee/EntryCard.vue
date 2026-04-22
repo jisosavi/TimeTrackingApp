@@ -55,7 +55,15 @@ const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.stat
   <div class="rounded-lg border p-4 space-y-2 bg-card">
     <div class="flex items-start justify-between gap-2">
       <div class="space-y-0.5">
-        <p class="font-medium text-sm">{{ formatDate(entry.entry_date) }}</p>
+        <div class="flex items-center gap-1.5">
+          <p class="font-medium text-sm">{{ formatDate(entry.entry_date) }}</p>
+          <span v-if="entry.hours > 0" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            {{ t('approval.type_hours') }}
+          </span>
+          <span v-if="entry.km > 0" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            {{ t('approval.type_mileage') }}
+          </span>
+        </div>
         <p class="text-sm text-muted-foreground">
           <span v-if="entry.start_time && entry.end_time">
             {{ entry.start_time }} – {{ entry.end_time }} &middot; {{ entry.hours }}h

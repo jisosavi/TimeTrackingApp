@@ -164,6 +164,11 @@ function getCfg(status: string) {
   const base = statusConfig[status] ?? { label: status, variant: 'outline' as const }
   return { ...base, label: statusKey[status] ? t(statusKey[status]!) : base.label }
 }
+
+function cardTypePill(card: VirtualCard): string {
+  if (card.isDual) return card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage')
+  return card.entry.km > 0 ? t('approval.type_mileage') : t('approval.type_hours')
+}
 </script>
 
 <template>
@@ -224,8 +229,8 @@ function getCfg(status: string) {
                 </p>
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
-                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
+                  <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ cardTypePill(card) }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
@@ -308,8 +313,8 @@ function getCfg(status: string) {
               <div class="space-y-0.5">
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ card.entry.employee_name }} &middot; {{ formatDate(card.entry.entry_date) }}</p>
-                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
+                  <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ cardTypePill(card) }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
@@ -355,8 +360,8 @@ function getCfg(status: string) {
               <div class="space-y-0.5 flex-1">
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
-                  <span v-if="card.isDual" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {{ card.field === 'status' ? t('approval.type_hours') : t('approval.type_mileage') }}
+                  <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {{ cardTypePill(card) }}
                   </span>
                 </div>
                 <p class="text-sm text-muted-foreground">
