@@ -385,5 +385,11 @@
   "payroll_settings.company_salaxy_id_label": "I-ID yeSalaxy yenkampani",
   "payroll_settings.company_salaxy_id_note": "Abasebenzisi abaphezulu kuphela banokulungisa le ID.",
   "admin.pending_approvals": "{count} iimvume ezilindileyo",
-  "payroll.approved_count": "{count} ivunyiwe"
+  "payroll.approved_count": "{count} ivunyiwe",
+  "login.cooldown_message": "Iinzame ezininzi ezingaphumeleli. Nceda ulinde ngaphambi kokuzama kwakhona.",
+  "login.locked_title": "Ukungena kuvaliwe",
+  "login.locked_message": "Ukungena kwakho kuvaliwe. Nceda uqhagamshelane nomphathi webhizinisi wakho ukuvula i-akhawunti.",
+  "login.error_last_attempt": "Inombolo ye-PIN engalunganga. 1 izama zisele ngaphambi kokuvala okwexeshana.",
+  "admin.pin_locked_badge": "Ivaliwe",
+  "admin.pin_unlock": "Vula"
 }

@@ -385,5 +385,11 @@
   "payroll_settings.company_salaxy_id_label": "Ettevõtte Salaxy ID",
   "payroll_settings.company_salaxy_id_note": "Ainult superadministraatorid saavad seda ID-d muuta.",
   "admin.pending_approvals": "{count} kinnitust ootab",
-  "payroll.approved_count": "{count} kinnitatud"
+  "payroll.approved_count": "{count} kinnitatud",
+  "login.cooldown_message": "Liiga palju ebaõnnestunud katseid. Palun oota enne uuesti proovimist.",
+  "login.locked_title": "Sisselogimine lukustatud",
+  "login.locked_message": "Teie sisselogimine on lukustatud. Konto avamiseks pöörduge ettevõtte administraatori poole.",
+  "login.error_last_attempt": "Vale PIN. 1 katse jäänud enne ajutist lukustust.",
+  "admin.pin_locked_badge": "Lukustatud",
+  "admin.pin_unlock": "Ava lukustus"
 }

@@ -29,6 +29,43 @@ const loading = ref(false)
 const shaking = ref(false)
 const announcement = ref('')
 
+// Rate-limit lockout state
+type LockoutType = 'cooldown' | 'locked' | null
+const lockoutType = ref<LockoutType>(null)
+const lockoutSeconds = ref(0)
+let lockoutTimer: ReturnType<typeof setInterval> | null = null
+
+function getDeviceId(): string {
+  const key = `salaxy_device_id_${slug}`
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
+function startCooldown(seconds: number) {
+  lockoutType.value = 'cooldown'
+  lockoutSeconds.value = Math.max(0, seconds)
+  if (lockoutTimer) clearInterval(lockoutTimer)
+  lockoutTimer = setInterval(() => {
+    lockoutSeconds.value--
+    if (lockoutSeconds.value <= 0) {
+      clearInterval(lockoutTimer!)
+      lockoutTimer = null
+      lockoutType.value = null
+      lockoutSeconds.value = 0
+    }
+  }, 1000)
+}
+
+function formatCountdown(s: number): string {
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
 function formatTime() {
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
 }
@@ -65,6 +102,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (clockInterval) clearInterval(clockInterval)
+  if (lockoutTimer) clearInterval(lockoutTimer)
   window.removeEventListener('keydown', onGlobalKeydown)
 })
 
@@ -82,7 +120,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
 }
 
 function appendDigit(d: string) {
-  if (loading.value || pin.value.length >= PIN_MAX) return
+  if (loading.value || lockoutType.value || pin.value.length >= PIN_MAX) return
   pin.value += d
   error.value = ''
   announcement.value = t('login.announce_digits', { count: pin.value.length })
@@ -143,10 +181,17 @@ async function loginEmployee() {
   const res = await fetch(`${apiBase}/validate_pin.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: pin.value, slug }),
+    body: JSON.stringify({ pin: pin.value, slug, device_id: getDeviceId() }),
   })
   const data = await res.json()
-  if (!data.valid) throw new Error(data.error ?? t('login.error_wrong_pin'))
+  if (data.lockout === 'cooldown') { startCooldown(data.seconds_remaining ?? 300); return }
+  if (data.lockout === 'locked')   { lockoutType.value = 'locked'; return }
+  if (!data.valid) {
+    const msg = data.attempts_remaining === 1
+      ? t('login.error_last_attempt')
+      : (data.error ?? t('login.error_wrong_pin'))
+    throw new Error(msg)
+  }
 
   const user: AuthUser = {
     id: data.id,
@@ -164,10 +209,17 @@ async function loginSupervisor() {
   const res = await fetch(`${apiBase}/api/supervisor_login.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: pin.value, slug }),
+    body: JSON.stringify({ pin: pin.value, slug, device_id: getDeviceId() }),
   })
   const data = await res.json()
-  if (!data.success) throw new Error(data.error ?? t('login.error_wrong_pin'))
+  if (data.lockout === 'cooldown') { startCooldown(data.seconds_remaining ?? 300); return }
+  if (data.lockout === 'locked')   { lockoutType.value = 'locked'; return }
+  if (!data.success) {
+    const msg = data.attempts_remaining === 1
+      ? t('login.error_last_attempt')
+      : (data.error ?? t('login.error_wrong_pin'))
+    throw new Error(msg)
+  }
 
   const user: AuthUser = {
     id: data.supervisor.id,
@@ -222,50 +274,64 @@ async function loginWithPassword() {
       <img src="/salaxy-logo.png" alt="Salaxy" class="h-8 mx-auto mb-1" />
       <p v-if="companyName" class="text-base font-semibold tracking-tight">{{ companyName }}</p>
       <p class="text-xs text-muted-foreground">{{ loginTypeLabel }}</p>
-      <p class="text-2xl font-mono tabular-nums text-muted-foreground/50 pt-0.5">{{ clockStr }}</p>
-      <p class="text-xs text-muted-foreground/50">{{ dateStr }}</p>
+      <p class="text-xs text-muted-foreground/40 pt-0.5 tabular-nums">{{ clockStr }} &middot; {{ dateStr }}</p>
     </header>
 
-    <!-- PIN dots -->
-    <div
-      class="flex-none flex justify-center gap-4 py-3"
-      :class="shaking ? 'shake' : ''"
-      aria-hidden="true"
-    >
-      <span
-        v-for="i in PIN_MAX"
-        :key="i"
-        class="w-3.5 h-3.5 rounded-full border-2 transition-all duration-100"
-        :class="i <= pin.length
-          ? 'bg-primary border-primary scale-110'
-          : 'bg-transparent border-muted-foreground/30'"
-      />
+    <!-- Cooldown screen -->
+    <div v-if="lockoutType === 'cooldown'" class="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <p class="text-5xl font-mono tabular-nums font-semibold">{{ formatCountdown(lockoutSeconds) }}</p>
+      <p class="text-sm text-muted-foreground max-w-xs">{{ t('login.cooldown_message') }}</p>
     </div>
 
-    <!-- Error / spacer -->
-    <div class="flex-none min-h-[1.25rem] text-center px-6">
-      <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+    <!-- Locked screen -->
+    <div v-else-if="lockoutType === 'locked'" class="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <p class="text-base font-semibold text-destructive">{{ t('login.locked_title') }}</p>
+      <p class="text-sm text-muted-foreground max-w-xs">{{ t('login.locked_message') }}</p>
     </div>
 
-    <!-- Keypad -->
-    <div class="flex-none flex justify-center px-4 pt-1 pb-3">
-      <div class="grid grid-cols-3 gap-2 w-full max-w-[340px]">
-        <Button
-          v-for="key in ['1','2','3','4','5','6','7','8','9','clear','0','back']"
-          :key="key"
-          variant="outline"
-          class="h-[60px] text-xl font-medium rounded-2xl active:scale-95 transition-transform"
-          :disabled="loading"
-          @click="handleKeypadPress(key)"
-        >
-          <span v-if="key === 'back'">⌫</span>
-          <span v-else-if="key === 'clear'" class="text-sm font-normal text-muted-foreground">
-            {{ t('login.clear') }}
-          </span>
-          <span v-else>{{ key }}</span>
-        </Button>
+    <!-- Normal PIN entry -->
+    <template v-else>
+      <!-- PIN dots -->
+      <div
+        class="flex-none flex justify-center gap-4 py-3"
+        :class="shaking ? 'shake' : ''"
+        aria-hidden="true"
+      >
+        <span
+          v-for="i in PIN_MAX"
+          :key="i"
+          class="w-3.5 h-3.5 rounded-full border-2 transition-all duration-100"
+          :class="i <= pin.length
+            ? 'bg-primary border-primary scale-110'
+            : 'bg-transparent border-muted-foreground/30'"
+        />
       </div>
-    </div>
+
+      <!-- Error / spacer -->
+      <div class="flex-none min-h-[1.25rem] text-center px-6">
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+      </div>
+
+      <!-- Keypad -->
+      <div class="flex-none flex justify-center px-4 pt-1 pb-3">
+        <div class="grid grid-cols-3 gap-2 w-full max-w-[340px]">
+          <Button
+            v-for="key in ['1','2','3','4','5','6','7','8','9','clear','0','back']"
+            :key="key"
+            variant="outline"
+            class="h-[60px] text-xl font-medium rounded-2xl active:scale-95 transition-transform"
+            :disabled="loading"
+            @click="handleKeypadPress(key)"
+          >
+            <span v-if="key === 'back'">⌫</span>
+            <span v-else-if="key === 'clear'" class="text-sm font-normal text-muted-foreground">
+              {{ t('login.clear') }}
+            </span>
+            <span v-else>{{ key }}</span>
+          </Button>
+        </div>
+      </div>
+    </template>
 
     <!-- Hidden input: surfaces numeric keyboard on mobile -->
     <input

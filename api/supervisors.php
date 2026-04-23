@@ -2,13 +2,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
+require_once __DIR__ . '/pin_rate_limit.php';
 
 $admin = requireAdmin();
 $db    = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        'SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.pin, s.ssn, s.salaxy_id, s.active, s.ui_language,
+        'SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.pin, s.ssn, s.salaxy_id, s.active, s.ui_language, s.pin_locked,
                 COUNT(se.employee_id) AS team_size
          FROM supervisors s
          LEFT JOIN supervisor_employees se ON se.supervisor_id = s.id
@@ -21,7 +22,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $payload   = getJsonPayload();
+    $payload = getJsonPayload();
+
+    // Unlock PIN — separate lightweight action
+    if (($payload['action'] ?? '') === 'unlock_pin') {
+        $id = isset($payload['id']) ? (int) $payload['id'] : null;
+        if (!$id) sendJson(['success' => false, 'error' => 'id required'], 400);
+        $db->prepare('UPDATE supervisors SET pin_locked = 0 WHERE id = :id AND company_id = :cid')
+           ->execute([':id' => $id, ':cid' => $admin['company_id']]);
+        clearPinRateLimitForUser($db, (int) $admin['company_id'], $id, 'supervisor');
+        sendJson(['success' => true]);
+    }
+
     $id        = isset($payload['id']) ? (int) $payload['id'] : null;
     $firstName = trim((string) ($payload['first_name'] ?? ''));
     $lastName  = trim((string) ($payload['last_name'] ?? ''));

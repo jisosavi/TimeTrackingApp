@@ -385,5 +385,11 @@
   "payroll_settings.company_salaxy_id_label": "Företagets Salaxy-ID",
   "payroll_settings.company_salaxy_id_note": "Endast superadmins kan redigera detta ID.",
   "admin.pending_approvals": "{count} godkännanden väntar",
-  "payroll.approved_count": "{count} godkänd"
+  "payroll.approved_count": "{count} godkänd",
+  "login.cooldown_message": "För många misslyckade försök. Vänta innan du försöker igen.",
+  "login.locked_title": "Inloggning låst",
+  "login.locked_message": "Din inloggning är låst. Kontakta din företagsadmin för att låsa upp kontot.",
+  "login.error_last_attempt": "Fel PIN. 1 försök kvar innan tillfällig låsning.",
+  "admin.pin_locked_badge": "Låst",
+  "admin.pin_unlock": "Lås upp"
 }

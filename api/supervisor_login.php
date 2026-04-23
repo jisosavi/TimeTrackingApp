@@ -2,20 +2,41 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
+require_once __DIR__ . '/pin_rate_limit.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJson(['success' => false, 'error' => 'Method not allowed'], 405);
 }
 
-$payload = getJsonPayload();
-$pin     = trim((string) ($payload['pin'] ?? ''));
-$slug    = trim((string) ($payload['slug'] ?? ''));
+$payload  = getJsonPayload();
+$pin      = trim((string) ($payload['pin'] ?? ''));
+$slug     = trim((string) ($payload['slug'] ?? ''));
+$deviceId = trim((string) ($payload['device_id'] ?? ''));
 
 if ($pin === '') {
     sendJson(['success' => false, 'error' => 'PIN puuttuu'], 400);
 }
 
 $db = getDb();
+
+// Resolve company_id for rate limiting
+$companyId = null;
+if ($slug !== '') {
+    $compStmt = $db->prepare('SELECT id FROM companies WHERE slug = :slug AND active = 1 LIMIT 1');
+    $compStmt->execute([':slug' => $slug]);
+    $company = $compStmt->fetch();
+    if ($company) {
+        $companyId = (int) $company['id'];
+    }
+}
+
+// Check device rate limit
+if ($deviceId !== '' && $companyId !== null) {
+    $rl = checkPinRateLimit($db, $deviceId, $companyId);
+    if (isset($rl['error'])) {
+        sendJson(['success' => false, 'lockout' => $rl['error']] + $rl, 429);
+    }
+}
 
 if ($slug !== '') {
     $stmt = $db->prepare(
@@ -33,7 +54,20 @@ if ($slug !== '') {
 $supervisor = $stmt->fetch();
 
 if (!$supervisor) {
-    sendJson(['success' => false, 'error' => 'Väärä PIN'], 401);
+    $result = ['success' => false, 'error' => 'Väärä PIN'];
+    if ($deviceId !== '' && $companyId !== null) {
+        $rl = recordPinFailure($db, $deviceId, $companyId);
+        if (isset($rl['error'])) {
+            sendJson(['success' => false, 'lockout' => $rl['error']] + $rl, 429);
+        }
+        $result['attempts_remaining'] = $rl['attempts_remaining'];
+    }
+    sendJson($result, 401);
+}
+
+// Correct PIN — check if account is locked
+if ((int) $supervisor['pin_locked'] === 1) {
+    sendJson(['success' => false, 'lockout' => 'locked'], 403);
 }
 
 $compLangStmt = $db->prepare('SELECT name, ui_language, approvals_enabled FROM companies WHERE id = :id LIMIT 1');
@@ -42,6 +76,11 @@ $compRow = $compLangStmt->fetch();
 
 if (!$compRow || !(int) $compRow['approvals_enabled']) {
     sendJson(['success' => false, 'error' => 'Supervisor approvals are not enabled for this company.'], 403);
+}
+
+// Success — reset rate limit
+if ($deviceId !== '' && $companyId !== null) {
+    recordPinSuccess($db, $deviceId, $companyId, (int) $supervisor['id'], 'supervisor');
 }
 
 $companyLang   = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';

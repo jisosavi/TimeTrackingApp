@@ -385,5 +385,11 @@
   "payroll_settings.company_salaxy_id_label": "Salaxy ID компанії",
   "payroll_settings.company_salaxy_id_note": "Лише суперадміни можуть редагувати цей ID.",
   "admin.pending_approvals": "{count} підтверджень очікується",
-  "payroll.approved_count": "{count} підтверджено"
+  "payroll.approved_count": "{count} підтверджено",
+  "login.cooldown_message": "Забагато невдалих спроб. Будь ласка, зачекайте перед наступною спробою.",
+  "login.locked_title": "Вхід заблоковано",
+  "login.locked_message": "Ваш вхід заблоковано. Зверніться до адміністратора компанії для розблокування.",
+  "login.error_last_attempt": "Невірний PIN. Залишилася 1 спроба перед тимчасовим блокуванням.",
+  "admin.pin_locked_badge": "Заблоковано",
+  "admin.pin_unlock": "Розблокувати"
 }

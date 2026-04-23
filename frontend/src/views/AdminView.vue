@@ -243,6 +243,32 @@ async function submitTeam() {
   }
 }
 
+// ── PIN unlock ───────────────────────────────────────────────────────────────
+const unlocking = ref<number | null>(null)
+
+async function unlockPinAccount(id: number, kind: 'employee' | 'supervisor') {
+  unlocking.value = id
+  const endpoint = kind === 'employee' ? '/api/employees.php' : '/api/supervisors.php'
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`,
+      },
+      body: JSON.stringify({ id, action: 'unlock_pin' }),
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.error ?? 'Unlock failed')
+    if (kind === 'employee') await fetchEmployees()
+    else await fetchSupervisors()
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'Unlock failed')
+  } finally {
+    unlocking.value = null
+  }
+}
+
 // ── Add drawer ────────────────────────────────────────────────────────────────
 const showAddDrawer = ref(false)
 const addRole = ref<'employee' | 'supervisor'>('employee')
@@ -331,9 +357,22 @@ async function submitAddForm() {
                 {{ t('admin.pending_approvals', { count: r.data.pending_count }) }}
               </Badge>
             </RouterLink>
+            <Badge v-if="r.data.pin_locked" variant="destructive" class="text-[10px]">
+              {{ t('admin.pin_locked_badge') }}
+            </Badge>
             <Badge :variant="r.data.active ? 'default' : 'outline'" class="text-[10px]">
               {{ r.data.active ? t('admin.active') : t('admin.inactive') }}
             </Badge>
+            <Button
+              v-if="r.data.pin_locked"
+              variant="outline"
+              size="sm"
+              class="h-7 px-2 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+              :disabled="unlocking === r.data.id"
+              @click="unlockPinAccount(r.data.id, 'employee')"
+            >
+              {{ t('admin.pin_unlock') }}
+            </Button>
             <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEditEmp(r.data.id)">
               {{ t('common.edit') }}
             </Button>
@@ -397,9 +436,22 @@ async function submitAddForm() {
           </div>
           <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
             <Badge variant="secondary" class="text-[10px]">{{ t('admin.team_badge', { count: r.data.team_size }) }}</Badge>
+            <Badge v-if="r.data.pin_locked" variant="destructive" class="text-[10px]">
+              {{ t('admin.pin_locked_badge') }}
+            </Badge>
             <Badge :variant="r.data.active ? 'default' : 'outline'" class="text-[10px]">
               {{ r.data.active ? t('admin.active') : t('admin.inactive') }}
             </Badge>
+            <Button
+              v-if="r.data.pin_locked"
+              variant="outline"
+              size="sm"
+              class="h-7 px-2 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+              :disabled="unlocking === r.data.id"
+              @click="unlockPinAccount(r.data.id, 'supervisor')"
+            >
+              {{ t('admin.pin_unlock') }}
+            </Button>
           </div>
         </div>
 

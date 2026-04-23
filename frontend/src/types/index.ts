@@ -42,6 +42,7 @@ export interface Employee {
   ssn: string | null
   employmentId: string | null
   active: number
+  pin_locked: number
   ui_language: string | null
   pending_hours: number
   pending_km: number
@@ -71,6 +72,7 @@ export interface Supervisor {
   ssn: string | null
   salaxy_id: string | null
   active: number
+  pin_locked: number
   ui_language: string | null
   team_size: number
 }

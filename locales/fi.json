@@ -385,5 +385,11 @@
   "payroll_settings.company_salaxy_id_label": "Yrityksen Salaxy-tunnus",
   "payroll_settings.company_salaxy_id_note": "Vain pääkäyttäjät voivat muokata tätä tunnusta.",
   "admin.pending_approvals": "{count} hyväksyntää odottaa",
-  "payroll.approved_count": "{count} hyväksytty"
+  "payroll.approved_count": "{count} hyväksytty",
+  "login.cooldown_message": "Liian monta epäonnistunutta yritystä. Odota ennen kuin yrität uudelleen.",
+  "login.locked_title": "Kirjautuminen lukittu",
+  "login.locked_message": "Kirjautumisesi on lukittu. Ota yhteyttä yrityksen pääkäyttäjään tilin avaamiseksi.",
+  "login.error_last_attempt": "Väärä PIN. 1 yritys jäljellä ennen väliaikaista lukitusta.",
+  "admin.pin_locked_badge": "Lukittu",
+  "admin.pin_unlock": "Avaa lukitus"
 }

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
+require_once __DIR__ . '/pin_rate_limit.php';
 
 $admin = requireAdmin();
 $db = getDb();
@@ -9,7 +10,7 @@ $db = getDb();
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
         "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
-                e.email, e.phone, e.birth_year,
+                e.email, e.phone, e.birth_year, e.pin_locked,
            COALESCE((
              SELECT ROUND(SUM(te.hours), 1)
              FROM time_entries te
@@ -54,6 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payload = getJsonPayload();
+
+    // Unlock PIN — separate lightweight action
+    if (($payload['action'] ?? '') === 'unlock_pin') {
+        $id = isset($payload['id']) ? (int) $payload['id'] : null;
+        if (!$id) sendJson(['success' => false, 'error' => 'id required'], 400);
+        $db->prepare('UPDATE employees SET pin_locked = 0 WHERE id = :id AND company_id = :cid')
+           ->execute([':id' => $id, ':cid' => $admin['company_id']]);
+        clearPinRateLimitForUser($db, (int) $admin['company_id'], $id, 'employee');
+        sendJson(['success' => true]);
+    }
+
     $id = isset($payload['id']) ? (int) $payload['id'] : null;
     $name = trim((string) ($payload['name'] ?? ''));
     $pin = trim((string) ($payload['pin'] ?? ''));

@@ -125,6 +125,19 @@ function initializeDatabase(PDO $db): void
             salaxy_calculation_id TEXT NOT NULL,
             PRIMARY KEY (payroll_export_id, salaxy_employment_id),
             FOREIGN KEY(payroll_export_id) REFERENCES payroll_exports(id)
+        );
+        CREATE TABLE IF NOT EXISTS pin_rate_limit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER NOT NULL,
+            device_id TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            window_start INTEGER,
+            locked_until INTEGER,
+            locked INTEGER NOT NULL DEFAULT 0,
+            strike INTEGER NOT NULL DEFAULT 0,
+            last_employee_id INTEGER,
+            last_employee_type TEXT,
+            UNIQUE(company_id, device_id)
         );'
     );
 
@@ -168,10 +181,16 @@ function initializeDatabase(PDO $db): void
     if (!in_array('birth_year', $empCols)) {
         $db->exec('ALTER TABLE employees ADD COLUMN birth_year INTEGER');
     }
+    if (!in_array('pin_locked', $empCols)) {
+        $db->exec('ALTER TABLE employees ADD COLUMN pin_locked INTEGER NOT NULL DEFAULT 0');
+    }
 
     $supCols = array_column($db->query('PRAGMA table_info(supervisors)')->fetchAll(), 'name');
     if (!in_array('ui_language', $supCols)) {
         $db->exec('ALTER TABLE supervisors ADD COLUMN ui_language TEXT');
+    }
+    if (!in_array('pin_locked', $supCols)) {
+        $db->exec('ALTER TABLE supervisors ADD COLUMN pin_locked INTEGER NOT NULL DEFAULT 0');
     }
 
     $admCols = array_column($db->query('PRAGMA table_info(company_admins)')->fetchAll(), 'name');
