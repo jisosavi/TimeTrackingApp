@@ -62,24 +62,26 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 - Kiosk-style full-viewport PIN pad with live clock; physical keyboard support, auto-submit on last digit, haptic feedback on mobile
 - Voice or text input — natural language like *"Yesterday 2h on project Alpha"*
 - Gemini AI interprets entries, asks follow-up questions if details are missing, then shows an editable preview card (date, hours, project, notes) before saving
-- Three tabs: **Log hours** (AI chat), **My entries** (full history), **Rejected** (entries needing attention — badge count)
+- Three tabs: **Log** (AI chat), **Entries** (full history), **Rejected** (entries needing attention — badge count)
 - Rejected tab shows the manager's rejection note per entry; employee can submit a clarification reply for hours and km rejections independently
 - Entries exported to Salaxy payroll via API — one payroll created per day, entries added as payslip items
 - Mileage allowance (km-korvaus) support with per-type approval tracking
 - Type pills on each entry row identify hours vs. kilometre entries at a glance
 
 **Company supervisor** (`/{slug}/approval/`)
-- Four tabs: **Needs Review** (pending), **Approved**, **Rejected**, **Your Team**
+- Four tabs: **Review** (pending), **Approved**, **Rejected**, **Team**
 - Checkbox selection for bulk approve/reject with optional rejection note; 3-second toast confirmation after bulk action
 - Hours and kilometres on the same entry appear as separate approval cards — each can be approved or rejected independently
 - Rejected entries carry a per-type rejection note visible to the employee; employee clarification responses are shown on re-review
 
 **Company admin** (`/{slug}/admin/`)
-- Manage employees: add, edit, deactivate, reset PIN, set UI language per employee
-- Manage teams and supervisors: who works in what team and who approves what
+- Four nav tabs: **Export Payroll** (default landing), **Personnel**, **Approvals**, **Settings**
+- Manage employees and supervisors: add, edit, deactivate, reset PIN, set UI language per person
+- Manage teams: assign employees to supervisors
 - Sync employees from Salaxy with one click — new employees are imported, existing ones updated
-- Payroll export: preview approved entries per period and push to Salaxy with one click
+- Payroll dashboard: period summary cards (current month + collapsible previous months), export approved entries to Salaxy with one click
 - Configurable payroll period (monthly or fortnightly) with flexible payday settings
+- Company Salaxy ID visible in Settings (read-only; editable by super-admins only)
 
 **Super-admin** (`/admin/`)
 - Create and manage companies with a slug-based URL and admin account
@@ -172,8 +174,9 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/{slug}/approval` | Supervisor/manager PIN login |
 | `/{slug}/approval/home` | Supervisor approval portal (authenticated) |
 | `/{slug}/admin` | Company admin PIN login |
-| `/{slug}/admin/dashboard` | Company admin dashboard (authenticated) |
-| `/{slug}/admin/payroll` | Payroll export (authenticated) |
+| `/{slug}/admin/dashboard` | Personnel management (authenticated) |
+| `/{slug}/admin/payroll-summary` | Export Payrolls to Salaxy — default admin landing (authenticated) |
+| `/{slug}/admin/payroll` | Redirects to `/payroll-summary` |
 | `/{slug}/admin/payroll-settings` | Payroll period settings (authenticated) |
 | `/admin` | Super-admin login |
 | `/admin/dashboard` | Super-admin company list (authenticated) |
@@ -335,14 +338,14 @@ npm run lint         # ESLint + Oxlint
 │   │   ├── views/
 │   │   │   ├── LoginView.vue             # PIN login — kiosk keypad for employee/supervisor, email+password for admin
 │   │   │   ├── EmployeeView.vue          # Employee: Log hours / My entries / Rejected tabs
-│   │   │   ├── ManagerView.vue           # Supervisor/admin: Needs Review / Approved / Rejected / Team tabs, bulk actions
+│   │   │   ├── ManagerView.vue           # Supervisor/admin: Review / Approved / Rejected / Team tabs, bulk actions
 │   │   │   ├── AdminView.vue             # Company admin: employees + supervisors management
-│   │   │   ├── PayrollView.vue           # Payroll export preview and Salaxy push
+│   │   │   ├── PayrollView.vue           # Export Payrolls to Salaxy: export section + payroll period overview
 │   │   │   ├── PayrollSettingsView.vue   # Payroll period and payday configuration
 │   │   │   └── SuperAdminView.vue        # Super-admin: company creation and management
 │   │   ├── components/
 │   │   │   ├── employee/
-│   │   │   │   ├── ChatPanel.vue         # AI chat: message history, editable preview card, recent entries strip
+│   │   │   │   ├── ChatPanel.vue         # AI chat: message history, editable preview card before saving
 │   │   │   │   ├── EntryList.vue         # Entry list (all entries or rejected-only mode via prop)
 │   │   │   │   └── EntryCard.vue         # Single entry: status badge, type pills, rejection notes, clarify/delete
 │   │   │   └── ui/
