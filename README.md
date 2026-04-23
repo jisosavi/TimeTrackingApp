@@ -4,7 +4,7 @@ An easy to use, AI-powered time tracking solution seamlessly integrated with **[
 
 Focus is on usability: easy for employees to log hours and easy for managers to approve!
 
-> **Branch: `vue-migration`** — This branch replaces the original Vanilla JS frontend with a Vue 3 + TypeScript single-page application. The PHP backend and Salaxy integration are unchanged.
+> **Branches** — Branches are used for development, stability and reliability varies.
 
 ## Overview
 
