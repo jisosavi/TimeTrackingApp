@@ -2,7 +2,6 @@
   "locale.date_locale": "et-EE",
   "time.at": "kell",
   "time.week_label": "Nädal",
-
   "common.loading": "Laadimine...",
   "common.save": "Salvesta",
   "common.cancel": "Tühista",
@@ -23,7 +22,6 @@
   "common.no_entries": "Kirjeid ei ole.",
   "common.lang_default": "Vaikekeel",
   "admin.language_label": "Keel",
-
   "page.employee_title": "TimeTrackingApp – Töötaja sisselogimine",
   "login.subtitle": "Logi sisse oma isikliku PIN-koodiga.",
   "login.pin_label": "PIN-kood",
@@ -45,13 +43,11 @@
   "login.role_superadmin": "Superadmin",
   "login.clear": "KUSTUTA",
   "login.announce_digits": "{count} numbrit sisestatud",
-
-  "nav.log_hours": "Registreeri tunde",
-  "nav.my_entries": "Minu kirjed",
-  "nav.rejected_tab": "Tagasi lükatud",
+  "nav.log_hours": "Logi",
+  "nav.my_entries": "Kanded",
+  "nav.rejected_tab": "Lükatud",
   "nav.payroll": "Palga eksport",
   "nav.settings": "Seaded",
-
   "chat.title": "Tööaja registreerimine",
   "chat.placeholder": "Kirjuta või dikteeri nt. 15.11 8–12 projekt Alfa.",
   "chat.record_button": "🎙 Dikteeri / Salvesta",
@@ -70,7 +66,6 @@
   "chat.speech_recognition_lang": "et-EE",
   "chat.welcome_message": "Räägi mulle, millal töötasid ja mis projektiga. Vormistan need tööaja kirjeteks, mille saad kinnitamiseks esitada.\n\nNt: 'Täna 9–12, Projekt Alfa'. Võid sisestada ka kuupäevad ja lisada kommentaari.\n\nNt: '15.11 8–12 projekt Bravo kommentaar: Võttis oodatust kauem'",
   "chat.ai_system_prompt": "Oled TimeTrackingApp tööaja registreerimise assistent. Suhtle eesti keeles. Palu kasutajal täpsustada vajalikud andmed ja moodusta lõpuks JSON, mis sisaldab kuupäeva, kellaaegu, projekti ja tunde. Näide: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Projekt Alfa\",\"notes\":\"Paigaldus\"}]}",
-
   "entries.my_entries_title": "Minu kirjed",
   "entries.refresh_button": "↺ Uuenda",
   "entries.count": "{count} kirjet",
@@ -103,17 +98,14 @@
   "entries.col_hours": "Tunnid/km",
   "entries.col_project": "Projekt",
   "entries.col_status": "Olek",
-
   "status.pending": "Ootel",
   "status.approved": "✓ Kinnitatud",
   "status.rejected": "✗ Tagasi lükatud",
   "status.clarified": "↩ Selgitatud",
-
   "grouping.day": "Päeviti",
   "grouping.week": "Nädaliti",
   "grouping.month": "Kuuti",
   "grouping.year": "Aastati",
-
   "salaxy.no_entries": "Saatmiseks tunde pole. Registreeri esmalt tunnid.",
   "salaxy.sending": "Saatmine Salaxy-sse...",
   "salaxy.success": "✅ {count} tööaja kirjet lisatud palganimekirja!",
@@ -125,7 +117,6 @@
   "salaxy.entries_added": "{count} tööaja kirjet lisatud palganimekirja.",
   "salaxy.payroll_label": "Palganimekiri:",
   "salaxy.debug_link": "DEBUG: Palganimekirja link Salaxy-s",
-
   "approval.login_title": "Juhi sisselogimine",
   "approval.dashboard_title": "Minu meeskonna kirjed",
   "approval.dashboard_subtitle": "Vaata üle ja kinnita meeskonna tööaja kirjed.",
@@ -154,7 +145,6 @@
   "approval.search_no_results": "Tulemusi pole.",
   "approval.no_team_members": "Tiimi liikmeid pole veel määratud.",
   "approval.no_contact_details": "Kontaktandmed puuduvad.",
-
   "admin.login_title": "Admini sisselogimine",
   "admin.employees_title": "Personal",
   "admin.employees_subtitle": "Halda töötajaid ja PIN-koode.",
@@ -250,8 +240,7 @@
   "admin.sup_pin_placeholder": "Nõutud uutele",
   "admin.first_name_label": "Eesnimi",
   "admin.last_name_label": "Perekonnanimi",
-
-  "payroll.title": "Palgaperioodid",
+  "payroll.title": "Palk",
   "payroll.period_label": "Palgaperiood",
   "payroll.monthly": "Kord kuus",
   "payroll.biweekly": "Iga 2 nädala tagant",
@@ -276,7 +265,7 @@
   "payroll.error_select_employee": "Vali vähemalt üks töötaja.",
   "payroll.loading": "Laadimine...",
   "payroll.server_error": "Serveri viga.",
-  "payroll.exporting": "Eksportimine Salaxy-sse...",
+  "payroll.exporting": "Eksportimine…",
   "payroll.re_exporting": "Taaseksportimine Salaxy-sse...",
   "payroll.export_failed": "Eksport ebaõnnestus",
   "payroll.export_success": "Eksport õnnestus!",
@@ -285,7 +274,6 @@
   "payroll.no_approved": "Valitud perioodil kinnitatud kirjeid pole.",
   "payroll.exported_on": "✓ Eksporditud {date}",
   "payroll.all_exported_label": "✓ Kõik eksporditud",
-
   "language.selector_label": "Keel:",
   "language.company_language_label": "Ettevõtte kasutajaliidese keel:",
   "language.personal_language_label": "Minu keel:",
@@ -299,7 +287,6 @@
   "language.xh": "isiXhosa",
   "language.saved": "Keel salvestatud.",
   "language.save_failed": "Keele salvestamine ebaõnnestus.",
-
   "supervisor.col_name": "Nimi",
   "supervisor.col_email": "E-post",
   "supervisor.col_phone": "Telefon",
@@ -313,8 +300,6 @@
   "supervisor.pin_label": "PIN * (3–6 numbrit)",
   "supervisor.ssn_label": "Isikukood / ID",
   "supervisor.salaxy_id_label": "Salaxy ID",
-
-  "payroll.title": "Palk",
   "payroll.export_section_title": "Ekspordi kanded Salaxy'sse",
   "payroll.date_from_label": "Alates",
   "payroll.date_to_label": "Kuni",
@@ -325,13 +310,11 @@
   "payroll.no_salaxy_id": "Salaxy ID puudub",
   "payroll.new_hours_badge": "({hours}h uus)",
   "payroll.export_button": "Ekspordi Salaxy'sse",
-  "payroll.exporting": "Eksportimine…",
   "payroll.reexport_button": "Ekspordi kõik uuesti",
   "payroll.export_complete": "Eksport lõpetatud",
   "payroll.export_summary": "Saadetud: {sent} kannet · Lisatud: {added} · Juba eksporditud: {already}",
   "payroll.export_errors": "Vead: {count}",
   "payroll.open_in_salaxy": "Ava {period} Salaxy's ↗",
-
   "payroll_settings.title": "Palgaperioodi seaded",
   "payroll_settings.period_monthly": "Igakuine",
   "payroll_settings.period_fortnightly": "Kahenädalane (1–15 / 16–lõpp)",
@@ -386,5 +369,6 @@
   "empty.people": "Isikuid ei leitud",
   "empty.people_body": "Alustamiseks lisa töötaja või juhendaja.",
   "empty.companies": "Ettevõtteid pole",
-  "empty.companies_body": "Alustamiseks loo esimene ettevõte."
+  "empty.companies_body": "Alustamiseks loo esimene ettevõte.",
+  "chat.voice_button": "Hääl"
 }

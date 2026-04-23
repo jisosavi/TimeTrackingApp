@@ -14,7 +14,7 @@ const { t } = useI18n({ useScope: 'global' })
 
 const emit = defineEmits<{ entriesSaved: [] }>()
 
-const { history, loading, send, reset, pendingPreview, confirmPreview, cancelPreview } = useChat()
+const { history, loading, send, reset, pendingPreview, confirmPreview } = useChat()
 const auth = useAuthStore()
 const inputText = ref('')
 const chatEl = ref<HTMLElement | null>(null)
@@ -64,10 +64,6 @@ async function handleConfirm() {
   })
   await confirmPreview(merged)
   emit('entriesSaved')
-}
-
-function handleCancel() {
-  cancelPreview()
 }
 
 function handleReset() {
@@ -156,7 +152,7 @@ function formatMessage(text: string) {
         <button
           v-if="pendingPreview && i === pendingPreview.messageIndex && msg.role === 'assistant'"
           class="mt-1 px-1 text-xs text-muted-foreground hover:text-destructive underline"
-          @click="handleCancel"
+          @click="handleReset"
         >
           {{ t('common.cancel') }}
         </button>
@@ -208,7 +204,7 @@ function formatMessage(text: string) {
           <Button size="sm" :disabled="loading" @click="handleConfirm">
             {{ t('employee.preview_confirm') }}
           </Button>
-          <Button size="sm" variant="ghost" @click="handleCancel">
+          <Button size="sm" variant="ghost" @click="handleReset">
             {{ t('common.cancel') }}
           </Button>
         </CardFooter>
@@ -225,16 +221,16 @@ function formatMessage(text: string) {
         :disabled="loading"
         @keydown="onKeydown"
       />
-      <div class="flex gap-2 justify-end">
+      <div class="flex gap-2">
         <Button
           variant="outline"
           :class="isListening ? 'text-destructive border-destructive' : ''"
           @click="startVoice"
         >
-          {{ isListening ? `● ${t('chat.listening')}` : '🎤 Voice' }}
+          {{ isListening ? `● ${t('chat.listening')}` : `🎤 ${t('chat.voice_button')}` }}
         </Button>
         <Button variant="ghost" @click="handleReset">{{ t('common.cancel') }}</Button>
-        <Button :disabled="loading || !inputText.trim()" @click="submit">
+        <Button class="grow" :disabled="loading || !inputText.trim()" @click="submit">
           {{ t('chat.send_button') }}
         </Button>
       </div>

@@ -2,7 +2,6 @@
   "locale.date_locale": "en-GB",
   "time.at": "at",
   "time.week_label": "Week",
-
   "common.loading": "Loading...",
   "common.save": "Save",
   "common.cancel": "Cancel",
@@ -23,7 +22,6 @@
   "common.no_entries": "No entries.",
   "common.lang_default": "Default",
   "admin.language_label": "Language",
-
   "page.employee_title": "TimeTrackingApp – Employee Login",
   "login.subtitle": "Log in with your personal PIN code.",
   "login.pin_label": "PIN code",
@@ -45,13 +43,11 @@
   "login.role_superadmin": "Super Admin",
   "login.clear": "CLR",
   "login.announce_digits": "{count} digits entered",
-
-  "nav.log_hours": "Log hours",
-  "nav.my_entries": "My entries",
+  "nav.log_hours": "Log",
+  "nav.my_entries": "Entries",
   "nav.rejected_tab": "Rejected",
   "nav.payroll": "Export Payroll",
   "nav.settings": "Settings",
-
   "chat.title": "Work hours log",
   "chat.guidance": "Type date, time and project — e.g. «15.4 8–16 Project Alpha». For mileage add km — e.g. «15.4 drove 45 km to client».",
   "chat.placeholder": "Type or dictate e.g. 15.11 8–12 Project Alpha.",
@@ -71,7 +67,6 @@
   "chat.speech_recognition_lang": "en-GB",
   "chat.welcome_message": "Tell me when you worked and on which project. I'll format them into time entries you can submit for approval.\n\nE.g: 'Today 9–12, Project Alpha'. You can also provide dates and optionally a comment.\n\nE.g: '15.11 8–12 project Bravo comment: Took longer than expected'",
   "chat.ai_system_prompt": "You are a TimeTrackingApp time entry assistant. Communicate in English. Ask the user to clarify required details and finally form a JSON containing the date, times, project and hours. Example: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Project Alpha\",\"notes\":\"Installation\"}]}",
-
   "entries.my_entries_title": "My entries",
   "entries.refresh_button": "↺ Refresh",
   "entries.count": "{count} entries",
@@ -104,17 +99,14 @@
   "entries.col_hours": "Hours/km",
   "entries.col_project": "Project",
   "entries.col_status": "Status",
-
   "status.pending": "Pending",
   "status.approved": "✓ Approved",
   "status.rejected": "✗ Rejected",
   "status.clarified": "↩ Clarified",
-
   "grouping.day": "Daily",
   "grouping.week": "Weekly",
   "grouping.month": "Monthly",
   "grouping.year": "Yearly",
-
   "salaxy.no_entries": "No hours to submit. Log hours first.",
   "salaxy.sending": "Sending to Salaxy...",
   "salaxy.success": "✅ {count} time entries added to payroll!",
@@ -126,7 +118,6 @@
   "salaxy.entries_added": "{count} time entries added to payroll.",
   "salaxy.payroll_label": "Payroll:",
   "salaxy.debug_link": "DEBUG: Payroll link in Salaxy",
-
   "approval.login_title": "Manager login",
   "approval.dashboard_title": "My team's entries",
   "approval.dashboard_subtitle": "Review and approve your team's time entries.",
@@ -155,7 +146,6 @@
   "approval.search_no_results": "No results.",
   "approval.no_team_members": "No team members assigned yet.",
   "approval.no_contact_details": "No contact details on file.",
-
   "admin.login_title": "Admin login",
   "admin.employees_title": "Personnel",
   "admin.employees_subtitle": "Manage employees and PINs.",
@@ -251,8 +241,7 @@
   "admin.sup_pin_placeholder": "Required for new",
   "admin.first_name_label": "First Name",
   "admin.last_name_label": "Last Name",
-
-  "payroll.title": "Payroll periods",
+  "payroll.title": "Payroll",
   "payroll.period_label": "Period",
   "payroll.monthly": "Once a month",
   "payroll.biweekly": "Fortnightly",
@@ -277,7 +266,7 @@
   "payroll.error_select_employee": "Select at least one employee.",
   "payroll.loading": "Loading...",
   "payroll.server_error": "Server error.",
-  "payroll.exporting": "Exporting to Salaxy...",
+  "payroll.exporting": "Exporting…",
   "payroll.re_exporting": "Re-exporting to Salaxy...",
   "payroll.export_failed": "Export failed",
   "payroll.export_success": "Export succeeded!",
@@ -286,7 +275,6 @@
   "payroll.no_approved": "No approved entries for the selected period.",
   "payroll.exported_on": "✓ Exported {date}",
   "payroll.all_exported_label": "✓ All exported",
-
   "language.selector_label": "Language:",
   "language.company_language_label": "Company UI language:",
   "language.personal_language_label": "My language:",
@@ -300,7 +288,6 @@
   "language.xh": "isiXhosa",
   "language.saved": "Language saved.",
   "language.save_failed": "Language save failed.",
-
   "supervisor.col_name": "Name",
   "supervisor.col_email": "Email",
   "supervisor.col_phone": "Phone",
@@ -314,8 +301,6 @@
   "supervisor.pin_label": "PIN * (3–6 digits)",
   "supervisor.ssn_label": "Personal ID / SSN",
   "supervisor.salaxy_id_label": "Salaxy ID",
-
-  "payroll.title": "Payroll",
   "payroll.export_section_title": "Export entries to Salaxy",
   "payroll.date_from_label": "From",
   "payroll.date_to_label": "To",
@@ -326,13 +311,11 @@
   "payroll.no_salaxy_id": "no Salaxy ID",
   "payroll.new_hours_badge": "({hours}h new)",
   "payroll.export_button": "Export to Salaxy",
-  "payroll.exporting": "Exporting…",
   "payroll.reexport_button": "Re-export all",
   "payroll.export_complete": "Export complete",
   "payroll.export_summary": "Sent: {sent} entries · Added: {added} · Already exported: {already}",
   "payroll.export_errors": "Errors: {count}",
   "payroll.open_in_salaxy": "Open {period} in Salaxy ↗",
-
   "payroll_settings.title": "Payroll Period Settings",
   "payroll_settings.period_monthly": "Monthly",
   "payroll_settings.period_fortnightly": "Fortnightly (1–15 / 16–end)",
@@ -387,5 +370,6 @@
   "empty.people": "No people found",
   "empty.people_body": "Add an employee or supervisor to get started.",
   "empty.companies": "No companies",
-  "empty.companies_body": "Create the first company to get started."
+  "empty.companies_body": "Create the first company to get started.",
+  "chat.voice_button": "Voice"
 }

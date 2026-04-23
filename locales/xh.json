@@ -2,7 +2,6 @@
   "locale.date_locale": "xh-ZA",
   "time.at": "ngo",
   "time.week_label": "Iveki",
-
   "common.loading": "Iyalayisha...",
   "common.save": "Gcina",
   "common.cancel": "Rhoxisa",
@@ -23,7 +22,6 @@
   "common.no_entries": "Akukho zingeniso.",
   "common.lang_default": "Owezimelo",
   "admin.language_label": "Ulwimi",
-
   "page.employee_title": "TimeTrackingApp – Ukungena kwaMasebenzi",
   "login.subtitle": "Ngena nge-PIN yakho yomntu.",
   "login.pin_label": "I-PIN",
@@ -45,13 +43,11 @@
   "login.role_superadmin": "Super Admin",
   "login.clear": "CLR",
   "login.announce_digits": "{count} digits entered",
-
-  "nav.log_hours": "Rekhoda amaxesha",
-  "nav.my_entries": "Izingeniso zam",
-  "nav.rejected_tab": "Zaligatyiweyo",
+  "nav.log_hours": "Rekhoda",
+  "nav.my_entries": "Izingeniso",
+  "nav.rejected_tab": "Zaliwe",
   "nav.payroll": "Thumela Intlawulo",
   "nav.settings": "Iinqobo",
-
   "chat.title": "Irekhodi lamaxesha omsebenzi",
   "chat.placeholder": "Bhala okanye uthethe nzwi umz. 15.11 8–12 Iphrojekthi Alpha.",
   "chat.record_button": "🎙 Thetha / Rekhoda",
@@ -70,7 +66,6 @@
   "chat.speech_recognition_lang": "xh-ZA",
   "chat.welcome_message": "Ndixelele xa usebenze naseproje yiphina. Ndiya kuzibeka ngendlela yezingeniso zexesha onokuzingenisa ukuze zivunywe.\n\nUmz: 'Namhlanje 9–12, Iphrojekthi Alpha'. Unganika imihlathi namazwi aneenkcukacha.\n\nUmz: '15.11 8–12 iphrojekthi Bravo amazwi: Ithath' ixesha elide kunokuhloswa'",
   "chat.ai_system_prompt": "Ungumncedi we-TimeTrackingApp yokurekhoda amaxesha. Thetha ngesiXhosa. Cela umsebenzisi ukuba acace iinkcukacha ezifunekayo aze ekugqibeleni enze i-JSON enomhla, amaxesha, iphrojekthi namaxesha. Umzekelo: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Iphrojekthi Alpha\",\"notes\":\"Ukufakela\"}]}",
-
   "entries.my_entries_title": "Izingeniso zam",
   "entries.refresh_button": "↺ Buyekeza",
   "entries.count": "{count} iirekhodi",
@@ -103,17 +98,14 @@
   "entries.col_hours": "Amaxesha/km",
   "entries.col_project": "Iphrojekthi",
   "entries.col_status": "Isimo",
-
   "status.pending": "Ilindile",
   "status.approved": "✓ Ivunyiwe",
   "status.rejected": "✗ Iyaliwe",
   "status.clarified": "↩ Icacisiwe",
-
   "grouping.day": "Imihla ngemihla",
   "grouping.week": "Veki ngaveki",
   "grouping.month": "Inyanga ngenyanga",
   "grouping.year": "Unyaka ngonyaka",
-
   "salaxy.no_entries": "Akukho maxesha athumelwayo. Qala urekhode amaxesha.",
   "salaxy.sending": "Ithumela kwi-Salaxy...",
   "salaxy.success": "✅ {count} izingeniso zexesha zongezwe kwimvuzo!",
@@ -125,7 +117,6 @@
   "salaxy.entries_added": "{count} izingeniso zexesha zongezwe kwimvuzo.",
   "salaxy.payroll_label": "Imvuzo:",
   "salaxy.debug_link": "DEBUG: Ikhonkco lemvuzo kwi-Salaxy",
-
   "approval.login_title": "Ukungena kweMeneja",
   "approval.dashboard_title": "Izingeniso zethimba lam",
   "approval.dashboard_subtitle": "Hlola uvume izingeniso zexesha zethimba lakho.",
@@ -154,7 +145,6 @@
   "approval.search_no_results": "Akukho iziphumo.",
   "approval.no_team_members": "Akukho malungu eqela amiselweyo.",
   "approval.no_contact_details": "Akukho iinkcukacha zokuqhagamshelana.",
-
   "admin.login_title": "Ukungena kweMlawuli",
   "admin.employees_title": "Abasebenzi",
   "admin.employees_subtitle": "Lawula abasebenzi ne-PIN.",
@@ -250,8 +240,7 @@
   "admin.sup_pin_placeholder": "Ifunekayo kwabatsha",
   "admin.first_name_label": "Igama lokuqala",
   "admin.last_name_label": "Ifani",
-
-  "payroll.title": "Izikhathi zemivuzo",
+  "payroll.title": "Umvuzo",
   "payroll.period_label": "Ixesha",
   "payroll.monthly": "Kanye ngenyanga",
   "payroll.biweekly": "Rhoqo ngamaveki amabini",
@@ -276,7 +265,7 @@
   "payroll.error_select_employee": "Khetha ubuncinane umsebenzi omnye.",
   "payroll.loading": "Iyalayisha...",
   "payroll.server_error": "Impazamo yeseva.",
-  "payroll.exporting": "Ithumela kwi-Salaxy...",
+  "payroll.exporting": "Iyathumela…",
   "payroll.re_exporting": "Iphinda ithumele kwi-Salaxy...",
   "payroll.export_failed": "Ukuthumela akuphumelelanga",
   "payroll.export_success": "Ukuthumela kuphumelelile!",
@@ -285,7 +274,6 @@
   "payroll.no_approved": "Akukho zingeniso ezivunyiweyo kwixesha elikhethiweyo.",
   "payroll.exported_on": "✓ Ithunyelwe {date}",
   "payroll.all_exported_label": "✓ Zonke zithunyelwe",
-
   "language.selector_label": "Ulwimi:",
   "language.company_language_label": "Ulwimi lweenkampani:",
   "language.personal_language_label": "Ulwimi lwam:",
@@ -299,7 +287,6 @@
   "language.xh": "isiXhosa",
   "language.saved": "Ulwimi lugciniwe.",
   "language.save_failed": "Ukugcina ulwimi akuphumelelanga.",
-
   "supervisor.col_name": "Igama",
   "supervisor.col_email": "I-imeyile",
   "supervisor.col_phone": "Ifowuni",
@@ -313,8 +300,6 @@
   "supervisor.pin_label": "I-PIN * (iinombolo ezi-3–6)",
   "supervisor.ssn_label": "I-ID yomntu / i-SSN",
   "supervisor.salaxy_id_label": "I-ID ye-Salaxy",
-
-  "payroll.title": "Umvuzo",
   "payroll.export_section_title": "Thumela iirekhodi kuSalaxy",
   "payroll.date_from_label": "Ukusuka",
   "payroll.date_to_label": "Ukuya",
@@ -325,13 +310,11 @@
   "payroll.no_salaxy_id": "akukho Salaxy ID",
   "payroll.new_hours_badge": "({hours}h entsha)",
   "payroll.export_button": "Thumela kuSalaxy",
-  "payroll.exporting": "Iyathumela…",
   "payroll.reexport_button": "Thumela konke kwakhona",
   "payroll.export_complete": "Ukuthumela kuphelile",
   "payroll.export_summary": "Ithunyelwe: {sent} iirekhodi · Yongezwa: {added} · Sele ithunyiwe: {already}",
   "payroll.export_errors": "Iimpazamo: {count}",
   "payroll.open_in_salaxy": "Vula {period} kuSalaxy ↗",
-
   "payroll_settings.title": "Iilungiselelo zexesha lomvuzo",
   "payroll_settings.period_monthly": "Nyanga ngenyanga",
   "payroll_settings.period_fortnightly": "Iiveki ezimbini (1–15 / 16–isiphelo)",
@@ -386,5 +369,6 @@
   "empty.people": "Akukho bantu abafunyanwayo",
   "empty.people_body": "Yongeza umsebenzi okanye umphathi ukuqala.",
   "empty.companies": "Akukho zinkampani",
-  "empty.companies_body": "Yenza inkampani yokuqala ukuqala."
+  "empty.companies_body": "Yenza inkampani yokuqala ukuqala.",
+  "chat.voice_button": "Ilizwi"
 }

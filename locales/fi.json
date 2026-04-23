@@ -2,7 +2,6 @@
   "locale.date_locale": "fi-FI",
   "time.at": "klo",
   "time.week_label": "Viikko",
-
   "common.loading": "Ladataan...",
   "common.save": "Tallenna",
   "common.cancel": "Peruuta",
@@ -23,7 +22,6 @@
   "common.no_entries": "Ei kirjauksia.",
   "common.lang_default": "Oletuskieli",
   "admin.language_label": "Kieli",
-
   "page.employee_title": "TimeTrackingApp – Työntekijän login",
   "login.subtitle": "Kirjaudu henkilökohtaisella PIN-koodillasi.",
   "login.pin_label": "PIN-koodi",
@@ -45,13 +43,11 @@
   "login.role_superadmin": "Superkäyttäjä",
   "login.clear": "TYHJENNÄ",
   "login.announce_digits": "{count} numeroa syötetty",
-
-  "nav.log_hours": "Kirjaa tunteja",
-  "nav.my_entries": "Tuntikirjaukset",
+  "nav.log_hours": "Kirjaa",
+  "nav.my_entries": "Talletetut",
   "nav.rejected_tab": "Hylätyt",
   "nav.payroll": "Palkkavienti",
   "nav.settings": "Asetukset",
-
   "chat.title": "Työtuntien kirjaus",
   "chat.guidance": "Kirjoita päivämäärä, aika ja projekti — esim. «15.4 8–16 Projekti Alpha». Kilometreille lisää km — esim. «15.4 ajoin 45 km asiakkaalle».",
   "chat.placeholder": "Kirjoita tai sanele esim. 15.11 klo 8–12 projekti Alfa.",
@@ -71,7 +67,6 @@
   "chat.speech_recognition_lang": "fi-FI",
   "chat.welcome_message": "Kerro milloin teit tunteja ja mille projektille. Muotoilen ne tuntikirjauksiksi ja voit lähettää ne hyväksyttäviksi.\n\nEsim: 'Tänään klo 9-12, Projekti Alfa'. Voit syöttää tunteja myös antamalla päivämääriä ja loppuun voi antaa oman kommenttisi.\n\nEsim: '15.11 klo 8-12 projekti Bravo kommentti: Meni ennakoitua pidempään'",
   "chat.ai_system_prompt": "Olet TimeTrackingApp tuntikirjausassistentti. Keskustele suomeksi. Pyydä käyttäjää tarkentamaan tarvittavat tiedot ja muodosta lopuksi JSON, joka sisältää päivämäärän, kellonajat, projektin ja tuntimäärän. Esimerkki: {\"entries\":[{\"date\":\"2025-11-15\",\"start\":\"08:00\",\"end\":\"12:00\",\"hours\":4,\"project\":\"Projekti Alfa\",\"notes\":\"Asennus\"}]}",
-
   "entries.my_entries_title": "Omat kirjaukseni",
   "entries.refresh_button": "↺ Päivitä",
   "entries.count": "{count} kirjausta",
@@ -104,17 +99,14 @@
   "entries.col_hours": "Tunnit/km",
   "entries.col_project": "Projekti",
   "entries.col_status": "Tila",
-
   "status.pending": "Odottaa",
   "status.approved": "✓ Hyväksytty",
   "status.rejected": "✗ Hylätty",
   "status.clarified": "↩ Selvitetty",
-
   "grouping.day": "Päivittäin",
   "grouping.week": "Viikoittain",
   "grouping.month": "Kuukausittain",
   "grouping.year": "Vuosittain",
-
   "salaxy.no_entries": "Ei lähetettäviä tunteja. Kirjaa ensin tunteja.",
   "salaxy.sending": "Lähetetään Salaxyyn...",
   "salaxy.success": "✅ {count} tuntikirjausta lisätty palkkalistalle!",
@@ -126,7 +118,6 @@
   "salaxy.entries_added": "{count} tuntikirjausta lisätty palkkalistalle.",
   "salaxy.payroll_label": "Palkkalista:",
   "salaxy.debug_link": "DEBUG: Palkkalistan linkki Salaxyssä",
-
   "approval.login_title": "Esihenkilökirjautuminen",
   "approval.dashboard_title": "Tiimini kirjaukset",
   "approval.dashboard_subtitle": "Tarkastele ja hyväksy tiimisi tuntikirjaukset.",
@@ -155,7 +146,6 @@
   "approval.search_no_results": "Ei tuloksia.",
   "approval.no_team_members": "Tiimiin ei ole lisätty jäseniä.",
   "approval.no_contact_details": "Ei yhteystietoja.",
-
   "admin.login_title": "Admin-kirjautuminen",
   "admin.employees_title": "Henkilöstö",
   "admin.employees_subtitle": "Hallinnoi työntekijöitä ja PIN-koodeja.",
@@ -251,8 +241,7 @@
   "admin.sup_pin_placeholder": "Vaaditaan uusille",
   "admin.first_name_label": "Etunimi",
   "admin.last_name_label": "Sukunimi",
-
-  "payroll.title": "Palkkakaudet",
+  "payroll.title": "Palkanlaskenta",
   "payroll.period_label": "Palkkakausi",
   "payroll.monthly": "Kerran kuussa",
   "payroll.biweekly": "2 vkon välein",
@@ -277,7 +266,7 @@
   "payroll.error_select_employee": "Valitse vähintään yksi työntekijä.",
   "payroll.loading": "Ladataan...",
   "payroll.server_error": "Palvelinvirhe.",
-  "payroll.exporting": "Viedään Salaxyyn...",
+  "payroll.exporting": "Viedään…",
   "payroll.re_exporting": "Viedään uudelleen Salaxyyn...",
   "payroll.export_failed": "Vienti epäonnistui",
   "payroll.export_success": "Vienti onnistui!",
@@ -286,7 +275,6 @@
   "payroll.no_approved": "Ei hyväksyttyjä kirjauksia valitulle ajanjaksolle.",
   "payroll.exported_on": "✓ Viety {date}",
   "payroll.all_exported_label": "✓ Kaikki viety",
-
   "language.selector_label": "Kieli:",
   "language.company_language_label": "Yrityksen käyttöliittymäkieli:",
   "language.personal_language_label": "Oma kieleni:",
@@ -300,7 +288,6 @@
   "language.xh": "isiXhosa",
   "language.saved": "Kieli tallennettu.",
   "language.save_failed": "Kielen tallennus epäonnistui.",
-
   "supervisor.col_name": "Nimi",
   "supervisor.col_email": "Email",
   "supervisor.col_phone": "Puhelin",
@@ -314,8 +301,6 @@
   "supervisor.pin_label": "PIN * (3–6 numeroa)",
   "supervisor.ssn_label": "Henkilönumero / Hetu",
   "supervisor.salaxy_id_label": "Salaxy ID",
-
-  "payroll.title": "Palkanlaskenta",
   "payroll.export_section_title": "Vie merkinnät Salaxyyn",
   "payroll.date_from_label": "Alkaen",
   "payroll.date_to_label": "Saakka",
@@ -326,13 +311,11 @@
   "payroll.no_salaxy_id": "Ei Salaxy-tunnistetta",
   "payroll.new_hours_badge": "({hours} h uutta)",
   "payroll.export_button": "Vie Salaxyyn",
-  "payroll.exporting": "Viedään…",
   "payroll.reexport_button": "Vie kaikki uudelleen",
   "payroll.export_complete": "Vienti valmis",
   "payroll.export_summary": "Lähetetty: {sent} merkintää · Lisätty: {added} · Jo viety: {already}",
   "payroll.export_errors": "Virheitä: {count}",
   "payroll.open_in_salaxy": "Avaa {period} Salaxyssa ↗",
-
   "payroll_settings.title": "Palkkakauden asetukset",
   "payroll_settings.period_monthly": "Kuukausittain",
   "payroll_settings.period_fortnightly": "Kaksiviikottain (1–15 / 16–loppu)",
@@ -387,5 +370,6 @@
   "empty.people": "Henkilöitä ei löydy",
   "empty.people_body": "Lisää työntekijä tai esimies aloittaaksesi.",
   "empty.companies": "Ei yrityksiä",
-  "empty.companies_body": "Luo ensimmäinen yritys aloittaaksesi."
+  "empty.companies_body": "Luo ensimmäinen yritys aloittaaksesi.",
+  "chat.voice_button": "Sanele"
 }
