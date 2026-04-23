@@ -371,5 +371,11 @@
   "empty.people_body": "Lisää työntekijä tai esimies aloittaaksesi.",
   "empty.companies": "Ei yrityksiä",
   "empty.companies_body": "Luo ensimmäinen yritys aloittaaksesi.",
-  "chat.voice_button": "Sanele"
+  "chat.voice_button": "Sanele",
+  "payroll.overview_employees": "{count} työntekijää",
+  "payroll.overview_entries": "{count} kirjausta",
+  "payroll.overview_no_project": "Ei projektia",
+  "payroll.overview_no_entries": "Ei kirjauksia tällä jaksolla",
+  "payroll.overview_total": "Yhteensä",
+  "payroll.overview_current": "Käynnissä"
 }

@@ -371,5 +371,11 @@
   "empty.people_body": "Add an employee or supervisor to get started.",
   "empty.companies": "No companies",
   "empty.companies_body": "Create the first company to get started.",
-  "chat.voice_button": "Voice"
+  "chat.voice_button": "Voice",
+  "payroll.overview_employees": "{count} employees",
+  "payroll.overview_entries": "{count} entries",
+  "payroll.overview_no_project": "No project",
+  "payroll.overview_no_entries": "No entries in this period yet",
+  "payroll.overview_total": "Total",
+  "payroll.overview_current": "Current"
 }

@@ -19,28 +19,77 @@ const { entries: approvalEntries, fetchEntries: fetchApprovalEntries } = useAppr
 const settings = ref<PayrollSettings | null>(null)
 const settingsLoading = ref(true)
 
-function computeCurrentPeriod(s: PayrollSettings): { from: string; to: string; label: string } {
+function computeAllPeriods(s: PayrollSettings): { from: string; to: string; label: string }[] {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()
   const mo = String(m + 1).padStart(2, '0')
   const lastDay = new Date(y, m + 1, 0).toISOString().slice(0, 10)
   if (s.payroll_period === 'monthly') {
-    return { from: `${y}-${mo}-01`, to: lastDay, label: `${mo}/${y}` }
+    return [{ from: `${y}-${mo}-01`, to: lastDay, label: `${mo}/${y}` }]
   }
-  // biweekly: 1–15 or 16–end
-  const day = now.getDate()
-  if (day <= 15) {
-    return { from: `${y}-${mo}-01`, to: `${y}-${mo}-15`, label: `${mo}/01–15 ${y}` }
-  }
-  return { from: `${y}-${mo}-16`, to: lastDay, label: `${mo}/16–${lastDay.slice(8)} ${y}` }
+  return [
+    { from: `${y}-${mo}-01`, to: `${y}-${mo}-15`, label: `${mo}/01–15 ${y}` },
+    { from: `${y}-${mo}-16`, to: lastDay, label: `${mo}/16–${lastDay.slice(8)} ${y}` },
+  ]
 }
 
-const currentPeriod = computed(() => settings.value ? computeCurrentPeriod(settings.value) : null)
+interface ProjectRow { project: string; hours: number; km: number }
+interface PeriodStat {
+  period: { from: string; to: string; label: string }
+  isCurrent: boolean
+  employeeCount: number
+  totalEntries: number
+  pendingCount: number
+  approvedCount: number
+  projectRows: ProjectRow[]
+  totalHours: number
+  totalKm: number
+}
 
-const pendingCount = computed(() =>
-  approvalEntries.value.filter(e => e.status === 'pending' || e.status === 'clarified').length,
-)
+const periodStats = computed<PeriodStat[]>(() => {
+  if (!settings.value) return []
+  const today = new Date().toISOString().slice(0, 10)
+  const periods = computeAllPeriods(settings.value)
+  const allEntries = approvalEntries.value
+
+  return periods.map((period) => {
+    const inPeriod = allEntries.filter(
+      e => e.status !== 'deleted' && e.entry_date >= period.from && e.entry_date <= period.to,
+    )
+    const countable = inPeriod.filter(e => e.status !== 'rejected')
+    const employees = new Set(countable.map(e => e.employee_id))
+    const projectMap = new Map<string, { hours: number; km: number }>()
+    for (const e of countable) {
+      const key = e.project?.trim() ?? ''
+      const row = projectMap.get(key) ?? { hours: 0, km: 0 }
+      row.hours += e.hours
+      row.km += e.km
+      projectMap.set(key, row)
+    }
+    const projectRows: ProjectRow[] = [...projectMap.entries()]
+      .map(([project, { hours, km }]) => ({ project, hours, km }))
+      .sort((a, b) => b.hours - a.hours)
+    return {
+      period,
+      isCurrent: today >= period.from && today <= period.to,
+      employeeCount: employees.size,
+      totalEntries: countable.length,
+      pendingCount: inPeriod.filter(e => e.status === 'pending' || e.status === 'clarified').length,
+      approvedCount: inPeriod.filter(e => e.status === 'approved').length,
+      projectRows,
+      totalHours: projectRows.reduce((s, r) => s + r.hours, 0),
+      totalKm: projectRows.reduce((s, r) => s + r.km, 0),
+    }
+  })
+})
+
+const currentPeriod = computed(() => {
+  const today = new Date().toISOString().slice(0, 10)
+  return periodStats.value.find(s => s.isCurrent)?.period
+    ?? periodStats.value[0]?.period
+    ?? null
+})
 
 // ── Export state ──────────────────────────────────────────────────────────────
 const exportDateFrom = ref('')
@@ -129,20 +178,79 @@ async function doExport(force = false) {
   <div class="space-y-4">
     <h2 class="text-lg font-semibold">{{ t('payroll.title') }}</h2>
 
-    <!-- ── Current period summary card ── -->
-    <div class="rounded-lg border px-4 py-3 bg-card space-y-1">
-      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('payroll.summary_title') }}</p>
-      <div v-if="settingsLoading" class="text-sm text-muted-foreground">{{ t('common.loading') }}</div>
-      <template v-else-if="currentPeriod">
-        <p class="text-base font-semibold">{{ currentPeriod.label }}</p>
-        <p class="text-xs text-muted-foreground">{{ t('payroll.period_dates', { from: currentPeriod.from, to: currentPeriod.to }) }}</p>
-        <div class="pt-1">
-          <Badge v-if="pendingCount > 0" variant="secondary" class="text-xs">
-            {{ t('payroll.pending_entries', { count: pendingCount }) }}
-          </Badge>
-          <span v-else class="text-xs text-muted-foreground">{{ t('payroll.no_pending') }}</span>
+    <!-- ── Current period summary ── -->
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{{ t('payroll.summary_title') }}</p>
+      <div v-if="settingsLoading" class="rounded-lg border px-4 py-3 bg-card text-sm text-muted-foreground">
+        {{ t('common.loading') }}
+      </div>
+      <div v-else class="space-y-3">
+        <div
+          v-for="stat in periodStats"
+          :key="stat.period.from"
+          class="rounded-lg border px-4 py-3 bg-card space-y-2"
+          :class="stat.isCurrent ? 'border-primary/40' : 'opacity-60'"
+        >
+          <!-- Period header -->
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold">{{ stat.period.label }}</p>
+            <span v-if="stat.isCurrent" class="text-[10px] font-semibold uppercase tracking-wide text-primary">
+              {{ t('payroll.overview_current') }}
+            </span>
+          </div>
+          <p class="text-xs text-muted-foreground">{{ stat.period.from }} – {{ stat.period.to }}</p>
+
+          <!-- Empty state -->
+          <p v-if="stat.totalEntries === 0" class="text-xs text-muted-foreground italic">
+            {{ t('payroll.overview_no_entries') }}
+          </p>
+
+          <template v-else>
+            <!-- Overview line -->
+            <p class="text-xs text-muted-foreground">
+              {{ t('payroll.overview_employees', { count: stat.employeeCount }) }}
+              · {{ t('payroll.overview_entries', { count: stat.totalEntries }) }}
+            </p>
+
+            <!-- Status badges -->
+            <div class="flex gap-2 flex-wrap">
+              <Badge v-if="stat.pendingCount > 0" variant="secondary" class="text-xs">
+                {{ t('payroll.pending_entries', { count: stat.pendingCount }) }}
+              </Badge>
+              <Badge v-if="stat.approvedCount > 0" variant="outline" class="text-xs">
+                ✓ {{ stat.approvedCount }} {{ t('status.approved').toLowerCase() }}
+              </Badge>
+            </div>
+
+            <!-- Project / cost-centre breakdown -->
+            <div class="pt-1 space-y-1 border-t">
+              <div
+                v-for="row in stat.projectRows"
+                :key="row.project"
+                class="flex items-center justify-between text-xs"
+              >
+                <span class="truncate pr-2 text-foreground">
+                  {{ row.project || t('payroll.overview_no_project') }}
+                </span>
+                <span class="tabular-nums text-muted-foreground shrink-0">
+                  <template v-if="row.hours > 0">{{ row.hours.toFixed(1) }}h</template>
+                  <template v-if="row.hours > 0 && row.km > 0"> · </template>
+                  <template v-if="row.km > 0">{{ row.km }} km</template>
+                </span>
+              </div>
+              <!-- Total row -->
+              <div class="flex items-center justify-between text-xs font-semibold pt-1 border-t">
+                <span>{{ t('payroll.overview_total') }}</span>
+                <span class="tabular-nums">
+                  <template v-if="stat.totalHours > 0">{{ stat.totalHours.toFixed(1) }}h</template>
+                  <template v-if="stat.totalHours > 0 && stat.totalKm > 0"> · </template>
+                  <template v-if="stat.totalKm > 0">{{ stat.totalKm }} km</template>
+                </span>
+              </div>
+            </div>
+          </template>
         </div>
-      </template>
+      </div>
     </div>
 
     <!-- ── Export section ── -->
