@@ -120,7 +120,7 @@ function formatMessage(text: string) {
 </script>
 
 <template>
-  <div class="flex flex-col h-[calc(100vh-12rem)]">
+  <div class="flex flex-col h-[calc(100svh-13rem)]">
 
     <!-- Chat history -->
     <div ref="chatEl" class="flex-1 min-h-0 overflow-y-auto space-y-3 pb-4">

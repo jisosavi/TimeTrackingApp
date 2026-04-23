@@ -251,23 +251,23 @@ function getCfg(status: string) {
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <Tabs v-model="activeTab" class="w-full">
-      <TabsList :class="['grid w-full mb-4', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
-        <TabsTrigger value="review" class="gap-1.5">
+      <TabsList :class="['grid w-full mb-4 !h-auto', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
+        <TabsTrigger value="review" class="gap-1.5 text-sm py-2">
           {{ t('approval.tab_review') }}
           <Badge v-if="needsReviewCards.length > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
             {{ needsReviewCards.length }}
           </Badge>
         </TabsTrigger>
-        <TabsTrigger value="approved">
+        <TabsTrigger value="approved" class="text-sm py-2">
           {{ t('approval.tab_approved', { count: approvedCards.length }) }}
         </TabsTrigger>
-        <TabsTrigger value="rejected" class="gap-1.5">
+        <TabsTrigger value="rejected" class="gap-1.5 text-sm py-2">
           {{ t('approval.tab_rejected') }}
           <Badge v-if="rejectedCards.length > 0" variant="outline" class="h-4 min-w-4 px-1 text-[10px]">
             {{ rejectedCards.length }}
           </Badge>
         </TabsTrigger>
-        <TabsTrigger v-if="isSupervisor" value="team" @click="loadTeam">
+        <TabsTrigger v-if="isSupervisor" value="team" class="text-sm py-2" @click="loadTeam">
           {{ t('approval.tab_team') }}
         </TabsTrigger>
       </TabsList>
