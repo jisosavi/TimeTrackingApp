@@ -96,7 +96,7 @@ async function logout() {
     <header class="border-b sticky top-0 bg-background z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <img src="/salaxy-logo.png" alt="Salaxy" class="h-8 w-auto" />
+          <img src="/salaxy-logo.png" alt="Salaxy" class="h-8 w-auto flex-shrink-0 object-contain" />
           <span v-if="auth.user?.type === 'admin'" class="text-sm font-medium text-foreground">
             {{ companyDisplayName }}
           </span>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChat } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
@@ -21,7 +21,7 @@ const chatEl = ref<HTMLElement | null>(null)
 const isListening = ref(false)
 
 // ── Preview state ─────────────────────────────────────────────────────────────
-interface PreviewRow { date: string; hours: string; project: string; notes: string }
+interface PreviewRow { date: string; hours: string; km: string; project: string; notes: string }
 const previewRows = ref<PreviewRow[]>([])
 
 function toInputDate(raw: string): string {
@@ -41,6 +41,7 @@ watch(
       ? preview.parsed.entries.map((e) => ({
           date: toInputDate(e.date ?? ''),
           hours: e.hours > 0 ? String(e.hours) : '',
+          km: e.mileage > 0 ? String(e.mileage) : '',
           project: e.project ?? '',
           notes: e.notes ?? '',
         }))
@@ -56,17 +57,22 @@ async function handleConfirm() {
       ...orig,
       date: row.date || orig.date,
       hours: parseFloat(row.hours) || orig.hours,
+      mileage: row.km !== '' ? parseFloat(row.km) : orig.mileage,
       project: row.project,
       notes: row.notes,
     }
   })
   await confirmPreview(merged)
-  await fetchEntries()
   emit('entriesSaved')
 }
 
 function handleCancel() {
   cancelPreview()
+}
+
+function handleReset() {
+  reset()
+  inputText.value = ''
 }
 
 // ── Chat scroll ───────────────────────────────────────────────────────────────
@@ -133,8 +139,8 @@ function formatMessage(text: string) {
       <div
         v-for="(msg, i) in history"
         :key="i"
-        class="flex"
-        :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+        class="flex flex-col"
+        :class="msg.role === 'user' ? 'items-end' : 'items-start'"
       >
         <div
           class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm"
@@ -147,6 +153,13 @@ function formatMessage(text: string) {
             ✓ {{ t('chat.entries_saved', { count: msg.savedCount }) }}
           </p>
         </div>
+        <button
+          v-if="pendingPreview && i === pendingPreview.messageIndex && msg.role === 'assistant'"
+          class="mt-1 px-1 text-xs text-muted-foreground hover:text-destructive underline"
+          @click="handleCancel"
+        >
+          {{ t('common.cancel') }}
+        </button>
       </div>
 
       <!-- Processing indicator -->
@@ -176,6 +189,10 @@ function formatMessage(text: string) {
                 <Label class="text-xs">{{ t('employee.preview_hours_label') }}</Label>
                 <Input v-model="row.hours" type="number" min="0" step="0.5" class="h-8 text-sm" />
               </div>
+            </div>
+            <div v-if="row.km !== ''" class="space-y-1">
+              <Label class="text-xs">{{ t('employee.preview_km_label') }}</Label>
+              <Input v-model="row.km" type="number" min="0" step="1" class="h-8 text-sm" />
             </div>
             <div class="space-y-1">
               <Label class="text-xs">{{ t('entries.col_project') }}</Label>
@@ -216,7 +233,7 @@ function formatMessage(text: string) {
         >
           {{ isListening ? `● ${t('chat.listening')}` : '🎤 Voice' }}
         </Button>
-        <Button variant="ghost" @click="reset">{{ t('common.cancel') }}</Button>
+        <Button variant="ghost" @click="handleReset">{{ t('common.cancel') }}</Button>
         <Button :disabled="loading || !inputText.trim()" @click="submit">
           {{ t('chat.send_button') }}
         </Button>
