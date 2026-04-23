@@ -19,12 +19,17 @@ const { entries: approvalEntries, fetchEntries: fetchApprovalEntries } = useAppr
 const settings = ref<PayrollSettings | null>(null)
 const settingsLoading = ref(true)
 
-function computeAllPeriods(s: PayrollSettings): { from: string; to: string; label: string }[] {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const mo = String(m + 1).padStart(2, '0')
-  const lastDay = new Date(y, m + 1, 0).toISOString().slice(0, 10)
+const _now = new Date()
+const _todayStr = _now.toISOString().slice(0, 10)
+const _curYear = _now.getFullYear()
+const _curMonthIdx = _now.getMonth()
+const _curMonthStr = String(_curMonthIdx + 1).padStart(2, '0')
+const currentMonthStart = `${_curYear}-${_curMonthStr}-01`
+const currentMonthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(_now)
+
+function computeMonthPeriods(s: PayrollSettings, y: number, mIdx: number) {
+  const mo = String(mIdx + 1).padStart(2, '0')
+  const lastDay = new Date(y, mIdx + 1, 0).toISOString().slice(0, 10)
   if (s.payroll_period === 'monthly') {
     return [{ from: `${y}-${mo}-01`, to: lastDay, label: `${mo}/${y}` }]
   }
@@ -37,7 +42,6 @@ function computeAllPeriods(s: PayrollSettings): { from: string; to: string; labe
 interface ProjectRow { project: string; hours: number; km: number }
 interface PeriodStat {
   period: { from: string; to: string; label: string }
-  isCurrent: boolean
   employeeCount: number
   totalEntries: number
   pendingCount: number
@@ -47,48 +51,65 @@ interface PeriodStat {
   totalKm: number
 }
 
+function computeStat(period: { from: string; to: string; label: string }, allEntries: typeof approvalEntries.value): PeriodStat {
+  const inPeriod = allEntries.filter(
+    e => e.status !== 'deleted' && e.entry_date >= period.from && e.entry_date <= period.to,
+  )
+  const countable = inPeriod.filter(e => e.status !== 'rejected')
+  const employees = new Set(countable.map(e => e.employee_id))
+  const projectMap = new Map<string, { hours: number; km: number }>()
+  for (const e of countable) {
+    const key = e.project?.trim() ?? ''
+    const row = projectMap.get(key) ?? { hours: 0, km: 0 }
+    row.hours += e.hours
+    row.km += e.km
+    projectMap.set(key, row)
+  }
+  const projectRows: ProjectRow[] = [...projectMap.entries()]
+    .map(([project, { hours, km }]) => ({ project, hours, km }))
+    .sort((a, b) => b.hours - a.hours)
+  return {
+    period,
+    employeeCount: employees.size,
+    totalEntries: countable.length,
+    pendingCount: inPeriod.filter(e => e.status === 'pending' || e.status === 'clarified').length,
+    approvedCount: inPeriod.filter(e => e.status === 'approved').length,
+    projectRows,
+    totalHours: projectRows.reduce((s, r) => s + r.hours, 0),
+    totalKm: projectRows.reduce((s, r) => s + r.km, 0),
+  }
+}
+
 const periodStats = computed<PeriodStat[]>(() => {
   if (!settings.value) return []
-  const today = new Date().toISOString().slice(0, 10)
-  const periods = computeAllPeriods(settings.value)
-  const allEntries = approvalEntries.value
+  return computeMonthPeriods(settings.value, _curYear, _curMonthIdx)
+    .map(p => computeStat(p, approvalEntries.value))
+})
 
-  return periods.map((period) => {
-    const inPeriod = allEntries.filter(
-      e => e.status !== 'deleted' && e.entry_date >= period.from && e.entry_date <= period.to,
-    )
-    const countable = inPeriod.filter(e => e.status !== 'rejected')
-    const employees = new Set(countable.map(e => e.employee_id))
-    const projectMap = new Map<string, { hours: number; km: number }>()
-    for (const e of countable) {
-      const key = e.project?.trim() ?? ''
-      const row = projectMap.get(key) ?? { hours: 0, km: 0 }
-      row.hours += e.hours
-      row.km += e.km
-      projectMap.set(key, row)
-    }
-    const projectRows: ProjectRow[] = [...projectMap.entries()]
-      .map(([project, { hours, km }]) => ({ project, hours, km }))
-      .sort((a, b) => b.hours - a.hours)
-    return {
-      period,
-      isCurrent: today >= period.from && today <= period.to,
-      employeeCount: employees.size,
-      totalEntries: countable.length,
-      pendingCount: inPeriod.filter(e => e.status === 'pending' || e.status === 'clarified').length,
-      approvedCount: inPeriod.filter(e => e.status === 'approved').length,
-      projectRows,
-      totalHours: projectRows.reduce((s, r) => s + r.hours, 0),
-      totalKm: projectRows.reduce((s, r) => s + r.km, 0),
-    }
-  })
+interface PrevMonthGroup { label: string; monthKey: string; stats: PeriodStat[] }
+const previousMonthGroups = computed<PrevMonthGroup[]>(() => {
+  if (!settings.value) return []
+  const prev = approvalEntries.value.filter(
+    e => e.status !== 'deleted' && e.entry_date < currentMonthStart,
+  )
+  if (!prev.length) return []
+  const monthKeys = [...new Set(prev.map(e => e.entry_date.slice(0, 7)))]
+    .sort((a, b) => b.localeCompare(a))
+  return monthKeys.map((monthKey) => {
+    const [yStr, moStr] = monthKey.split('-')
+    const y = parseInt(yStr!); const mIdx = parseInt(moStr!) - 1
+    const stats = computeMonthPeriods(settings.value!, y, mIdx)
+      .map(p => computeStat(p, prev))
+      .filter(s => s.totalEntries > 0)
+    const label = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' })
+      .format(new Date(y, mIdx, 1))
+    return { label, monthKey, stats }
+  }).filter(g => g.stats.length > 0)
 })
 
 const currentPeriod = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
-  return periodStats.value.find(s => s.isCurrent)?.period
-    ?? periodStats.value[0]?.period
-    ?? null
+  const hit = periodStats.value.find(s => _todayStr >= s.period.from && _todayStr <= s.period.to)
+  return hit?.period ?? periodStats.value[0]?.period ?? null
 })
 
 // ── Export state ──────────────────────────────────────────────────────────────
@@ -180,24 +201,24 @@ async function doExport(force = false) {
 
     <!-- ── Current period summary ── -->
     <div>
-      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{{ t('payroll.summary_title') }}</p>
       <div v-if="settingsLoading" class="rounded-lg border px-4 py-3 bg-card text-sm text-muted-foreground">
         {{ t('common.loading') }}
       </div>
       <div v-else class="space-y-3">
+        <!-- Month header with draft count -->
+        <div class="flex items-baseline justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ currentMonthLabel }}</p>
+          <p class="text-xs text-muted-foreground">{{ t('payroll.draft_count', { count: periodStats.length }) }}</p>
+        </div>
+
+        <!-- Current month period cards (no highlighting) -->
         <div
           v-for="stat in periodStats"
           :key="stat.period.from"
           class="rounded-lg border px-4 py-3 bg-card space-y-2"
-          :class="stat.isCurrent ? 'border-primary/40' : 'opacity-60'"
         >
           <!-- Period header -->
-          <div class="flex items-center justify-between">
-            <p class="text-sm font-semibold">{{ stat.period.label }}</p>
-            <span v-if="stat.isCurrent" class="text-[10px] font-semibold uppercase tracking-wide text-primary">
-              {{ t('payroll.overview_current') }}
-            </span>
-          </div>
+          <p class="text-sm font-semibold">{{ stat.period.label }}</p>
           <p class="text-xs text-muted-foreground">{{ stat.period.from }} – {{ stat.period.to }}</p>
 
           <!-- Empty state -->
@@ -250,6 +271,77 @@ async function doExport(force = false) {
             </div>
           </template>
         </div>
+
+        <!-- Previous months (collapsible) -->
+        <Accordion
+          v-if="previousMonthGroups.length"
+          type="multiple"
+          class="space-y-1"
+        >
+          <AccordionItem
+            v-for="group in previousMonthGroups"
+            :key="group.monthKey"
+            :value="group.monthKey"
+            class="rounded-lg border px-3"
+          >
+            <AccordionTrigger class="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+              {{ group.label }}
+            </AccordionTrigger>
+            <AccordionContent class="pb-3 space-y-3">
+              <div
+                v-for="stat in group.stats"
+                :key="stat.period.from"
+                class="rounded-lg border px-4 py-3 bg-card space-y-2"
+              >
+                <p class="text-sm font-semibold">{{ stat.period.label }}</p>
+                <p class="text-xs text-muted-foreground">{{ stat.period.from }} – {{ stat.period.to }}</p>
+
+                <p v-if="stat.totalEntries === 0" class="text-xs text-muted-foreground italic">
+                  {{ t('payroll.overview_no_entries') }}
+                </p>
+
+                <template v-else>
+                  <p class="text-xs text-muted-foreground">
+                    {{ t('payroll.overview_employees', { count: stat.employeeCount }) }}
+                    · {{ t('payroll.overview_entries', { count: stat.totalEntries }) }}
+                  </p>
+                  <div class="flex gap-2 flex-wrap">
+                    <Badge v-if="stat.pendingCount > 0" variant="secondary" class="text-xs">
+                      {{ t('payroll.pending_entries', { count: stat.pendingCount }) }}
+                    </Badge>
+                    <Badge v-if="stat.approvedCount > 0" variant="outline" class="text-xs">
+                      ✓ {{ stat.approvedCount }} {{ t('status.approved').toLowerCase() }}
+                    </Badge>
+                  </div>
+                  <div class="pt-1 space-y-1 border-t">
+                    <div
+                      v-for="row in stat.projectRows"
+                      :key="row.project"
+                      class="flex items-center justify-between text-xs"
+                    >
+                      <span class="truncate pr-2 text-foreground">
+                        {{ row.project || t('payroll.overview_no_project') }}
+                      </span>
+                      <span class="tabular-nums text-muted-foreground shrink-0">
+                        <template v-if="row.hours > 0">{{ row.hours.toFixed(1) }}h</template>
+                        <template v-if="row.hours > 0 && row.km > 0"> · </template>
+                        <template v-if="row.km > 0">{{ row.km }} km</template>
+                      </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs font-semibold pt-1 border-t">
+                      <span>{{ t('payroll.overview_total') }}</span>
+                      <span class="tabular-nums">
+                        <template v-if="stat.totalHours > 0">{{ stat.totalHours.toFixed(1) }}h</template>
+                        <template v-if="stat.totalHours > 0 && stat.totalKm > 0"> · </template>
+                        <template v-if="stat.totalKm > 0">{{ stat.totalKm }} km</template>
+                      </span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
 

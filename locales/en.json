@@ -377,5 +377,7 @@
   "payroll.overview_no_project": "No project",
   "payroll.overview_no_entries": "No entries in this period yet",
   "payroll.overview_total": "Total",
-  "payroll.overview_current": "Current"
+  "payroll.overview_current": "Current",
+  "payroll.draft_count": "{count} payroll drafts this month",
+  "payroll.previous_periods": "Previous months"
 }

@@ -377,5 +377,7 @@
   "payroll.overview_no_entries": "Inga poster för perioden ännu",
   "payroll.overview_total": "Totalt",
   "payroll.overview_current": "Pågående",
-  "chat.guidance": "Ange datum, tid och projekt — t.ex. «15.4 8–16 Projekt Alpha». För körsträcka lägg till km — t.ex. «15.4 körde 45 km till kund»."
+  "chat.guidance": "Ange datum, tid och projekt — t.ex. «15.4 8–16 Projekt Alpha». För körsträcka lägg till km — t.ex. «15.4 körde 45 km till kund».",
+  "payroll.draft_count": "{count} löneutkast denna månad",
+  "payroll.previous_periods": "Tidigare månader"
 }

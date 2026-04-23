@@ -377,5 +377,7 @@
   "payroll.overview_no_project": "Ei projektia",
   "payroll.overview_no_entries": "Ei kirjauksia tällä jaksolla",
   "payroll.overview_total": "Yhteensä",
-  "payroll.overview_current": "Käynnissä"
+  "payroll.overview_current": "Käynnissä",
+  "payroll.draft_count": "{count} palkkajaksoa tässä kuussa",
+  "payroll.previous_periods": "Aiemmat kuukaudet"
 }

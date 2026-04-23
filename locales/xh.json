@@ -377,5 +377,7 @@
   "payroll.overview_no_entries": "Azikho izingeniso kulo mxhelo",
   "payroll.overview_total": "Isicelo",
   "payroll.overview_current": "Yangoku",
-  "chat.guidance": "Faka umhla, ixesha kunye nephrojekthi — umz. «15.4 8–16 Iphrojekthi Alpha». Yezo izimayile faka km — umz. «15.4 ndaqhuba 45 km ukuya kumthengi»."
+  "chat.guidance": "Faka umhla, ixesha kunye nephrojekthi — umz. «15.4 8–16 Iphrojekthi Alpha». Yezo izimayile faka km — umz. «15.4 ndaqhuba 45 km ukuya kumthengi».",
+  "payroll.draft_count": "{count} iimvulophi zomvuzo kule nyanga",
+  "payroll.previous_periods": "Iinyanga ezidlulileyo"
 }
