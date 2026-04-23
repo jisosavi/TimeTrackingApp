@@ -34,6 +34,7 @@ type LockoutType = 'cooldown' | 'locked' | null
 const lockoutType = ref<LockoutType>(null)
 const lockoutSeconds = ref(0)
 let lockoutTimer: ReturnType<typeof setInterval> | null = null
+let lockoutUntilMs = 0
 
 function getDeviceId(): string {
   const key = `salaxy_device_id_${slug}`
@@ -47,15 +48,18 @@ function getDeviceId(): string {
 
 function startCooldown(seconds: number) {
   lockoutType.value = 'cooldown'
+  lockoutUntilMs = Date.now() + Math.max(0, seconds) * 1000
   lockoutSeconds.value = Math.max(0, seconds)
   if (lockoutTimer) clearInterval(lockoutTimer)
   lockoutTimer = setInterval(() => {
-    lockoutSeconds.value--
-    if (lockoutSeconds.value <= 0) {
+    const remaining = Math.ceil((lockoutUntilMs - Date.now()) / 1000)
+    if (remaining <= 0) {
       clearInterval(lockoutTimer!)
       lockoutTimer = null
       lockoutType.value = null
       lockoutSeconds.value = 0
+    } else {
+      lockoutSeconds.value = remaining
     }
   }, 1000)
 }
@@ -169,7 +173,7 @@ async function submit() {
     error.value = (e as Error).message
     if (isPinLogin.value) {
       triggerShake()
-      setTimeout(() => clearPin(), 300)
+      setTimeout(() => { pin.value = '' }, 300)
       announcement.value = t('login.error_wrong_pin')
     }
   } finally {

@@ -391,5 +391,6 @@
   "login.locked_message": "Your login has been locked. Please contact your company admin to unlock your account.",
   "login.error_last_attempt": "Wrong PIN. 1 attempt left before temporary lockout.",
   "admin.pin_locked_badge": "Locked",
-  "admin.pin_unlock": "Unlock"
+  "admin.pin_unlock": "Unlock",
+  "admin.pin_temp_locked_badge": "Cooling down"
 }

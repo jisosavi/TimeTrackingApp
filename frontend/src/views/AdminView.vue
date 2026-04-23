@@ -360,6 +360,9 @@ async function submitAddForm() {
             <Badge v-if="r.data.pin_locked" variant="destructive" class="text-[10px]">
               {{ t('admin.pin_locked_badge') }}
             </Badge>
+            <Badge v-else-if="r.data.pin_temp_locked" variant="secondary" class="text-[10px] text-amber-600 dark:text-amber-400">
+              {{ t('admin.pin_temp_locked_badge') }}
+            </Badge>
             <Badge :variant="r.data.active ? 'default' : 'outline'" class="text-[10px]">
               {{ r.data.active ? t('admin.active') : t('admin.inactive') }}
             </Badge>
@@ -438,6 +441,9 @@ async function submitAddForm() {
             <Badge variant="secondary" class="text-[10px]">{{ t('admin.team_badge', { count: r.data.team_size }) }}</Badge>
             <Badge v-if="r.data.pin_locked" variant="destructive" class="text-[10px]">
               {{ t('admin.pin_locked_badge') }}
+            </Badge>
+            <Badge v-else-if="r.data.pin_temp_locked" variant="secondary" class="text-[10px] text-amber-600 dark:text-amber-400">
+              {{ t('admin.pin_temp_locked_badge') }}
             </Badge>
             <Badge :variant="r.data.active ? 'default' : 'outline'" class="text-[10px]">
               {{ r.data.active ? t('admin.active') : t('admin.inactive') }}

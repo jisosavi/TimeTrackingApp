@@ -10,6 +10,14 @@ $db    = getDb();
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
         'SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.pin, s.ssn, s.salaxy_id, s.active, s.ui_language, s.pin_locked,
+                CASE WHEN EXISTS(
+                  SELECT 1 FROM pin_rate_limit prl
+                  WHERE prl.last_employee_id = s.id
+                    AND prl.last_employee_type = \'supervisor\'
+                    AND prl.locked = 0
+                    AND prl.locked_until IS NOT NULL
+                    AND prl.locked_until > CAST(strftime(\'%s\',\'now\') AS INTEGER)
+                ) THEN 1 ELSE 0 END AS pin_temp_locked,
                 COUNT(se.employee_id) AS team_size
          FROM supervisors s
          LEFT JOIN supervisor_employees se ON se.supervisor_id = s.id

@@ -391,5 +391,6 @@
   "login.locked_message": "Din inloggning är låst. Kontakta din företagsadmin för att låsa upp kontot.",
   "login.error_last_attempt": "Fel PIN. 1 försök kvar innan tillfällig låsning.",
   "admin.pin_locked_badge": "Låst",
-  "admin.pin_unlock": "Lås upp"
+  "admin.pin_unlock": "Lås upp",
+  "admin.pin_temp_locked_badge": "Avkylning"
 }

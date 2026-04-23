@@ -391,5 +391,6 @@
   "login.locked_message": "Kirjautumisesi on lukittu. Ota yhteyttä yrityksen pääkäyttäjään tilin avaamiseksi.",
   "login.error_last_attempt": "Väärä PIN. 1 yritys jäljellä ennen väliaikaista lukitusta.",
   "admin.pin_locked_badge": "Lukittu",
-  "admin.pin_unlock": "Avaa lukitus"
+  "admin.pin_unlock": "Avaa lukitus",
+  "admin.pin_temp_locked_badge": "Jäähtymisaika"
 }

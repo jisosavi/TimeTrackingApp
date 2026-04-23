@@ -11,6 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
         "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
                 e.email, e.phone, e.birth_year, e.pin_locked,
+           CASE WHEN EXISTS(
+             SELECT 1 FROM pin_rate_limit prl
+             WHERE prl.last_employee_id = e.id
+               AND prl.last_employee_type = 'employee'
+               AND prl.locked = 0
+               AND prl.locked_until IS NOT NULL
+               AND prl.locked_until > CAST(strftime('%s','now') AS INTEGER)
+           ) THEN 1 ELSE 0 END AS pin_temp_locked,
            COALESCE((
              SELECT ROUND(SUM(te.hours), 1)
              FROM time_entries te

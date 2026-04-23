@@ -391,5 +391,6 @@
   "login.locked_message": "Teie sisselogimine on lukustatud. Konto avamiseks pöörduge ettevõtte administraatori poole.",
   "login.error_last_attempt": "Vale PIN. 1 katse jäänud enne ajutist lukustust.",
   "admin.pin_locked_badge": "Lukustatud",
-  "admin.pin_unlock": "Ava lukustus"
+  "admin.pin_unlock": "Ava lukustus",
+  "admin.pin_temp_locked_badge": "Jahutusaeg"
 }

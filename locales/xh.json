@@ -391,5 +391,6 @@
   "login.locked_message": "Ukungena kwakho kuvaliwe. Nceda uqhagamshelane nomphathi webhizinisi wakho ukuvula i-akhawunti.",
   "login.error_last_attempt": "Inombolo ye-PIN engalunganga. 1 izama zisele ngaphambi kokuvala okwexeshana.",
   "admin.pin_locked_badge": "Ivaliwe",
-  "admin.pin_unlock": "Vula"
+  "admin.pin_unlock": "Vula",
+  "admin.pin_temp_locked_badge": "Iyapholisa"
 }

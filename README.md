@@ -16,6 +16,7 @@ Support for multiple UI languages, easy to add more locales when needed.
 
 ### Very Easy Login and Time Entry
 - **Kiosk PIN Pad**: Full-viewport numeric keypad with live clock — works on a shared tablet behind a counter, a phone in portrait, or any browser. Physical keyboard fully supported.
+- **Brute-Force Protection**: PIN login is rate-limited per device and per company. Three failed attempts within 60 seconds trigger a 5-minute cooldown shown on screen. A second failure chain after the cooldown permanently locks the account — only a company admin can unlock it.
 - **Voice & Text Input**: Employees log hours using conversational AI (text or speech)
 - **Smart Interpretation**: AI understands natural language entries like "worked 8 hours on client project today"
 - **Preview & Confirm**: AI parses the entry and shows an editable preview card before saving — employees can adjust date, hours, project, or notes before confirming
@@ -77,6 +78,7 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 **Company admin** (`/{slug}/admin/`)
 - Four nav tabs: **Export Payroll** (default landing), **Personnel**, **Approvals**, **Settings**
 - Manage employees and supervisors: add, edit, deactivate, reset PIN, set UI language per person
+- Personnel list shows PIN lock status inline: **Locked** (red badge) for permanently locked accounts and **Cooling down** (amber badge) for accounts in a temporary rate-limit cooldown — each has an **Unlock** button to clear the lock and reset the device rate limit
 - Manage teams: assign employees to supervisors
 - Sync employees from Salaxy with one click — new employees are imported, existing ones updated
 - Payroll dashboard: period summary cards (current month + collapsible previous months), export approved entries to Salaxy with one click
@@ -297,6 +299,7 @@ npm run lint         # ESLint + Oxlint
 │   ├── create_company.php                # Create company + admin account
 │   ├── employees.php                     # CRUD for employees
 │   ├── supervisors.php                   # CRUD for supervisors
+│   ├── pin_rate_limit.php                # PIN brute-force protection helpers (rate limit, cooldown, lock/unlock)
 │   ├── supervisor_login.php              # Supervisor PIN login → JWT
 │   ├── supervisor_team.php               # Supervisor ↔ employee assignments
 │   ├── time_entries.php                  # Time entry read/write/delete

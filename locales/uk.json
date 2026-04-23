@@ -391,5 +391,6 @@
   "login.locked_message": "Ваш вхід заблоковано. Зверніться до адміністратора компанії для розблокування.",
   "login.error_last_attempt": "Невірний PIN. Залишилася 1 спроба перед тимчасовим блокуванням.",
   "admin.pin_locked_badge": "Заблоковано",
-  "admin.pin_unlock": "Розблокувати"
+  "admin.pin_unlock": "Розблокувати",
+  "admin.pin_temp_locked_badge": "Охолодження"
 }
