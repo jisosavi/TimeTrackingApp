@@ -42,10 +42,13 @@ onMounted(async () => {
   const type = auth.user?.type
   if (type === 'admin' || type === 'supervisor') {
     try {
-      const data = await apiFetch<{ entries: { status: string }[] }>('/api/time_entries.php')
-      pendingCount.value = data.entries.filter(
-        e => e.status === 'pending' || e.status === 'clarified',
-      ).length
+      const data = await apiFetch<{ entries: { status: string; km_status: string | null; hours: number; km: number }[] }>('/api/time_entries.php')
+      pendingCount.value = data.entries.reduce((n, e) => {
+        const isPending = (s: string | null) => s === 'pending' || s === 'clarified'
+        const dual = e.hours > 0 && e.km > 0
+        if (dual) return n + (isPending(e.status) ? 1 : 0) + (isPending(e.km_status) ? 1 : 0)
+        return n + (isPending(e.status) ? 1 : 0)
+      }, 0)
     } catch {}
   }
 })
