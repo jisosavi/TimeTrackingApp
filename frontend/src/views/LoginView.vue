@@ -29,10 +29,14 @@ const loading = ref(false)
 const shaking = ref(false)
 const announcement = ref('')
 
-function formatClock() {
+function formatTime() {
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
 }
-const clockStr = ref(formatClock())
+function formatDate() {
+  return new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
+}
+const clockStr = ref(formatTime())
+const dateStr = ref(formatDate())
 let clockInterval: ReturnType<typeof setInterval> | null = null
 
 const isPinLogin = computed(() => loginType === 'employee' || loginType === 'supervisor')
@@ -52,7 +56,10 @@ const companyName = computed(() =>
 )
 
 onMounted(() => {
-  clockInterval = setInterval(() => { clockStr.value = formatClock() }, 30000)
+  clockInterval = setInterval(() => {
+    clockStr.value = formatTime()
+    dateStr.value = formatDate()
+  }, 30000)
   if (isPinLogin.value) window.addEventListener('keydown', onGlobalKeydown)
 })
 
@@ -216,6 +223,7 @@ async function loginWithPassword() {
       <p v-if="companyName" class="text-lg font-semibold tracking-tight">{{ companyName }}</p>
       <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
       <p class="text-3xl font-mono tabular-nums text-muted-foreground/50 pt-1">{{ clockStr }}</p>
+      <p class="text-sm text-muted-foreground/50">{{ dateStr }}</p>
     </header>
 
     <!-- PIN dots -->
