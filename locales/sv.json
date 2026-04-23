@@ -384,5 +384,6 @@
   "payroll.section_export": "Exportera lönedata",
   "payroll_settings.company_salaxy_id_label": "Företagets Salaxy-ID",
   "payroll_settings.company_salaxy_id_note": "Endast superadmins kan redigera detta ID.",
-  "admin.pending_approvals": "{count} godkännanden väntar"
+  "admin.pending_approvals": "{count} godkännanden väntar",
+  "payroll.approved_count": "{count} godkänd"
 }

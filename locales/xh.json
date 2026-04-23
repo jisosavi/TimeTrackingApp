@@ -384,5 +384,6 @@
   "payroll.section_export": "Thumela idatha yomvuzo",
   "payroll_settings.company_salaxy_id_label": "I-ID yeSalaxy yenkampani",
   "payroll_settings.company_salaxy_id_note": "Abasebenzisi abaphezulu kuphela banokulungisa le ID.",
-  "admin.pending_approvals": "{count} iimvume ezilindileyo"
+  "admin.pending_approvals": "{count} iimvume ezilindileyo",
+  "payroll.approved_count": "{count} ivunyiwe"
 }

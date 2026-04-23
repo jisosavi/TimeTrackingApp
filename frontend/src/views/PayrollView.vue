@@ -335,7 +335,7 @@ async function doExport(force = false) {
                 {{ t('payroll.pending_entries', { count: stat.pendingCount }) }}
               </Badge>
               <Badge v-if="stat.approvedCount > 0" variant="outline" class="text-xs">
-                ✓ {{ stat.approvedCount }} {{ t('status.approved').toLowerCase() }}
+                {{ t('payroll.approved_count', { count: stat.approvedCount }) }}
               </Badge>
             </div>
             <div class="pt-1 space-y-1 border-t">
@@ -401,7 +401,7 @@ async function doExport(force = false) {
                       {{ t('payroll.pending_entries', { count: stat.pendingCount }) }}
                     </Badge>
                     <Badge v-if="stat.approvedCount > 0" variant="outline" class="text-xs">
-                      ✓ {{ stat.approvedCount }} {{ t('status.approved').toLowerCase() }}
+                      {{ t('payroll.approved_count', { count: stat.approvedCount }) }}
                     </Badge>
                   </div>
                   <div class="pt-1 space-y-1 border-t">

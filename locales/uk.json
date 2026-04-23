@@ -384,5 +384,6 @@
   "payroll.section_export": "Експорт даних нарахувань",
   "payroll_settings.company_salaxy_id_label": "Salaxy ID компанії",
   "payroll_settings.company_salaxy_id_note": "Лише суперадміни можуть редагувати цей ID.",
-  "admin.pending_approvals": "{count} підтверджень очікується"
+  "admin.pending_approvals": "{count} підтверджень очікується",
+  "payroll.approved_count": "{count} підтверджено"
 }
