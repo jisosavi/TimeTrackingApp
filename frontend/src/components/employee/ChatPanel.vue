@@ -200,7 +200,7 @@ function formatMessage(text: string) {
             </div>
           </div>
         </CardContent>
-        <CardFooter class="flex gap-2 pt-0">
+        <CardFooter class="flex gap-2 border-t-0 bg-transparent pt-2">
           <Button size="sm" :disabled="loading" @click="handleConfirm">
             {{ t('employee.preview_confirm') }}
           </Button>
