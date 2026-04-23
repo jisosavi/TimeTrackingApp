@@ -383,5 +383,6 @@
   "payroll.section_payrolls": "Payrolls",
   "payroll.section_export": "Export Payroll Data",
   "payroll_settings.company_salaxy_id_label": "Company Salaxy ID",
-  "payroll_settings.company_salaxy_id_note": "Only super-admins can edit this ID."
+  "payroll_settings.company_salaxy_id_note": "Only super-admins can edit this ID.",
+  "admin.pending_approvals": "{count} approvals pending"
 }

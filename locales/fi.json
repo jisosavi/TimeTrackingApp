@@ -383,5 +383,6 @@
   "payroll.section_payrolls": "Palkkajaksot",
   "payroll.section_export": "Vie palkkadata",
   "payroll_settings.company_salaxy_id_label": "Yrityksen Salaxy-tunnus",
-  "payroll_settings.company_salaxy_id_note": "Vain pääkäyttäjät voivat muokata tätä tunnusta."
+  "payroll_settings.company_salaxy_id_note": "Vain pääkäyttäjät voivat muokata tätä tunnusta.",
+  "admin.pending_approvals": "{count} hyväksyntää odottaa"
 }

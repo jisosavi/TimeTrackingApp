@@ -207,7 +207,7 @@ async function loginWithPassword() {
   if (isSuperAdmin) {
     router.push({ name: 'superadmin-dashboard' })
   } else {
-    router.push({ name: 'admin-dashboard', params: { slug } })
+    router.push({ name: 'admin-payroll-summary', params: { slug } })
   }
 }
 </script>

@@ -23,6 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                AND te.status IN ('pending', 'clarified')
            ), 0) AS pending_km,
            COALESCE((
+             SELECT COUNT(*)
+             FROM time_entries te
+             WHERE te.employee_id = e.id
+               AND te.status IN ('pending', 'clarified')
+           ), 0) AS pending_count,
+           COALESCE((
              SELECT ROUND(SUM(te.hours), 1)
              FROM time_entries te
              WHERE te.employee_id = e.id

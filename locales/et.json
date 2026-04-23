@@ -383,5 +383,6 @@
   "payroll.section_payrolls": "Palgaarvestused",
   "payroll.section_export": "Ekspordi palgaandmed",
   "payroll_settings.company_salaxy_id_label": "Ettevõtte Salaxy ID",
-  "payroll_settings.company_salaxy_id_note": "Ainult superadministraatorid saavad seda ID-d muuta."
+  "payroll_settings.company_salaxy_id_note": "Ainult superadministraatorid saavad seda ID-d muuta.",
+  "admin.pending_approvals": "{count} kinnitust ootab"
 }

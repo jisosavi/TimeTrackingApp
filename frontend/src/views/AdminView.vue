@@ -53,14 +53,7 @@ function empFirstNames(name: string): string {
   return parts.length >= 2 ? parts.slice(0, -1).join(' ') : ''
 }
 
-function infoLine(fields: (string | null | undefined)[]): string {
-  return fields.filter(Boolean).join(' · ')
-}
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return `${d}.${m}.${y}`
-}
 
 // ── Unified list ──────────────────────────────────────────────────────────────
 type PersonRow = { kind: 'employee'; data: Employee } | { kind: 'supervisor'; data: Supervisor }
@@ -331,19 +324,11 @@ async function submitAddForm() {
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <RouterLink
-              v-if="r.data.pending_hours > 0"
+              v-if="r.data.pending_count > 0"
               :to="{ name: 'supervisor-home', params: { slug: auth.user?.companySlug }, query: { employee: r.data.id } }"
             >
               <Badge variant="secondary" class="text-[10px] cursor-pointer hover:opacity-80">
-                {{ r.data.pending_hours }}{{ t('admin.hours_pending') }}
-              </Badge>
-            </RouterLink>
-            <RouterLink
-              v-if="r.data.pending_km > 0"
-              :to="{ name: 'supervisor-home', params: { slug: auth.user?.companySlug }, query: { employee: r.data.id } }"
-            >
-              <Badge variant="secondary" class="text-[10px] cursor-pointer hover:opacity-80">
-                {{ r.data.pending_km }} {{ t('admin.km_pending') }}
+                {{ t('admin.pending_approvals', { count: r.data.pending_count }) }}
               </Badge>
             </RouterLink>
             <Badge :variant="r.data.active ? 'default' : 'outline'" class="text-[10px]">
@@ -354,9 +339,6 @@ async function submitAddForm() {
             </Button>
           </div>
         </div>
-        <p class="text-xs text-muted-foreground mt-0.5">
-          {{ t('admin.this_period_hours', { hours: r.data.hours_this_period }) }}<template v-if="r.data.last_entry_at"> · {{ t('admin.last_entry_date', { date: formatDate(r.data.last_entry_at) }) }}</template>
-        </p>
 
         <!-- Employee inline edit -->
         <div v-if="editingEmpId === r.data.id" class="space-y-3 pt-2 mt-2 border-t">
@@ -420,9 +402,6 @@ async function submitAddForm() {
             </Badge>
           </div>
         </div>
-        <p class="text-xs text-muted-foreground mt-0.5">
-          {{ infoLine([r.data.email, r.data.phone, r.data.pin ? 'PIN: ' + r.data.pin : null]) }}
-        </p>
 
         <div class="flex gap-2 flex-wrap mt-2">
           <Button variant="outline" size="sm" class="h-7 text-xs" @click="openEditSup(r.data.id)">
