@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChat } from '@/composables/useChat'
-import { useTimeEntries } from '@/composables/useTimeEntries'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,15 +15,10 @@ const { t } = useI18n({ useScope: 'global' })
 const emit = defineEmits<{ entriesSaved: [] }>()
 
 const { history, loading, send, reset, pendingPreview, confirmPreview, cancelPreview } = useChat()
-const { entries, fetchEntries } = useTimeEntries()
 const auth = useAuthStore()
 const inputText = ref('')
 const chatEl = ref<HTMLElement | null>(null)
 const isListening = ref(false)
-
-onMounted(fetchEntries)
-
-const recentEntries = computed(() => entries.value.slice(0, 3))
 
 // ── Preview state ─────────────────────────────────────────────────────────────
 interface PreviewRow { date: string; hours: string; project: string; notes: string }
@@ -121,10 +115,6 @@ function formatMessage(text: string) {
   return text.replace(/```json[\s\S]*?```/g, '').trim()
 }
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return `${d}.${m}.${y}`
-}
 </script>
 
 <template>
@@ -210,7 +200,7 @@ function formatDate(iso: string): string {
     </div>
 
     <!-- Input strip -->
-    <div class="border-t pt-3 space-y-2">
+    <div class="pt-2 space-y-2">
       <Textarea
         v-model="inputText"
         :placeholder="t('chat.placeholder')"
@@ -221,36 +211,18 @@ function formatDate(iso: string): string {
       <div class="flex gap-2 justify-end">
         <Button
           variant="outline"
-          size="sm"
           :class="isListening ? 'text-destructive border-destructive' : ''"
           @click="startVoice"
         >
           {{ isListening ? `● ${t('chat.listening')}` : '🎤 Voice' }}
         </Button>
-        <Button variant="ghost" size="sm" @click="reset">{{ t('common.cancel') }}</Button>
-        <Button size="sm" :disabled="loading || !inputText.trim()" @click="submit">
+        <Button variant="ghost" @click="reset">{{ t('common.cancel') }}</Button>
+        <Button :disabled="loading || !inputText.trim()" @click="submit">
           {{ t('chat.send_button') }}
         </Button>
       </div>
     </div>
 
     <!-- 3 most recent entries -->
-    <div v-if="recentEntries.length" class="border-t pt-2 pb-1">
-      <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-        {{ t('employee.recent_title') }}
-      </p>
-      <div
-        v-for="entry in recentEntries"
-        :key="entry.id"
-        class="flex items-center gap-2 text-xs text-muted-foreground py-0.5"
-      >
-        <span class="w-16 shrink-0 tabular-nums">{{ formatDate(entry.entry_date) }}</span>
-        <span class="flex-1 truncate">{{ entry.project ?? '–' }}</span>
-        <span class="shrink-0 tabular-nums">
-          {{ [entry.hours > 0 ? entry.hours + 'h' : '', entry.km > 0 ? entry.km + 'km' : ''].filter(Boolean).join(' · ') }}
-        </span>
-      </div>
-    </div>
-
   </div>
 </template>

@@ -75,12 +75,19 @@ const navLinks = computed(() => {
 })
 
 async function logout() {
+  const user = auth.user
+  const slug = user?.companySlug
+
   await fetch('/api/logout.php', {
     method: 'POST',
     headers: { Authorization: `Bearer ${auth.token}` },
   }).catch(() => {})
   auth.clearAuth()
-  router.push('/admin')
+
+  if (user?.type === 'employee')        router.push(`/${slug}`)
+  else if (user?.type === 'supervisor') router.push(`/${slug}/approval`)
+  else if (user?.type === 'admin')      router.push(`/${slug}/admin`)
+  else                                  router.push('/admin')
 }
 </script>
 
@@ -89,15 +96,12 @@ async function logout() {
     <header class="border-b sticky top-0 bg-background z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <img src="/salaxy-logo.png" alt="Salaxy" class="h-8" />
+          <img src="/salaxy-logo.png" alt="Salaxy" class="h-8 w-auto" />
           <span v-if="auth.user?.type === 'admin'" class="text-sm font-medium text-foreground">
             {{ companyDisplayName }}
           </span>
         </div>
         <div class="flex items-center gap-3">
-          <span v-if="auth.user?.type === 'employee'" class="text-sm text-muted-foreground">
-            {{ auth.user?.name }}
-          </span>
           <select
             :value="auth.user?.uiLanguage ?? 'en'"
             class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
@@ -112,6 +116,13 @@ async function logout() {
         </div>
       </div>
     </header>
+
+    <!-- Employee name above tab selector -->
+    <div v-if="auth.user?.type === 'employee'" class="border-b bg-background">
+      <p class="max-w-4xl mx-auto px-4 py-2 text-sm font-medium text-center text-foreground">
+        {{ auth.user?.name }}
+      </p>
+    </div>
 
     <div v-if="navLinks.length > 1" class="border-b bg-background">
       <nav class="max-w-4xl mx-auto px-4 flex gap-1 h-10 items-center">

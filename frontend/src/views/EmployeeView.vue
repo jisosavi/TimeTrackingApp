@@ -31,10 +31,10 @@ function onEntriesSaved() {
 
 <template>
   <Tabs v-model="activeTab" class="w-full">
-    <TabsList class="grid w-full grid-cols-3 mb-4">
-      <TabsTrigger value="chat">{{ t('nav.log_hours') }}</TabsTrigger>
-      <TabsTrigger value="entries">{{ t('nav.my_entries') }}</TabsTrigger>
-      <TabsTrigger value="rejected" class="gap-1.5">
+    <TabsList class="grid w-full grid-cols-3 mb-4 h-12">
+      <TabsTrigger value="chat" class="text-sm py-3">{{ t('nav.log_hours') }}</TabsTrigger>
+      <TabsTrigger value="entries" class="text-sm py-3">{{ t('nav.my_entries') }}</TabsTrigger>
+      <TabsTrigger value="rejected" class="gap-1.5 text-sm py-3">
         {{ t('nav.rejected_tab') }}
         <Badge v-if="rejectedCount > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
           {{ rejectedCount }}
