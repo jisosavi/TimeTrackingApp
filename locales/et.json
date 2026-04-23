@@ -240,7 +240,7 @@
   "admin.sup_pin_placeholder": "Nõutud uutele",
   "admin.first_name_label": "Eesnimi",
   "admin.last_name_label": "Perekonnanimi",
-  "payroll.title": "Palk",
+  "payroll.title": "Palgaarvestuse ülevaade",
   "payroll.period_label": "Palgaperiood",
   "payroll.monthly": "Kord kuus",
   "payroll.biweekly": "Iga 2 nädala tagant",
@@ -379,5 +379,9 @@
   "payroll.overview_current": "Aktiivne",
   "chat.guidance": "Sisesta kuupäev, kellaaeg ja projekt — nt «15.4 8–16 Projekt Alpha». Kilometrite jaoks lisa km — nt «15.4 sõitsin 45 km kliendi juurde».",
   "payroll.draft_count": "{count} palgaperioodi sel kuul",
-  "payroll.previous_periods": "Eelmised kuud"
+  "payroll.previous_periods": "Eelmised kuud",
+  "payroll.section_payrolls": "Palgaarvestused",
+  "payroll.section_export": "Ekspordi palgaandmed",
+  "payroll_settings.company_salaxy_id_label": "Ettevõtte Salaxy ID",
+  "payroll_settings.company_salaxy_id_note": "Ainult superadministraatorid saavad seda ID-d muuta."
 }

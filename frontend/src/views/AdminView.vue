@@ -281,7 +281,7 @@ async function submitAddForm() {
 
 <template>
   <div class="space-y-4">
-    <h2 class="text-lg font-semibold">{{ t('admin.dashboard_title') }}</h2>
+    <h2 class="text-lg font-semibold">{{ t('admin.employees_title') }}</h2>
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <!-- Top action bar -->

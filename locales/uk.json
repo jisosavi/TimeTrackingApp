@@ -240,7 +240,7 @@
   "admin.sup_pin_placeholder": "Обов'язково для нових",
   "admin.first_name_label": "Ім'я",
   "admin.last_name_label": "Прізвище",
-  "payroll.title": "Зарплата",
+  "payroll.title": "Панель нарахувань",
   "payroll.period_label": "Платіжний період",
   "payroll.monthly": "Раз на місяць",
   "payroll.biweekly": "Кожні 2 тижні",
@@ -379,5 +379,9 @@
   "payroll.overview_current": "Поточний",
   "chat.guidance": "Введіть дату, час і проект — напр. «15.4 8–16 Проект Альфа». Для кілометражу додайте км — напр. «15.4 проїхав 45 км до клієнта».",
   "payroll.draft_count": "{count} розрахункових периодів цього місяця",
-  "payroll.previous_periods": "Попередні місяці"
+  "payroll.previous_periods": "Попередні місяці",
+  "payroll.section_payrolls": "Розрахункові відомості",
+  "payroll.section_export": "Експорт даних нарахувань",
+  "payroll_settings.company_salaxy_id_label": "Salaxy ID компанії",
+  "payroll_settings.company_salaxy_id_note": "Лише суперадміни можуть редагувати цей ID."
 }

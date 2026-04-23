@@ -8,10 +8,10 @@ $db    = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        'SELECT payroll_period, payday_1, payday_2, payroll_settings_updated_at FROM companies WHERE id = :id'
+        'SELECT payroll_period, payday_1, payday_2, payroll_settings_updated_at, salaxy_company_id FROM companies WHERE id = :id'
     );
     $stmt->execute([':id' => $admin['company_id']]);
-    $row = $stmt->fetch() ?: ['payroll_period' => 'monthly', 'payday_1' => 15, 'payday_2' => 0, 'payroll_settings_updated_at' => null];
+    $row = $stmt->fetch() ?: ['payroll_period' => 'monthly', 'payday_1' => 15, 'payday_2' => 0, 'payroll_settings_updated_at' => null, 'salaxy_company_id' => null];
     sendJson(['success' => true, 'settings' => $row]);
 }
 

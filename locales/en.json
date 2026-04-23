@@ -241,7 +241,7 @@
   "admin.sup_pin_placeholder": "Required for new",
   "admin.first_name_label": "First Name",
   "admin.last_name_label": "Last Name",
-  "payroll.title": "Payroll",
+  "payroll.title": "Payroll Dashboard",
   "payroll.period_label": "Period",
   "payroll.monthly": "Once a month",
   "payroll.biweekly": "Fortnightly",
@@ -379,5 +379,9 @@
   "payroll.overview_total": "Total",
   "payroll.overview_current": "Current",
   "payroll.draft_count": "{count} payroll drafts this month",
-  "payroll.previous_periods": "Previous months"
+  "payroll.previous_periods": "Previous months",
+  "payroll.section_payrolls": "Payrolls",
+  "payroll.section_export": "Export Payroll Data",
+  "payroll_settings.company_salaxy_id_label": "Company Salaxy ID",
+  "payroll_settings.company_salaxy_id_note": "Only super-admins can edit this ID."
 }

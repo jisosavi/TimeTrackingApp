@@ -240,7 +240,7 @@
   "admin.sup_pin_placeholder": "Krävs för nya",
   "admin.first_name_label": "Förnamn",
   "admin.last_name_label": "Efternamn",
-  "payroll.title": "Lön",
+  "payroll.title": "Lönedashboard",
   "payroll.period_label": "Löneperiod",
   "payroll.monthly": "En gång i månaden",
   "payroll.biweekly": "Varannan vecka",
@@ -379,5 +379,9 @@
   "payroll.overview_current": "Pågående",
   "chat.guidance": "Ange datum, tid och projekt — t.ex. «15.4 8–16 Projekt Alpha». För körsträcka lägg till km — t.ex. «15.4 körde 45 km till kund».",
   "payroll.draft_count": "{count} löneutkast denna månad",
-  "payroll.previous_periods": "Tidigare månader"
+  "payroll.previous_periods": "Tidigare månader",
+  "payroll.section_payrolls": "Löneperioder",
+  "payroll.section_export": "Exportera lönedata",
+  "payroll_settings.company_salaxy_id_label": "Företagets Salaxy-ID",
+  "payroll_settings.company_salaxy_id_note": "Endast superadmins kan redigera detta ID."
 }

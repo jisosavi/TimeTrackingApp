@@ -196,44 +196,140 @@ async function doExport(force = false) {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-6">
     <h2 class="text-lg font-semibold">{{ t('payroll.title') }}</h2>
 
-    <!-- ── Current period summary ── -->
-    <div>
+    <!-- ── Section 1: Export Payroll Data ── -->
+    <div class="space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('payroll.section_export') }}</p>
+
+      <div class="rounded-lg border p-4 space-y-4 bg-card">
+        <div class="flex gap-3 flex-wrap items-end">
+          <div class="space-y-1">
+            <Label class="text-xs">{{ t('payroll.date_from_label') }}</Label>
+            <Input v-model="exportDateFrom" type="date" class="w-36" />
+          </div>
+          <div class="space-y-1">
+            <Label class="text-xs">{{ t('payroll.date_to_label') }}</Label>
+            <Input v-model="exportDateTo" type="date" class="w-36" />
+          </div>
+          <Button size="sm" :disabled="exportLoading || !exportDateFrom || !exportDateTo" @click="doFetchPreview">
+            {{ exportLoading && !exportPeriods.length ? t('payroll.fetching') : t('payroll.fetch_button') }}
+          </Button>
+        </div>
+
+        <p v-if="exportError" class="text-sm text-destructive">{{ exportError }}</p>
+
+        <!-- Periods accordion -->
+        <Accordion
+          v-if="exportPeriods.length"
+          v-model="accordionOpenItems"
+          type="multiple"
+          class="space-y-2"
+        >
+          <AccordionItem
+            v-for="period in exportPeriods"
+            :key="period.period_start"
+            :value="period.period_start"
+            class="rounded-lg border px-3"
+          >
+            <AccordionTrigger class="gap-2">
+              <span>{{ period.period_label }}</span>
+              <Badge
+                v-if="period.existing_payroll_id"
+                variant="outline"
+                class="text-[10px] normal-case ml-1"
+              >{{ t('payroll.previously_exported') }}</Badge>
+            </AccordionTrigger>
+            <AccordionContent class="pb-3">
+              <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
+                {{ t('payroll.no_entries_empty') }}
+              </p>
+              <div
+                v-for="emp in period.employees"
+                :key="emp.employee_id"
+                class="flex items-center gap-3 text-sm py-1 border-b last:border-0"
+              >
+                <input
+                  type="checkbox"
+                  :checked="exportSelectedIds.includes(emp.employee_id)"
+                  class="h-4 w-4"
+                  @change="toggleExportEmployee(emp.employee_id)"
+                />
+                <span class="flex-1">{{ emp.employee_name }}</span>
+                <span class="text-muted-foreground text-xs">
+                  {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
+                  <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
+                </span>
+                <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        <div v-if="exportPeriods.length" class="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            :disabled="exportLoading || exportPeriods.length === 0"
+            @click="doExport(false)"
+          >
+            {{ exportLoading ? t('payroll.exporting') : t('payroll.export_button') }}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="exportLoading || exportAllEmployeeIds.length === 0"
+            @click="doExport(true)"
+          >
+            {{ t('payroll.reexport_button') }}
+          </Button>
+        </div>
+
+        <div v-if="exportResult" class="rounded-md bg-muted p-3 text-sm space-y-1">
+          <p class="font-medium text-green-700">{{ t('payroll.export_complete') }}</p>
+          <p>{{ t('payroll.export_summary', { sent: exportResult.total_sent, added: exportResult.total_added, already: exportResult.total_already }) }}</p>
+          <p v-if="exportResult.errors > 0" class="text-destructive">{{ t('payroll.export_errors', { count: exportResult.errors }) }}</p>
+          <div v-for="payroll in exportResult.payrolls" :key="payroll.period_start">
+            <a :href="payroll.url" target="_blank" class="text-primary hover:underline text-xs">
+              {{ t('payroll.open_in_salaxy', { period: payroll.period_start }) }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 2: Payrolls ── -->
+    <div class="space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('payroll.section_payrolls') }}</p>
+
       <div v-if="settingsLoading" class="rounded-lg border px-4 py-3 bg-card text-sm text-muted-foreground">
         {{ t('common.loading') }}
       </div>
       <div v-else class="space-y-3">
         <!-- Month header with draft count -->
         <div class="flex items-baseline justify-between">
-          <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ currentMonthLabel }}</p>
+          <p class="text-xs font-semibold text-foreground">{{ currentMonthLabel }}</p>
           <p class="text-xs text-muted-foreground">{{ t('payroll.draft_count', { count: periodStats.length }) }}</p>
         </div>
 
-        <!-- Current month period cards (no highlighting) -->
+        <!-- Current month period cards -->
         <div
           v-for="stat in periodStats"
           :key="stat.period.from"
           class="rounded-lg border px-4 py-3 bg-card space-y-2"
         >
-          <!-- Period header -->
           <p class="text-sm font-semibold">{{ stat.period.label }}</p>
           <p class="text-xs text-muted-foreground">{{ stat.period.from }} – {{ stat.period.to }}</p>
 
-          <!-- Empty state -->
           <p v-if="stat.totalEntries === 0" class="text-xs text-muted-foreground italic">
             {{ t('payroll.overview_no_entries') }}
           </p>
 
           <template v-else>
-            <!-- Overview line -->
             <p class="text-xs text-muted-foreground">
               {{ t('payroll.overview_employees', { count: stat.employeeCount }) }}
               · {{ t('payroll.overview_entries', { count: stat.totalEntries }) }}
             </p>
-
-            <!-- Status badges -->
             <div class="flex gap-2 flex-wrap">
               <Badge v-if="stat.pendingCount > 0" variant="secondary" class="text-xs">
                 {{ t('payroll.pending_entries', { count: stat.pendingCount }) }}
@@ -242,24 +338,19 @@ async function doExport(force = false) {
                 ✓ {{ stat.approvedCount }} {{ t('status.approved').toLowerCase() }}
               </Badge>
             </div>
-
-            <!-- Project / cost-centre breakdown -->
             <div class="pt-1 space-y-1 border-t">
               <div
                 v-for="row in stat.projectRows"
                 :key="row.project"
                 class="flex items-center justify-between text-xs"
               >
-                <span class="truncate pr-2 text-foreground">
-                  {{ row.project || t('payroll.overview_no_project') }}
-                </span>
+                <span class="truncate pr-2 text-foreground">{{ row.project || t('payroll.overview_no_project') }}</span>
                 <span class="tabular-nums text-muted-foreground shrink-0">
                   <template v-if="row.hours > 0">{{ row.hours.toFixed(1) }}h</template>
                   <template v-if="row.hours > 0 && row.km > 0"> · </template>
                   <template v-if="row.km > 0">{{ row.km }} km</template>
                 </span>
               </div>
-              <!-- Total row -->
               <div class="flex items-center justify-between text-xs font-semibold pt-1 border-t">
                 <span>{{ t('payroll.overview_total') }}</span>
                 <span class="tabular-nums">
@@ -319,9 +410,7 @@ async function doExport(force = false) {
                       :key="row.project"
                       class="flex items-center justify-between text-xs"
                     >
-                      <span class="truncate pr-2 text-foreground">
-                        {{ row.project || t('payroll.overview_no_project') }}
-                      </span>
+                      <span class="truncate pr-2 text-foreground">{{ row.project || t('payroll.overview_no_project') }}</span>
                       <span class="tabular-nums text-muted-foreground shrink-0">
                         <template v-if="row.hours > 0">{{ row.hours.toFixed(1) }}h</template>
                         <template v-if="row.hours > 0 && row.km > 0"> · </template>
@@ -342,103 +431,6 @@ async function doExport(force = false) {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
-    </div>
-
-    <!-- ── Export section ── -->
-    <div class="rounded-lg border p-4 space-y-4 bg-card">
-      <p class="text-sm font-semibold">{{ t('payroll.export_section_title') }}</p>
-
-      <div class="flex gap-3 flex-wrap items-end">
-        <div class="space-y-1">
-          <Label class="text-xs">{{ t('payroll.date_from_label') }}</Label>
-          <Input v-model="exportDateFrom" type="date" class="w-36" />
-        </div>
-        <div class="space-y-1">
-          <Label class="text-xs">{{ t('payroll.date_to_label') }}</Label>
-          <Input v-model="exportDateTo" type="date" class="w-36" />
-        </div>
-        <Button size="sm" :disabled="exportLoading || !exportDateFrom || !exportDateTo" @click="doFetchPreview">
-          {{ exportLoading && !exportPeriods.length ? t('payroll.fetching') : t('payroll.fetch_button') }}
-        </Button>
-      </div>
-
-      <p v-if="exportError" class="text-sm text-destructive">{{ exportError }}</p>
-
-      <!-- Periods accordion -->
-      <Accordion
-        v-if="exportPeriods.length"
-        v-model="accordionOpenItems"
-        type="multiple"
-        class="space-y-2"
-      >
-        <AccordionItem
-          v-for="period in exportPeriods"
-          :key="period.period_start"
-          :value="period.period_start"
-          class="rounded-lg border px-3"
-        >
-          <AccordionTrigger class="gap-2">
-            <span>{{ period.period_label }}</span>
-            <Badge
-              v-if="period.existing_payroll_id"
-              variant="outline"
-              class="text-[10px] normal-case ml-1"
-            >{{ t('payroll.previously_exported') }}</Badge>
-          </AccordionTrigger>
-          <AccordionContent class="pb-3">
-            <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
-              {{ t('payroll.no_entries_empty') }}
-            </p>
-            <div
-              v-for="emp in period.employees"
-              :key="emp.employee_id"
-              class="flex items-center gap-3 text-sm py-1 border-b last:border-0"
-            >
-              <input
-                type="checkbox"
-                :checked="exportSelectedIds.includes(emp.employee_id)"
-                class="h-4 w-4"
-                @change="toggleExportEmployee(emp.employee_id)"
-              />
-              <span class="flex-1">{{ emp.employee_name }}</span>
-              <span class="text-muted-foreground text-xs">
-                {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
-                <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
-              </span>
-              <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <div v-if="exportPeriods.length" class="flex gap-2 pt-1">
-        <Button
-          size="sm"
-          :disabled="exportLoading || exportPeriods.length === 0"
-          @click="doExport(false)"
-        >
-          {{ exportLoading ? t('payroll.exporting') : t('payroll.export_button') }}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          :disabled="exportLoading || exportAllEmployeeIds.length === 0"
-          @click="doExport(true)"
-        >
-          {{ t('payroll.reexport_button') }}
-        </Button>
-      </div>
-
-      <div v-if="exportResult" class="rounded-md bg-muted p-3 text-sm space-y-1">
-        <p class="font-medium text-green-700">{{ t('payroll.export_complete') }}</p>
-        <p>{{ t('payroll.export_summary', { sent: exportResult.total_sent, added: exportResult.total_added, already: exportResult.total_already }) }}</p>
-        <p v-if="exportResult.errors > 0" class="text-destructive">{{ t('payroll.export_errors', { count: exportResult.errors }) }}</p>
-        <div v-for="payroll in exportResult.payrolls" :key="payroll.period_start">
-          <a :href="payroll.url" target="_blank" class="text-primary hover:underline text-xs">
-            {{ t('payroll.open_in_salaxy', { period: payroll.period_start }) }}
-          </a>
-        </div>
       </div>
     </div>
   </div>

@@ -241,7 +241,7 @@
   "admin.sup_pin_placeholder": "Vaaditaan uusille",
   "admin.first_name_label": "Etunimi",
   "admin.last_name_label": "Sukunimi",
-  "payroll.title": "Palkanlaskenta",
+  "payroll.title": "Palkkahallinta",
   "payroll.period_label": "Palkkakausi",
   "payroll.monthly": "Kerran kuussa",
   "payroll.biweekly": "2 vkon välein",
@@ -379,5 +379,9 @@
   "payroll.overview_total": "Yhteensä",
   "payroll.overview_current": "Käynnissä",
   "payroll.draft_count": "{count} palkkajaksoa tässä kuussa",
-  "payroll.previous_periods": "Aiemmat kuukaudet"
+  "payroll.previous_periods": "Aiemmat kuukaudet",
+  "payroll.section_payrolls": "Palkkajaksot",
+  "payroll.section_export": "Vie palkkadata",
+  "payroll_settings.company_salaxy_id_label": "Yrityksen Salaxy-tunnus",
+  "payroll_settings.company_salaxy_id_note": "Vain pääkäyttäjät voivat muokata tätä tunnusta."
 }

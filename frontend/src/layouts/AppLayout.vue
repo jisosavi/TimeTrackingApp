@@ -62,9 +62,9 @@ const navLinks = computed(() => {
   }
   if (type === 'admin') {
     return [
+      { to: `/${slug}/admin/payroll-summary`, label: t('nav.payroll'), badge: 0 },
       { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title'), badge: 0 },
       { to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value },
-      { to: `/${slug}/admin/payroll-summary`, label: t('nav.payroll'), badge: 0 },
       { to: `/${slug}/admin/payroll-settings`, label: t('nav.settings'), badge: 0 },
     ]
   }

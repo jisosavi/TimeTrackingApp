@@ -102,5 +102,14 @@ async function doSave() {
         {{ t('payroll_settings.last_saved', { time: formatTs(settings.payroll_settings_updated_at) }) }}
       </p>
     </div>
+
+    <!-- Company Salaxy ID (read-only for admins) -->
+    <div class="rounded-lg border p-4 space-y-2 bg-card max-w-md">
+      <Label class="text-xs">{{ t('payroll_settings.company_salaxy_id_label') }}</Label>
+      <p class="font-mono text-sm px-3 py-2 rounded-md bg-muted text-foreground">
+        {{ settings.salaxy_company_id || '—' }}
+      </p>
+      <p class="text-xs text-muted-foreground">{{ t('payroll_settings.company_salaxy_id_note') }}</p>
+    </div>
   </div>
 </template>

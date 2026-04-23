@@ -240,7 +240,7 @@
   "admin.sup_pin_placeholder": "Ifunekayo kwabatsha",
   "admin.first_name_label": "Igama lokuqala",
   "admin.last_name_label": "Ifani",
-  "payroll.title": "Umvuzo",
+  "payroll.title": "Ikhasi lomvuzo",
   "payroll.period_label": "Ixesha",
   "payroll.monthly": "Kanye ngenyanga",
   "payroll.biweekly": "Rhoqo ngamaveki amabini",
@@ -379,5 +379,9 @@
   "payroll.overview_current": "Yangoku",
   "chat.guidance": "Faka umhla, ixesha kunye nephrojekthi — umz. «15.4 8–16 Iphrojekthi Alpha». Yezo izimayile faka km — umz. «15.4 ndaqhuba 45 km ukuya kumthengi».",
   "payroll.draft_count": "{count} iimvulophi zomvuzo kule nyanga",
-  "payroll.previous_periods": "Iinyanga ezidlulileyo"
+  "payroll.previous_periods": "Iinyanga ezidlulileyo",
+  "payroll.section_payrolls": "Iimvulophi zomvuzo",
+  "payroll.section_export": "Thumela idatha yomvuzo",
+  "payroll_settings.company_salaxy_id_label": "I-ID yeSalaxy yenkampani",
+  "payroll_settings.company_salaxy_id_note": "Abasebenzisi abaphezulu kuphela banokulungisa le ID."
 }
