@@ -218,17 +218,17 @@ async function loginWithPassword() {
   <div v-if="isPinLogin" class="min-h-screen flex flex-col bg-background select-none">
 
     <!-- Header -->
-    <header class="flex-none pt-10 pb-2 px-6 text-center space-y-1">
-      <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-3" />
-      <p v-if="companyName" class="text-lg font-semibold tracking-tight">{{ companyName }}</p>
-      <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
-      <p class="text-3xl font-mono tabular-nums text-muted-foreground/50 pt-1">{{ clockStr }}</p>
-      <p class="text-sm text-muted-foreground/50">{{ dateStr }}</p>
+    <header class="flex-none pt-5 pb-1 px-6 text-center space-y-0.5">
+      <img src="/salaxy-logo.png" alt="Salaxy" class="h-8 mx-auto mb-1" />
+      <p v-if="companyName" class="text-base font-semibold tracking-tight">{{ companyName }}</p>
+      <p class="text-xs text-muted-foreground">{{ loginTypeLabel }}</p>
+      <p class="text-2xl font-mono tabular-nums text-muted-foreground/50 pt-0.5">{{ clockStr }}</p>
+      <p class="text-xs text-muted-foreground/50">{{ dateStr }}</p>
     </header>
 
     <!-- PIN dots -->
     <div
-      class="flex-none flex justify-center gap-4 py-6"
+      class="flex-none flex justify-center gap-4 py-3"
       :class="shaking ? 'shake' : ''"
       aria-hidden="true"
     >
@@ -243,18 +243,18 @@ async function loginWithPassword() {
     </div>
 
     <!-- Error / spacer -->
-    <div class="flex-none min-h-[1.5rem] text-center px-6">
+    <div class="flex-none min-h-[1.25rem] text-center px-6">
       <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
     </div>
 
     <!-- Keypad -->
-    <div class="flex-1 flex items-center justify-center px-6 py-2">
-      <div class="grid grid-cols-3 gap-3 w-full max-w-[340px]">
+    <div class="flex-none flex justify-center px-4 pt-1 pb-3">
+      <div class="grid grid-cols-3 gap-2 w-full max-w-[340px]">
         <Button
           v-for="key in ['1','2','3','4','5','6','7','8','9','clear','0','back']"
           :key="key"
           variant="outline"
-          class="h-[72px] text-xl font-medium rounded-2xl active:scale-95 transition-transform"
+          class="h-[60px] text-xl font-medium rounded-2xl active:scale-95 transition-transform"
           :disabled="loading"
           @click="handleKeypadPress(key)"
         >
@@ -285,7 +285,7 @@ async function loginWithPassword() {
     </div>
 
     <!-- Footer -->
-    <footer class="flex-none text-center py-4">
+    <footer class="mt-auto text-center py-2">
       <p class="text-xs text-muted-foreground/30">TimeTrackingApp</p>
     </footer>
 
