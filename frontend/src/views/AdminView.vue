@@ -17,6 +17,7 @@ import type { Employee, Supervisor, TeamMember } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
 const auth = useAuthStore()
+const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
@@ -248,7 +249,7 @@ const unlocking = ref<number | null>(null)
 
 async function unlockPinAccount(id: number, kind: 'employee' | 'supervisor') {
   unlocking.value = id
-  const endpoint = kind === 'employee' ? '/api/employees.php' : '/api/supervisors.php'
+  const endpoint = kind === 'employee' ? `${apiBase}/api/employees.php` : `${apiBase}/api/supervisors.php`
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
