@@ -15,8 +15,8 @@ $action         = trim((string) ($payload['action'] ?? ''));
 $rejectionNote  = trim((string) ($payload['rejection_note'] ?? ''));
 $field          = trim((string) ($payload['field'] ?? '')) === 'km_status' ? 'km_status' : 'status';
 
-if (empty($ids) || !in_array($action, ['approve', 'reject'], true)) {
-    sendJson(['success' => false, 'error' => 'ids ja action (approve|reject) vaaditaan'], 400);
+if (empty($ids) || !in_array($action, ['approve', 'reject', 'delete'], true)) {
+    sendJson(['success' => false, 'error' => 'ids ja action (approve|reject|delete) vaaditaan'], 400);
 }
 
 $db = getDb();
@@ -41,6 +41,12 @@ if ($reviewer['type'] === 'supervisor') {
 $allowed = array_column($stmt->fetchAll(), 'id');
 if (count($allowed) !== count($ids)) {
     sendJson(['success' => false, 'error' => 'Osa kirjauksista ei kuulu sinulle tai yrityksellesi'], 403);
+}
+
+if ($action === 'delete') {
+    $db->prepare("UPDATE time_entries SET status = 'deleted' WHERE id IN ($placeholders)")
+       ->execute([...$ids]);
+    sendJson(['success' => true, 'updated' => count($ids), 'status' => 'deleted']);
 }
 
 $newStatus = $action === 'approve' ? 'approved' : 'rejected';

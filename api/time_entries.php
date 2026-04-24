@@ -108,10 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $params[':date_to']  = $dateTo;
     }
 
-    $sql  = 'SELECT te.*, e.name AS employee_name
+    $sql  = "SELECT te.*, e.name AS employee_name,
+             CASE
+               WHEN te.reviewed_by_type = 'supervisor' THEN s.first_name || ' ' || s.last_name
+               WHEN te.reviewed_by_type = 'admin' THEN a.name
+               ELSE NULL
+             END AS reviewed_by_name
              FROM time_entries te
              JOIN employees e ON e.id = te.employee_id
-             WHERE ' . implode(' AND ', $where) . '
+             LEFT JOIN supervisors s ON s.id = te.reviewed_by_id AND te.reviewed_by_type = 'supervisor'
+             LEFT JOIN company_admins a ON a.id = te.reviewed_by_id AND te.reviewed_by_type = 'admin'
+             WHERE " . implode(' AND ', $where) . '
              ORDER BY te.entry_date DESC, te.start_time DESC';
     $stmt = $db->prepare($sql);
     $stmt->execute($params);

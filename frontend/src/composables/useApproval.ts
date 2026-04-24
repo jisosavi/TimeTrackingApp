@@ -73,5 +73,13 @@ export function useApproval() {
     return result.updated
   }
 
-  return { entries, loading, error, fetchEntries, reviewEntries }
+  async function deleteEntry(id: number): Promise<void> {
+    await apiFetch('/api/review_entries.php', {
+      method: 'POST',
+      body: JSON.stringify({ ids: [id], action: 'delete' }),
+    })
+    entries.value = entries.value.filter(e => e.id !== id)
+  }
+
+  return { entries, loading, error, fetchEntries, reviewEntries, deleteEntry }
 }

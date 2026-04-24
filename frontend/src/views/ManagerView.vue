@@ -16,7 +16,7 @@ import { useRefresh } from '@/composables/useRefresh'
 import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
-const { entries, loading, error, fetchEntries, reviewEntries } = useApproval()
+const { entries, loading, error, fetchEntries, reviewEntries, deleteEntry } = useApproval()
 const auth = useAuthStore()
 const { apiFetch } = useApi()
 const route = useRoute()
@@ -218,6 +218,19 @@ function formatDate(iso: string) {
   return `${d}.${m}.${y}`
 }
 
+function formatDateTime(iso: string | null): string {
+  if (!iso) return ''
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric', month: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+async function handleDelete(id: number) {
+  if (!confirm(t('entries.confirm_delete'))) return
+  await deleteEntry(id)
+}
+
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending:   { label: 'Pending',   variant: 'secondary' },
   clarified: { label: 'Clarified', variant: 'outline' },
@@ -336,6 +349,14 @@ function getCfg(status: string) {
               </Badge>
             </div>
 
+            <!-- Reviewer info (who requested clarification and when) -->
+            <div
+              v-if="card.field === 'status' && card.entry.reviewed_by_name && card.entry.reviewed_at"
+              class="text-xs text-muted-foreground"
+            >
+              {{ card.entry.reviewed_by_name }} · {{ formatDateTime(card.entry.reviewed_at) }}
+            </div>
+
             <!-- Employee clarification (hours) -->
             <div
               v-if="card.cardStatus === 'clarified' && card.entry.employee_clarification"
@@ -355,6 +376,7 @@ function getCfg(status: string) {
             <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
               <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
               <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
+              <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto" @click="handleDelete(card.id)">{{ t('common.delete') }}</Button>
             </div>
 
             <!-- Inline rejection form -->
@@ -477,6 +499,12 @@ function getCfg(status: string) {
             <div v-else-if="card.field === 'km_status' && card.entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.km_rejection_note }}
             </div>
+            <div
+              v-if="card.field === 'status' && card.entry.reviewed_by_name && card.entry.reviewed_at"
+              class="text-xs text-muted-foreground"
+            >
+              {{ card.entry.reviewed_by_name }} · {{ formatDateTime(card.entry.reviewed_at) }}
+            </div>
 
             <div v-if="card.field === 'status' && card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
               <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
@@ -506,6 +534,13 @@ function getCfg(status: string) {
                 </div>
               </div>
             </template>
+
+            <!-- Delete button (always available on rejected cards) -->
+            <div v-if="rejectingId !== card.key" class="flex justify-end pt-1">
+              <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(card.id)">
+                {{ t('common.delete') }}
+              </Button>
+            </div>
           </div>
         </div>
       </TabsContent>
