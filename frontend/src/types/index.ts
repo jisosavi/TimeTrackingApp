@@ -106,6 +106,7 @@ export interface ExportEntryRow {
   km: number
   project: string | null
   exported_to_salaxy: number
+  exported_at: string | null
 }
 
 export interface ExportEmployee {
