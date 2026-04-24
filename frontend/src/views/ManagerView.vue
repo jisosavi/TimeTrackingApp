@@ -336,12 +336,19 @@ function getCfg(status: string) {
               </Badge>
             </div>
 
-            <!-- Employee clarification -->
+            <!-- Employee clarification (hours) -->
             <div
               v-if="card.cardStatus === 'clarified' && card.entry.employee_clarification"
               class="rounded-md bg-muted px-3 py-2 text-sm"
             >
               <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
+            </div>
+            <!-- Employee clarification (km) -->
+            <div
+              v-else-if="card.field === 'km_status' && card.entry.km_employee_clarification"
+              class="rounded-md bg-muted px-3 py-2 text-sm"
+            >
+              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.km_employee_clarification }}
             </div>
 
             <!-- Action buttons -->
@@ -471,9 +478,34 @@ function getCfg(status: string) {
               <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.km_rejection_note }}
             </div>
 
-            <div v-if="card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+            <div v-if="card.field === 'status' && card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
               <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
             </div>
+            <div v-else-if="card.field === 'km_status' && card.entry.km_employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.km_employee_clarification }}
+            </div>
+
+            <!-- Approve/reject when employee has clarified this field -->
+            <template v-if="(card.field === 'status' && card.entry.employee_clarification) || (card.field === 'km_status' && card.entry.km_employee_clarification)">
+              <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
+                <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
+                <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
+              </div>
+              <div v-else class="space-y-2 pt-1">
+                <Textarea
+                  v-model="rejectNote"
+                  :placeholder="t('approval.rejection_placeholder')"
+                  class="text-sm min-h-14 resize-none"
+                  autofocus
+                />
+                <div class="flex gap-2">
+                  <Button size="sm" variant="destructive" :disabled="!rejectNote.trim()" @click="submitReject(card.key)">
+                    {{ t('approval.reject') }}
+                  </Button>
+                  <Button size="sm" variant="ghost" @click="cancelReject">{{ t('common.cancel') }}</Button>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </TabsContent>
