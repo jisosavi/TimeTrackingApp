@@ -29,6 +29,7 @@ const filterEmployeeId = computed(() => route.query.employee ? Number(route.quer
 
 // ── Type filter ──────────────────────────────────────────────────────────────
 const typeFilter = ref<'all' | 'hours' | 'km'>('all')
+const approvalSearch = ref('')
 
 function isKmCard(card: VirtualCard): boolean {
   return card.field === 'km_status' || (!card.isDual && card.entry.km > 0)
@@ -38,6 +39,11 @@ function matchesTypeFilter(card: VirtualCard): boolean {
   if (typeFilter.value === 'all') return true
   if (typeFilter.value === 'hours') return !isKmCard(card)
   return isKmCard(card)
+}
+
+function matchesSearch(card: VirtualCard): boolean {
+  const q = approvalSearch.value.trim().toLowerCase()
+  return !q || card.entry.employee_name.toLowerCase().includes(q)
 }
 
 // ── Bulk selection ──────────────────────────────────────────────────────────
@@ -176,7 +182,7 @@ function cardSortFn(a: VirtualCard, b: VirtualCard): number {
 }
 
 const sortedNeedsReviewCards = computed(() =>
-  [...needsReviewCards.value].filter(matchesTypeFilter).sort(cardSortFn),
+  [...needsReviewCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(cardSortFn),
 )
 const visibleNeedsReviewCards = computed(() =>
   filterEmployeeId.value
@@ -184,13 +190,13 @@ const visibleNeedsReviewCards = computed(() =>
     : sortedNeedsReviewCards.value,
 )
 const sortedApprovedCards = computed(() =>
-  [...approvedCards.value].filter(matchesTypeFilter).sort(cardSortFn),
+  [...approvedCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(cardSortFn),
 )
 
 interface CardGroup { name: string; cards: VirtualCard[] }
 const rejectedCardGroups = computed<CardGroup[]>(() => {
   const map = new Map<string, VirtualCard[]>()
-  for (const c of rejectedCards.value.filter(matchesTypeFilter)) {
+  for (const c of rejectedCards.value.filter(c => matchesTypeFilter(c) && matchesSearch(c))) {
     const name = c.entry.employee_name
     const group = map.get(name)
     if (group) group.push(c)
@@ -281,11 +287,18 @@ function getCfg(status: string) {
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-    <ToggleGroup v-model="typeFilter" type="single" variant="outline" :spacing="1" class="justify-start">
-      <ToggleGroupItem value="all" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_all') }}</ToggleGroupItem>
-      <ToggleGroupItem value="hours" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_hours') }}</ToggleGroupItem>
-      <ToggleGroupItem value="km" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_km') }}</ToggleGroupItem>
-    </ToggleGroup>
+    <div class="flex items-center gap-3 flex-wrap">
+      <ToggleGroup v-model="typeFilter" type="single" variant="outline" :spacing="1">
+        <ToggleGroupItem value="all" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_all') }}</ToggleGroupItem>
+        <ToggleGroupItem value="hours" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_hours') }}</ToggleGroupItem>
+        <ToggleGroupItem value="km" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_km') }}</ToggleGroupItem>
+      </ToggleGroup>
+      <Input
+        v-model="approvalSearch"
+        :placeholder="t('approval.search_placeholder')"
+        class="h-11 text-sm flex-1 min-w-[180px]"
+      />
+    </div>
 
     <Tabs v-model="activeTab" class="w-full">
       <TabsList :class="['grid w-full mb-4 !h-auto', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">
@@ -321,10 +334,11 @@ function getCfg(status: string) {
 
         <EmptyState
           v-if="!loading && visibleNeedsReviewCards.length === 0"
-          :title="t('empty.needs_review')"
-          :body="t('empty.needs_review_body')"
+          :title="approvalSearch ? t('empty.search') : t('empty.needs_review')"
+          :body="approvalSearch ? t('empty.search_body') : t('empty.needs_review_body')"
         >
-          <ListChecks class="size-10" />
+          <Search v-if="approvalSearch" class="size-10" />
+          <ListChecks v-else class="size-10" />
         </EmptyState>
 
         <div class="space-y-2">
@@ -430,10 +444,12 @@ function getCfg(status: string) {
       <!-- Approved tab -->
       <TabsContent value="approved">
         <EmptyState
-          v-if="!loading && approvedCards.length === 0"
-          :title="t('empty.approved')"
+          v-if="!loading && sortedApprovedCards.length === 0"
+          :title="approvalSearch ? t('empty.search') : t('empty.approved')"
+          :body="approvalSearch ? t('empty.search_body') : undefined"
         >
-          <CheckCircle2 class="size-10" />
+          <Search v-if="approvalSearch" class="size-10" />
+          <CheckCircle2 v-else class="size-10" />
         </EmptyState>
 
         <div class="space-y-2">
@@ -475,10 +491,12 @@ function getCfg(status: string) {
       <!-- Rejected tab -->
       <TabsContent value="rejected">
         <EmptyState
-          v-if="!loading && rejectedCards.length === 0"
-          :title="t('empty.rejected')"
+          v-if="!loading && rejectedCardGroups.length === 0"
+          :title="approvalSearch ? t('empty.search') : t('empty.rejected')"
+          :body="approvalSearch ? t('empty.search_body') : undefined"
         >
-          <XCircle class="size-10" />
+          <Search v-if="approvalSearch" class="size-10" />
+          <XCircle v-else class="size-10" />
         </EmptyState>
 
         <div v-for="group in rejectedCardGroups" :key="group.name" class="space-y-2 mb-6">

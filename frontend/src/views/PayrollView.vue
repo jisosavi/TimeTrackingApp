@@ -134,24 +134,39 @@ watch(exportPeriods, (periods) => {
     .map(p => p.period_start)
 })
 
+function getPeriodExportedAt(period: ExportPeriod): string {
+  let latest = ''
+  for (const emp of period.employees) {
+    for (const entry of emp.entries) {
+      if (entry.exported_at && entry.exported_at > latest) latest = entry.exported_at
+    }
+  }
+  return latest
+}
+
+function formatExportedAt(ts: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).format(new Date(ts))
+}
+
+function periodExportedLabel(period: ExportPeriod): string {
+  if (!period.existing_payroll_id) return t('payroll.not_exported_yet')
+  const ts = getPeriodExportedAt(period)
+  return ts
+    ? t('payroll.exported_at_badge', { datetime: formatExportedAt(ts) })
+    : t('payroll.previously_exported')
+}
+
 onMounted(async () => {
   try {
     settings.value = await fetchPayrollSettings()
   } catch {}
   settingsLoading.value = false
 
-  // Seed date range from computed current period (falls back to monthly defaults)
-  const period = currentPeriod.value
-  if (period) {
-    exportDateFrom.value = period.from
-    exportDateTo.value = period.to
-  } else {
-    const now = new Date()
-    const y = now.getFullYear()
-    const mo = String(now.getMonth() + 1).padStart(2, '0')
-    exportDateFrom.value = `${y}-${mo}-01`
-    exportDateTo.value = new Date(y, now.getMonth() + 1, 0).toISOString().slice(0, 10)
-  }
+  exportDateFrom.value = currentMonthStart
+  exportDateTo.value = new Date(_curYear, _curMonthIdx + 1, 0).toISOString().slice(0, 10)
 
   fetchApprovalEntries()
 })
@@ -241,10 +256,9 @@ async function doExport(force = false) {
             <AccordionTrigger class="gap-2">
               <span>{{ period.period_label }}</span>
               <Badge
-                v-if="period.existing_payroll_id"
-                variant="outline"
+                :variant="period.existing_payroll_id ? 'outline' : 'secondary'"
                 class="text-[10px] normal-case ml-1"
-              >{{ t('payroll.previously_exported') }}</Badge>
+              >{{ periodExportedLabel(period) }}</Badge>
             </AccordionTrigger>
             <AccordionContent class="pb-3">
               <p v-if="period.employees.length === 0" class="text-xs text-muted-foreground py-1 italic">
@@ -264,7 +278,10 @@ async function doExport(force = false) {
                 <span class="flex-1">{{ emp.employee_name }}</span>
                 <span class="text-muted-foreground text-xs">
                   {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
-                  <span v-if="emp.pending_hours < emp.total_hours" class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
+                  <template v-if="emp.pending_hours < emp.total_hours">
+                  <span v-if="emp.pending_hours === 0" class="text-muted-foreground ml-1">{{ t('payroll.no_new_entries') }}</span>
+                  <span v-else class="text-orange-500 ml-1">{{ t('payroll.new_hours_badge', { hours: emp.pending_hours }) }}</span>
+                </template>
                 </span>
                 <span v-if="!emp.salaxy_employment_id" class="text-xs text-destructive">{{ t('payroll.no_salaxy_id') }}</span>
               </div>
