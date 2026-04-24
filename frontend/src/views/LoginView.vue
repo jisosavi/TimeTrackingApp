@@ -8,7 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
+
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa',
+}
+
+function applyLang(lang: string) {
+  locale.value = lang
+  if (slug) localStorage.setItem(`salaxy_ui_lang_${slug}`, lang)
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -97,6 +106,10 @@ const companyName = computed(() =>
 )
 
 onMounted(() => {
+  if (slug) {
+    const savedLang = localStorage.getItem(`salaxy_ui_lang_${slug}`)
+    if (savedLang && savedLang in LANG_NAMES) locale.value = savedLang
+  }
   clockInterval = setInterval(() => {
     clockStr.value = formatTime()
     dateStr.value = formatDate()
@@ -354,10 +367,17 @@ async function loginWithPassword() {
       {{ announcement }}
     </div>
 
-    <!-- Footer -->
-    <footer class="mt-auto text-center py-2">
+    <!-- Language selector + footer -->
+    <div class="mt-auto flex flex-col items-center gap-1 pb-3 pt-1">
+      <select
+        :value="locale"
+        class="text-xs text-muted-foreground/60 bg-transparent border-0 outline-none cursor-pointer appearance-none px-1"
+        @change="applyLang(($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
+      </select>
       <p class="text-xs text-muted-foreground/30">TimeTrackingApp</p>
-    </footer>
+    </div>
 
   </div>
 
