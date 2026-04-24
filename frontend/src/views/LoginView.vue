@@ -370,17 +370,18 @@ async function loginWithPassword() {
         <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
       </div>
 
-      <div class="space-y-4">
+      <form class="space-y-4" @submit.prevent="submit">
         <div class="space-y-2">
           <Label for="email">{{ t('login.email_label') }}</Label>
           <Input
             id="email"
             v-model="email"
             type="email"
+            name="email"
+            autocomplete="email"
             placeholder="admin@example.com"
             autofocus
             @input="clearError"
-            @keyup.enter="submit"
           />
         </div>
         <div class="space-y-2">
@@ -389,20 +390,21 @@ async function loginWithPassword() {
             id="password"
             v-model="password"
             type="password"
+            name="password"
+            autocomplete="current-password"
             placeholder="••••••••"
             @input="clearError"
-            @keyup.enter="submit"
           />
         </div>
         <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
         <Button
+          type="submit"
           class="w-full"
           :disabled="loading || !email || !password"
-          @click="submit"
         >
           {{ loading ? t('login.logging_in') : t('login.sign_in_button') }}
         </Button>
-      </div>
+      </form>
 
       <p class="text-center text-xs text-muted-foreground/30">TimeTrackingApp</p>
 
