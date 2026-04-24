@@ -319,18 +319,18 @@ async function submitAddForm() {
       <ToggleGroup
         :model-value="roleFilter"
         type="single"
-        size="sm"
         variant="outline"
+        :spacing="1"
         @update:model-value="v => roleFilter = (v as string) || 'all'"
       >
-        <ToggleGroupItem value="all">{{ t('admin.people.filter_all') }}</ToggleGroupItem>
-        <ToggleGroupItem value="employee">{{ t('admin.people.filter_employee') }}</ToggleGroupItem>
-        <ToggleGroupItem value="supervisor">{{ t('admin.people.filter_supervisor') }}</ToggleGroupItem>
+        <ToggleGroupItem value="all" class="h-11 px-5 text-sm font-medium">{{ t('admin.people.filter_all') }}</ToggleGroupItem>
+        <ToggleGroupItem value="employee" class="h-11 px-5 text-sm font-medium">{{ t('admin.people.filter_employee') }}</ToggleGroupItem>
+        <ToggleGroupItem value="supervisor" class="h-11 px-5 text-sm font-medium">{{ t('admin.people.filter_supervisor') }}</ToggleGroupItem>
       </ToggleGroup>
       <Input
         v-model="search"
         :placeholder="t('approval.search_placeholder')"
-        class="h-8 text-sm flex-1 min-w-[180px]"
+        class="h-11 text-sm flex-1 min-w-[180px]"
       />
     </div>
 
