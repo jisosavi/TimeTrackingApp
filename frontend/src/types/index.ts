@@ -88,7 +88,7 @@ export interface TeamMember {
 
 export interface ReviewEntry extends TimeEntry {
   employee_name: string
-  reviewed_by_name: string | null
+  reviewed_by_name?: string | null
 }
 
 export interface PayrollSettings {
