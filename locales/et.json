@@ -392,5 +392,8 @@
   "login.error_last_attempt": "Vale PIN. 1 katse jäänud enne ajutist lukustust.",
   "admin.pin_locked_badge": "Lukustatud",
   "admin.pin_unlock": "Ava lukustus",
-  "admin.pin_temp_locked_badge": "Jahutusaeg"
+  "admin.pin_temp_locked_badge": "Jahutusaeg",
+  "approval.filter_all": "Kõik",
+  "approval.filter_hours": "Tunnid",
+  "approval.filter_km": "Kilomeetrid"
 }

@@ -392,5 +392,8 @@
   "login.error_last_attempt": "Väärä PIN. 1 yritys jäljellä ennen väliaikaista lukitusta.",
   "admin.pin_locked_badge": "Lukittu",
   "admin.pin_unlock": "Avaa lukitus",
-  "admin.pin_temp_locked_badge": "Jäähtymisaika"
+  "admin.pin_temp_locked_badge": "Jäähtymisaika",
+  "approval.filter_all": "Kaikki",
+  "approval.filter_hours": "Tunnit",
+  "approval.filter_km": "Kilometrit"
 }

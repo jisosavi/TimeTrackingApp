@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ListChecks, CheckCircle2, XCircle, Users, Search } from 'lucide-vue-next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,19 @@ watch(refreshTick, fetchEntries)
 
 const isSupervisor = computed(() => auth.user?.type === 'supervisor')
 const filterEmployeeId = computed(() => route.query.employee ? Number(route.query.employee) : null)
+
+// ── Type filter ──────────────────────────────────────────────────────────────
+const typeFilter = ref<'all' | 'hours' | 'km'>('all')
+
+function isKmCard(card: VirtualCard): boolean {
+  return card.field === 'km_status' || (!card.isDual && card.entry.km > 0)
+}
+
+function matchesTypeFilter(card: VirtualCard): boolean {
+  if (typeFilter.value === 'all') return true
+  if (typeFilter.value === 'hours') return !isKmCard(card)
+  return isKmCard(card)
+}
 
 // ── Bulk selection ──────────────────────────────────────────────────────────
 const activeTab = ref('review')
@@ -161,18 +175,22 @@ function cardSortFn(a: VirtualCard, b: VirtualCard): number {
   return nameCmp !== 0 ? nameCmp : a.entry.entry_date.localeCompare(b.entry.entry_date)
 }
 
-const sortedNeedsReviewCards = computed(() => [...needsReviewCards.value].sort(cardSortFn))
+const sortedNeedsReviewCards = computed(() =>
+  [...needsReviewCards.value].filter(matchesTypeFilter).sort(cardSortFn),
+)
 const visibleNeedsReviewCards = computed(() =>
   filterEmployeeId.value
     ? sortedNeedsReviewCards.value.filter(c => c.entry.employee_id === filterEmployeeId.value)
     : sortedNeedsReviewCards.value,
 )
-const sortedApprovedCards = computed(() => [...approvedCards.value].sort(cardSortFn))
+const sortedApprovedCards = computed(() =>
+  [...approvedCards.value].filter(matchesTypeFilter).sort(cardSortFn),
+)
 
 interface CardGroup { name: string; cards: VirtualCard[] }
 const rejectedCardGroups = computed<CardGroup[]>(() => {
   const map = new Map<string, VirtualCard[]>()
-  for (const c of rejectedCards.value) {
+  for (const c of rejectedCards.value.filter(matchesTypeFilter)) {
     const name = c.entry.employee_name
     const group = map.get(name)
     if (group) group.push(c)
@@ -262,6 +280,12 @@ function getCfg(status: string) {
     <h2 class="text-lg font-semibold">{{ t('approval.title') }}</h2>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+
+    <ToggleGroup v-model="typeFilter" type="single" class="justify-start">
+      <ToggleGroupItem value="all" class="text-sm">{{ t('approval.filter_all') }}</ToggleGroupItem>
+      <ToggleGroupItem value="hours" class="text-sm">{{ t('approval.filter_hours') }}</ToggleGroupItem>
+      <ToggleGroupItem value="km" class="text-sm">{{ t('approval.filter_km') }}</ToggleGroupItem>
+    </ToggleGroup>
 
     <Tabs v-model="activeTab" class="w-full">
       <TabsList :class="['grid w-full mb-4 !h-auto', isSupervisor ? 'grid-cols-4' : 'grid-cols-3']">

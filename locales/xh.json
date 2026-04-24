@@ -392,5 +392,8 @@
   "login.error_last_attempt": "Inombolo ye-PIN engalunganga. 1 izama zisele ngaphambi kokuvala okwexeshana.",
   "admin.pin_locked_badge": "Ivaliwe",
   "admin.pin_unlock": "Vula",
-  "admin.pin_temp_locked_badge": "Iyapholisa"
+  "admin.pin_temp_locked_badge": "Iyapholisa",
+  "approval.filter_all": "Zonke",
+  "approval.filter_hours": "Amaxesha",
+  "approval.filter_km": "Ikhilomitha"
 }

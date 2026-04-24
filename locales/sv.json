@@ -392,5 +392,8 @@
   "login.error_last_attempt": "Fel PIN. 1 försök kvar innan tillfällig låsning.",
   "admin.pin_locked_badge": "Låst",
   "admin.pin_unlock": "Lås upp",
-  "admin.pin_temp_locked_badge": "Avkylning"
+  "admin.pin_temp_locked_badge": "Avkylning",
+  "approval.filter_all": "Alla",
+  "approval.filter_hours": "Timmar",
+  "approval.filter_km": "Kilometer"
 }
