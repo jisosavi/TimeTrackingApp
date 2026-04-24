@@ -281,10 +281,10 @@ function getCfg(status: string) {
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-    <ToggleGroup v-model="typeFilter" type="single" class="justify-start">
-      <ToggleGroupItem value="all" class="text-sm">{{ t('approval.filter_all') }}</ToggleGroupItem>
-      <ToggleGroupItem value="hours" class="text-sm">{{ t('approval.filter_hours') }}</ToggleGroupItem>
-      <ToggleGroupItem value="km" class="text-sm">{{ t('approval.filter_km') }}</ToggleGroupItem>
+    <ToggleGroup v-model="typeFilter" type="single" variant="outline" :spacing="1" class="justify-start">
+      <ToggleGroupItem value="all" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_all') }}</ToggleGroupItem>
+      <ToggleGroupItem value="hours" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_hours') }}</ToggleGroupItem>
+      <ToggleGroupItem value="km" class="h-11 px-5 text-sm font-medium">{{ t('approval.filter_km') }}</ToggleGroupItem>
     </ToggleGroup>
 
     <Tabs v-model="activeTab" class="w-full">
