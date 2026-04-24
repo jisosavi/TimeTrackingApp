@@ -6,8 +6,8 @@ $allowedOrigins = [
     'https://www.isosavi.com',
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://time-api.salaxy.com',
-    'https://test-time-api.salaxy.com'
+    'https://time.salaxy.com',
+    'https://test-time.salaxy.com'
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
