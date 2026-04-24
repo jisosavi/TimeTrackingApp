@@ -29,7 +29,8 @@ const currentMonthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', ye
 
 function computeMonthPeriods(s: PayrollSettings, y: number, mIdx: number) {
   const mo = String(mIdx + 1).padStart(2, '0')
-  const lastDay = new Date(y, mIdx + 1, 0).toISOString().slice(0, 10)
+  const lastDayNum = new Date(y, mIdx + 1, 0).getDate()
+  const lastDay = `${y}-${mo}-${String(lastDayNum).padStart(2, '0')}`
   if (s.payroll_period === 'monthly') {
     return [{ from: `${y}-${mo}-01`, to: lastDay, label: `${mo}/${y}` }]
   }
@@ -166,7 +167,8 @@ onMounted(async () => {
   settingsLoading.value = false
 
   exportDateFrom.value = currentMonthStart
-  exportDateTo.value = new Date(_curYear, _curMonthIdx + 1, 0).toISOString().slice(0, 10)
+  const _lastDay = new Date(_curYear, _curMonthIdx + 1, 0).getDate()
+  exportDateTo.value = `${_curYear}-${_curMonthStr}-${String(_lastDay).padStart(2, '0')}`
 
   fetchApprovalEntries()
 })
