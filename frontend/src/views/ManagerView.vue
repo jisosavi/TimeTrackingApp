@@ -481,6 +481,7 @@ function getCfg(status: string) {
                   </template>
                 </p>
                 <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
+                <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic">{{ card.entry.comment }}</p>
               </div>
               <Badge variant="default" class="shrink-0">{{ t('status.approved') }}</Badge>
             </div>

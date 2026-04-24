@@ -139,11 +139,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'entries'              => [],
             ];
         }
+        // For dual entries (hours + km), km requires its own km_status = 'approved'.
+        // For km-only entries (hours = 0), the main status = 'approved' covers km.
+        $isDual       = (float) $row['hours'] > 0 && (float) $row['km'] > 0;
+        $exportableKm = ($isDual && $row['km_status'] !== 'approved') ? 0.0 : (float) $row['km'];
+
         $byPeriod[$pk]['employees'][$eid]['total_hours'] += (float) $row['hours'];
-        $byPeriod[$pk]['employees'][$eid]['total_km']    += (float) $row['km'];
+        $byPeriod[$pk]['employees'][$eid]['total_km']    += $exportableKm;
         if (!(int) $row['exported_to_salaxy']) {
             $byPeriod[$pk]['employees'][$eid]['pending_hours'] += (float) $row['hours'];
-            $byPeriod[$pk]['employees'][$eid]['pending_km']    += (float) $row['km'];
+            $byPeriod[$pk]['employees'][$eid]['pending_km']    += $exportableKm;
         }
         $byPeriod[$pk]['employees'][$eid]['entries'][] = $row;
     }
@@ -198,13 +203,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($entriesByPeriod[$pk][$eid])) $entriesByPeriod[$pk][$eid] = [];
             $parts    = explode('-', $row['entry_date']);
             $ddmmyyyy = count($parts) === 3 ? "{$parts[2]}-{$parts[1]}-{$parts[0]}" : $row['entry_date'];
+            // Zero out km for dual entries whose km_status is not yet approved.
+            $isDual       = (float) $row['hours'] > 0 && (float) $row['km'] > 0;
+            $exportableKm = ($isDual && $row['km_status'] !== 'approved') ? 0.0 : (float) $row['km'];
             $entriesByPeriod[$pk][$eid][] = [
                 'id'      => (int) $row['id'],
                 'date'    => $ddmmyyyy,
                 'start'   => $row['start_time'],
                 'end'     => $row['end_time'],
                 'hours'   => (float) $row['hours'],
-                'mileage' => (float) $row['km'],
+                'mileage' => $exportableKm,
                 'project' => $row['project'],
                 'notes'   => $row['comment'],
             ];
