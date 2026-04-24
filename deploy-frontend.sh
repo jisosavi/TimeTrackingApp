@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Vue frontend and upload dist/ to cPanel via SFTP.
+# Build the Vue frontend and upload dist/ to the cPanel public_html root.
 #
 # Prerequisites:
 #   1. Copy frontend/.env.production.example → frontend/.env.production
@@ -15,7 +15,7 @@ set -euo pipefail
 
 CPANEL_HOST="${CPANEL_HOST:-isosavi.com}"
 CPANEL_USER="${CPANEL_USER:-}"
-CPANEL_REMOTE_PATH="${CPANEL_REMOTE_PATH:-public_html/test/TimeTrackingAppVue}"
+CPANEL_REMOTE_PATH="${CPANEL_REMOTE_PATH:-public_html}"
 
 if [[ -z "$CPANEL_USER" ]]; then
   echo "Error: CPANEL_USER is not set."
@@ -36,8 +36,11 @@ cd ..
 
 echo "==> Uploading dist/ to ${CPANEL_USER}@${CPANEL_HOST}:${CPANEL_REMOTE_PATH}/"
 rsync -avz --delete \
+  --exclude='.well-known/' \
+  --exclude='cgi-bin/' \
+  --exclude='mail/' \
   -e "ssh" \
   frontend/dist/ \
   "${CPANEL_USER}@${CPANEL_HOST}:${CPANEL_REMOTE_PATH}/"
 
-echo "==> Done. Site live at https://${CPANEL_HOST}/test/TimeTrackingAppVue/"
+echo "==> Done. Site live at https://${CPANEL_HOST}/"

@@ -9,8 +9,7 @@ export default defineConfig(({ mode }) => {
   const phpServer = env.VITE_PHP_SERVER || 'http://localhost:8000'
 
   return {
-    // Production: served from isosavi.com/test/TimeTrackingAppVue/
-    base: mode === 'production' ? '/test/TimeTrackingAppVue/' : '/',
+    base: '/',
 
     plugins: [vue(), vueDevTools(), tailwindcss()],
 

@@ -1,11 +1,17 @@
+# Protect server-side config from direct access
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /test/TimeTrackingAppVue/
+  RewriteBase /
 
   # Don't rewrite existing files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
 
-  # Send all other requests to index.html for Vue Router
+  # Route all other requests to Vue's index.html
   RewriteRule ^ index.html [L]
 </IfModule>
