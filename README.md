@@ -135,6 +135,18 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 
 ---
 
+## Recent Changes
+
+### 2026-04-25
+- **PIN security hardening**: Employee and supervisor PINs are now stored as HMAC-SHA256 hashes instead of plain text. The server-side `JWT_SECRET` is used as the HMAC key, so an attacker needs both a database dump *and* the secret to crack any PIN. The migration runs automatically on the next request — no manual steps needed. API endpoints no longer return PIN values; the admin edit form no longer pre-fills the PIN field (leave it blank to keep the existing PIN unchanged).
+
+### 2026-04-24
+- **Vue-only deployment at domain root**: Removed all legacy PHP/HTML frontend files (`index.html`, `approval.html`, `router.php`, `admin/`, `company/` directories). The app is now served entirely from the Vue SPA at the domain root. `router.php` is gone — the PHP built-in server no longer needs it for local development.
+- **Configurable deploy path via `VITE_APP_BASE`**: `vite.config.ts` reads `VITE_APP_BASE` from `.env.production` to set the Vite base path and auto-generates `dist/.htaccess` with a matching `RewriteBase` at build time. `deploy-frontend.sh` derives the remote `rsync` destination from `VITE_APP_BASE` automatically. See `.env.production.example` for the format.
+- **Production domains added to CORS**: `time.salaxy.com` and `test-time.salaxy.com` added to the allowed origins list in `api/cors.php`.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -214,16 +226,20 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
    git checkout vue-migration
    ```
 
-2. Configure `config.php` with your credentials:
-   ```php
-   define('GEMINI_API_KEY',  'your-gemini-api-key');
-   define('SALAXY_API_URL',  'https://api.salaxy.com/v03/api');
-   define('SALAXY_TOKEN_URL','https://api.salaxy.com/oauth2/token');
-   define('SALAXY_USERNAME', 'user@yourcompany.com');
-   define('SALAXY_PASSWORD', 'your-password');
-   define('DB_FILE', __DIR__ . '/data/app.sqlite');
+2. Set credentials via environment variables or a local override file:
+
+   **Option A — environment variables** (recommended for production / Railway):
    ```
-   A `config.local.php.example` file is included as a template.
+   GEMINI_API_KEY=your-gemini-api-key
+   JWT_SECRET=a-long-random-secret
+   SALAXY_API_URL=https://api.salaxy.com/v03/api
+   SALAXY_TOKEN_URL=https://api.salaxy.com/oauth2/token
+   SALAXY_USERNAME=user@yourcompany.com
+   SALAXY_PASSWORD=your-password
+   ```
+
+   **Option B — local override file** (for local dev):
+   Copy `config.local.php.example` to `config.local.php` and fill in your values. This file is gitignored and loaded automatically by `config.php`.
 
 3. Make sure the `data/` directory is writable. The SQLite database is created automatically on first run.
 
@@ -239,7 +255,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 
 Start the PHP backend:
 ```bash
-php -S localhost:8000 router.php
+php -S localhost:8000
 ```
 
 Start the Vite dev server (with API proxy to PHP):
@@ -257,7 +273,7 @@ The Vite dev server proxies `/api/` requests to `localhost:8000`, so both server
 | `http://localhost:5173/{slug}/approval` | Supervisor/manager login |
 | `http://localhost:5173/admin` | Super-admin login |
 
-A default super-admin and test company are bootstrapped on first run. Login credentials are set in `bootstrap.php` — change the default password before deploying to any shared environment.
+A default super-admin (`superadmin@timeapp.local`) and a test company admin (`admin@timeapp.local`) are created on first run with default passwords defined in `bootstrap.php`. Change these before deploying to any shared environment.
 
 ### Frontend development commands
 
@@ -281,12 +297,12 @@ npm run lint         # ESLint + Oxlint
 ## Project Structure
 
 ```
-├── bootstrap.php                         # DB init and schema migrations
-├── router.php                            # PHP dev server routing
-├── config.php                            # API keys and DB path (not in git)
+├── bootstrap.php                         # DB init, schema migrations, PIN hashing helper
+├── config.php                            # Reads credentials from env vars; loads config.local.php if present
 ├── config.local.php.example             # Config template
-├── deploy-frontend.sh                    # Copies dist/ to Apache web root
-├── nixpacks.toml / railway.toml         # Deployment configuration
+├── deploy-frontend.sh                    # rsync dist/ to remote; derives path from VITE_APP_BASE automatically
+├── nixpacks.toml / railway.toml         # Deployment configuration (Railway)
+├── .env.production.example              # Template for VITE_API_BASE and VITE_APP_BASE
 │
 ├── api/
 │   ├── common.php                        # Shared JWT auth helpers and utilities

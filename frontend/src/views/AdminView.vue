@@ -96,7 +96,7 @@ function openEditEmp(id: number) {
   const emp = employees.value.find(e => e.id === id)
   if (!emp) return
   editingEmpId.value = id
-  empForm.value = { name: emp.name, pin: emp.pin, active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '', email: emp.email ?? '', phone: emp.phone ?? '', birth_year: emp.birth_year != null ? String(emp.birth_year) : '' }
+  empForm.value = { name: emp.name, pin: '', active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '', email: emp.email ?? '', phone: emp.phone ?? '', birth_year: emp.birth_year != null ? String(emp.birth_year) : '' }
   empFormError.value = null
 }
 
@@ -106,15 +106,27 @@ function cancelEmpForm() {
 }
 
 async function submitEmpForm() {
-  const err = validateEmployeeForm(empForm.value.name, empForm.value.pin)
+  const err = validateEmployeeForm(empForm.value.name, empForm.value.pin, !editingEmpId.value)
   if (err) { empFormError.value = err; return }
   empSaving.value = true
   empFormError.value = null
   try {
     const birthYearNum = empForm.value.birth_year ? parseInt(empForm.value.birth_year, 10) : null
-    const payload = editingEmpId.value
-      ? { id: editingEmpId.value, ...empForm.value, birth_year: birthYearNum }
-      : { name: empForm.value.name, pin: empForm.value.pin, ui_language: empForm.value.ui_language, employmentId: empForm.value.employmentId, email: empForm.value.email, phone: empForm.value.phone, birth_year: birthYearNum }
+    const payload: Parameters<typeof saveEmployee>[0] = {
+      name: empForm.value.name,
+      active: empForm.value.active,
+      ui_language: empForm.value.ui_language,
+      employmentId: empForm.value.employmentId,
+      email: empForm.value.email,
+      phone: empForm.value.phone,
+      birth_year: birthYearNum,
+    }
+    if (editingEmpId.value) {
+      payload.id = editingEmpId.value
+      if (empForm.value.pin.trim()) payload.pin = empForm.value.pin.trim()
+    } else {
+      payload.pin = empForm.value.pin.trim()
+    }
     await saveEmployee(payload)
     cancelEmpForm()
   } catch (e) {
@@ -150,7 +162,7 @@ function openEditSup(id: number) {
     last_name: sup.last_name,
     email: sup.email,
     phone: sup.phone,
-    pin: sup.pin ?? '',
+    pin: '',
     active: sup.active,
   }
   supFormError.value = null

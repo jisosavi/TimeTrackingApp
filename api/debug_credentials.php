@@ -17,7 +17,7 @@ try {
     )->fetchAll();
 
     $employees = $db->query(
-        'SELECT c.name AS company, c.slug, e.name, e.pin
+        'SELECT c.name AS company, c.slug, e.name
          FROM employees e
          JOIN companies c ON c.id = e.company_id
          WHERE e.active = 1
@@ -25,7 +25,7 @@ try {
     )->fetchAll();
 
     $supervisors = $db->query(
-        'SELECT c.name AS company, c.slug, s.first_name, s.last_name, s.pin
+        'SELECT c.name AS company, c.slug, s.first_name, s.last_name
          FROM supervisors s
          JOIN companies c ON c.id = s.company_id
          WHERE s.active = 1

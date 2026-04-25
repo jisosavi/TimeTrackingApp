@@ -2,9 +2,10 @@ import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import type { Employee, Supervisor, TeamMember, PayrollSettings, ExportPeriod, ExportResult } from '@/types'
 
-export function validateEmployeeForm(name: string, pin: string): string | null {
+export function validateEmployeeForm(name: string, pin: string, isNew = true): string | null {
   if (!name.trim()) return 'Name is required'
-  if (!/^\d{3,6}$/.test(pin.trim())) return 'PIN must be 3–6 digits'
+  if (isNew && !pin.trim()) return 'PIN is required'
+  if (pin.trim() && !/^\d{3,6}$/.test(pin.trim())) return 'PIN must be 3–6 digits'
   return null
 }
 
@@ -33,7 +34,7 @@ export function useAdminData() {
   async function saveEmployee(payload: {
     id?: number
     name: string
-    pin: string
+    pin?: string
     active?: number
     employmentId?: string
     ui_language?: string

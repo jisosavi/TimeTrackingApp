@@ -9,7 +9,7 @@ $db = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        "SELECT e.id, e.name, e.pin, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
+        "SELECT e.id, e.name, e.ssn, e.salaxy_employment_id AS employmentId, e.active, e.ui_language,
                 e.email, e.phone, e.birth_year, e.pin_locked,
            CASE WHEN EXISTS(
              SELECT 1 FROM pin_rate_limit prl
@@ -91,45 +91,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($uiLanguage === '') $uiLanguage = null; // empty = clear override
 
-    // If updating an existing employee with only PIN, fetch current data
-    if ($id && $name === '' && $pin !== '') {
-        $stmt = $db->prepare(
-            'SELECT name, ssn, salaxy_employment_id, active
-             FROM employees
-             WHERE id = :id AND company_id = :company_id'
-        );
-        $stmt->execute([':id' => $id, ':company_id' => $admin['company_id']]);
-        $existing = $stmt->fetch();
-        if ($existing) {
-            $name = $existing['name'];
-            $ssn = $existing['ssn'] ?? '';
-            $employmentId = $existing['salaxy_employment_id'] ?? '';
-            $active = (int) $existing['active'];
-        }
+    if ($name === '') {
+        sendJson(['success' => false, 'error' => 'Nimi on pakollinen.'], 400);
     }
 
-    if ($name === '' || $pin === '') {
-        sendJson(['success' => false, 'error' => 'Nimi ja PIN ovat pakollisia.'], 400);
+    if (!$id && $pin === '') {
+        sendJson(['success' => false, 'error' => 'PIN on pakollinen uudelle työntekijälle.'], 400);
     }
 
-    if (!preg_match('/^\d{3,6}$/', $pin)) {
+    if ($pin !== '' && !preg_match('/^\d{3,6}$/', $pin)) {
         sendJson(['success' => false, 'error' => 'PIN-koodin on oltava 3–6 numeroa.'], 400);
     }
 
-    $uniqueQuery = 'SELECT id FROM employees WHERE pin = :pin AND company_id = :company_id';
-    if ($id) {
-        $uniqueQuery .= ' AND id != :id';
-    }
-
-    $stmt = $db->prepare($uniqueQuery);
-    $params = [':pin' => $pin, ':company_id' => $admin['company_id']];
-    if ($id) {
-        $params[':id'] = $id;
-    }
-    $stmt->execute($params);
-    $existing = $stmt->fetch();
-    if ($existing) {
-        sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä.'], 409);
+    if ($pin !== '') {
+        $pinHash = hashPin($pin);
+        $uniqueQuery = 'SELECT id FROM employees WHERE pin = :pin AND company_id = :company_id';
+        if ($id) $uniqueQuery .= ' AND id != :id';
+        $uqStmt = $db->prepare($uniqueQuery);
+        $uqParams = [':pin' => $pinHash, ':company_id' => $admin['company_id']];
+        if ($id) $uqParams[':id'] = $id;
+        $uqStmt->execute($uqParams);
+        if ($uqStmt->fetch()) {
+            sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä.'], 409);
+        }
+    } else {
+        // Editing without changing PIN — fetch existing hash
+        $cur = $db->prepare('SELECT pin FROM employees WHERE id = :id AND company_id = :company_id');
+        $cur->execute([':id' => $id, ':company_id' => $admin['company_id']]);
+        $row = $cur->fetch();
+        $pinHash = $row ? $row['pin'] : '';
     }
 
     if ($id) {
@@ -143,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $stmt->execute([
             ':name' => $name,
-            ':pin' => $pin,
+            ':pin' => $pinHash,
             ':ssn' => $ssn,
             ':employmentId' => $employmentId,
             ':active' => $active,
@@ -161,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $stmt->execute([
             ':company_id' => $admin['company_id'],
-            ':pin' => $pin,
+            ':pin' => $pinHash,
             ':name' => $name,
             ':ssn' => $ssn,
             ':employmentId' => $employmentId,
@@ -176,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $stmt = $db->prepare(
-        'SELECT id, name, pin, ssn, salaxy_employment_id AS employmentId, active, ui_language, email, phone, birth_year
+        'SELECT id, name, ssn, salaxy_employment_id AS employmentId, active, ui_language, email, phone, birth_year
          FROM employees
          WHERE id = :id AND company_id = :company_id'
     );

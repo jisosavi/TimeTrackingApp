@@ -160,8 +160,9 @@ try {
 
             do {
                 $pin     = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $pinHash = hashPin($pin);
                 $pinChk  = $db->prepare('SELECT id FROM employees WHERE company_id = :cid AND pin = :pin');
-                $pinChk->execute([':cid' => $companyId, ':pin' => $pin]);
+                $pinChk->execute([':cid' => $companyId, ':pin' => $pinHash]);
             } while ($pinChk->fetch());
 
             $db->prepare(
@@ -169,7 +170,7 @@ try {
                  VALUES (:cid, :pin, :name, :ssn, :sid, :role, 1)'
             )->execute([
                 ':cid'  => $companyId,
-                ':pin'  => $pin,
+                ':pin'  => $pinHash,
                 ':name' => $fullName,
                 ':ssn'  => $ssn ?: null,
                 ':sid'  => $empId,

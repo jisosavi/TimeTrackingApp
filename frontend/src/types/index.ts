@@ -38,7 +38,7 @@ export interface Company {
 export interface Employee {
   id: number
   name: string
-  pin: string
+  pin?: string
   ssn: string | null
   employmentId: string | null
   active: number
@@ -69,7 +69,7 @@ export interface Supervisor {
   last_name: string
   email: string
   phone: string
-  pin: string
+  pin?: string
   ssn: string | null
   salaxy_id: string | null
   active: number

@@ -9,7 +9,7 @@ $db    = getDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(
-        'SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.pin, s.ssn, s.salaxy_id, s.active, s.ui_language, s.pin_locked,
+        'SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.ssn, s.salaxy_id, s.active, s.ui_language, s.pin_locked,
                 CASE WHEN EXISTS(
                   SELECT 1 FROM pin_rate_limit prl
                   WHERE prl.last_employee_id = s.id
@@ -72,26 +72,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($pin !== '') {
-        // Check uniqueness across supervisors in the same company
+        $pinHash = hashPin($pin);
         $supQuery = 'SELECT id FROM supervisors WHERE pin = :pin AND company_id = :cid';
         if ($id) $supQuery .= ' AND id != :id';
         $supStmt = $db->prepare($supQuery);
-        $supParams = [':pin' => $pin, ':cid' => $admin['company_id']];
+        $supParams = [':pin' => $pinHash, ':cid' => $admin['company_id']];
         if ($id) $supParams[':id'] = $id;
         $supStmt->execute($supParams);
         if ($supStmt->fetch()) {
             sendJson(['success' => false, 'error' => 'Tämä PIN on jo käytössä toisella esihenkilöllä.'], 409);
         }
-
     }
 
     if ($id) {
-        // Fetch current PIN if not changing
         if ($pin === '') {
-            $cur  = $db->prepare('SELECT pin FROM supervisors WHERE id = :id AND company_id = :cid');
+            $cur = $db->prepare('SELECT pin FROM supervisors WHERE id = :id AND company_id = :cid');
             $cur->execute([':id' => $id, ':cid' => $admin['company_id']]);
             $row = $cur->fetch();
-            $pin = $row ? $row['pin'] : '';
+            $pinHash = $row ? $row['pin'] : '';
         }
 
         $uiLangExpr = $langProvided ? ':ui_language' : 'COALESCE(:ui_language, ui_language)';
@@ -102,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              WHERE id=:id AND company_id=:cid"
         )->execute([
             ':fn' => $firstName, ':ln' => $lastName, ':email' => $email,
-            ':phone' => $phone, ':pin' => $pin, ':ssn' => $ssn,
+            ':phone' => $phone, ':pin' => $pinHash, ':ssn' => $ssn,
             ':salaxy_id' => $salaxyId, ':active' => $active,
             ':ui_language' => $uiLanguage,
             ':id' => $id, ':cid' => $admin['company_id'],
@@ -113,14 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (:cid, :fn, :ln, :email, :phone, :pin, :ssn, :salaxy_id, :active, :ui_language)'
         )->execute([
             ':cid' => $admin['company_id'], ':fn' => $firstName, ':ln' => $lastName,
-            ':email' => $email, ':phone' => $phone, ':pin' => $pin,
+            ':email' => $email, ':phone' => $phone, ':pin' => $pinHash,
             ':ssn' => $ssn, ':salaxy_id' => $salaxyId, ':active' => $active,
             ':ui_language' => $uiLanguage,
         ]);
         $id = (int) $db->lastInsertId();
     }
 
-    $stmt = $db->prepare('SELECT * FROM supervisors WHERE id = :id');
+    $stmt = $db->prepare(
+        'SELECT id, first_name, last_name, email, phone, ssn, salaxy_id, active, ui_language, pin_locked
+         FROM supervisors WHERE id = :id'
+    );
     $stmt->execute([':id' => $id]);
     sendJson(['success' => true, 'supervisor' => $stmt->fetch()]);
 }

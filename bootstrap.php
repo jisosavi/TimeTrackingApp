@@ -210,6 +210,20 @@ function initializeDatabase(PDO $db): void
         $db->exec('ALTER TABLE time_entries ADD COLUMN km_employee_clarification TEXT');
     }
 
+    // Migrate plain-text PINs to HMAC-SHA256
+    foreach ($db->query('SELECT id, pin FROM employees')->fetchAll() as $row) {
+        if (preg_match('/^\d{3,6}$/', $row['pin'])) {
+            $db->prepare('UPDATE employees SET pin = :h WHERE id = :id')
+               ->execute([':h' => hashPin($row['pin']), ':id' => $row['id']]);
+        }
+    }
+    foreach ($db->query('SELECT id, pin FROM supervisors')->fetchAll() as $row) {
+        if (preg_match('/^\d{3,6}$/', $row['pin'])) {
+            $db->prepare('UPDATE supervisors SET pin = :h WHERE id = :id')
+               ->execute([':h' => hashPin($row['pin']), ':id' => $row['id']]);
+        }
+    }
+
     ensureDefaultCompany($db);
     ensureDefaultAdmin($db);
     ensureDefaultSuperAdmin($db);
@@ -292,4 +306,9 @@ function ensureDefaultSuperAdmin(PDO $db): void
 function verifyPassword(string $password, string $hash): bool
 {
     return password_verify($password, $hash);
+}
+
+function hashPin(string $pin): string
+{
+    return hash_hmac('sha256', $pin, JWT_SECRET);
 }

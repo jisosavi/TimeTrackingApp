@@ -38,6 +38,8 @@ if ($deviceId !== '' && $companyId !== null) {
     }
 }
 
+$pinHash = hashPin($pin);
+
 if ($slug !== '') {
     $stmt = $db->prepare(
         'SELECT s.* FROM supervisors s
@@ -45,10 +47,10 @@ if ($slug !== '') {
          WHERE s.pin = :pin AND s.active = 1 AND c.slug = :slug
          LIMIT 1'
     );
-    $stmt->execute([':pin' => $pin, ':slug' => $slug]);
+    $stmt->execute([':pin' => $pinHash, ':slug' => $slug]);
 } else {
     $stmt = $db->prepare('SELECT * FROM supervisors WHERE pin = :pin AND active = 1 LIMIT 1');
-    $stmt->execute([':pin' => $pin]);
+    $stmt->execute([':pin' => $pinHash]);
 }
 
 $supervisor = $stmt->fetch();

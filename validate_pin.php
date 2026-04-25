@@ -50,6 +50,8 @@ try {
         }
     }
 
+    $pinHash = hashPin($pin);
+
     // Look up employee — include pin_locked so we can reject even on correct PIN
     if ($slug !== '') {
         $stmt = $db->prepare(
@@ -60,7 +62,7 @@ try {
              WHERE e.pin = :pin AND e.active = 1 AND c.slug = :slug
              LIMIT 1'
         );
-        $stmt->execute([':pin' => $pin, ':slug' => $slug]);
+        $stmt->execute([':pin' => $pinHash, ':slug' => $slug]);
     } else {
         $stmt = $db->prepare(
             'SELECT id, name, ssn, pin_locked,
@@ -69,7 +71,7 @@ try {
              WHERE pin = :pin AND active = 1
              LIMIT 1'
         );
-        $stmt->execute([':pin' => $pin]);
+        $stmt->execute([':pin' => $pinHash]);
     }
 
     $employee = $stmt->fetch();
