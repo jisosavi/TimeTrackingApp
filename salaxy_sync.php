@@ -8,6 +8,10 @@ require_once __DIR__ . '/config.php';
 const DRAFT_FILE = __DIR__ . '/data/salaxy_draft.json';
 const TOKEN_FILE = __DIR__ . '/data/salaxy_token.json';
 
+// Per-company credential override — set before calling salaxy_sync functions.
+// Keys: api_url, token_url, username, password, company_id
+$_salaxyCompanyCreds = [];
+
 // When included as a library (e.g. from export_payroll.php) skip standalone execution
 if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
     if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -22,61 +26,61 @@ if (!defined('SALAXY_SYNC_AS_LIBRARY')) {
  * Hae Salaxy access token (cachetetaan tiedostoon)
  */
 function getSalaxyAccessToken(): ?string {
-    // Tarkista onko cachessa validi token
-    if (file_exists(TOKEN_FILE)) {
-        $cached = json_decode(file_get_contents(TOKEN_FILE), true);
-        // Token on voimassa jos se on alle 23 tuntia vanha (token kestää 24h)
+    global $_salaxyCompanyCreds;
+    $tokenUrl  = $_salaxyCompanyCreds['token_url'] ?? SALAXY_TOKEN_URL;
+    $username  = $_salaxyCompanyCreds['username']  ?? SALAXY_USERNAME;
+    $password  = $_salaxyCompanyCreds['password']  ?? SALAXY_PASSWORD;
+    $companyId = $_salaxyCompanyCreds['company_id'] ?? 0;
+    $tokenFile = $companyId ? (DB_DIR . '/salaxy_token_' . $companyId . '.json') : TOKEN_FILE;
+
+    if (file_exists($tokenFile)) {
+        $cached = json_decode(file_get_contents($tokenFile), true);
         if (isset($cached['access_token'], $cached['fetched_at'])) {
-            $age = time() - $cached['fetched_at'];
-            if ($age < 23 * 60 * 60) {
+            if (time() - $cached['fetched_at'] < 23 * 3600) {
                 return $cached['access_token'];
             }
         }
     }
-    
-    // Hae uusi token
-    $ch = curl_init(SALAXY_TOKEN_URL);
+
+    $ch = curl_init($tokenUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_POSTFIELDS => json_encode([
+        CURLOPT_POST           => true,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS     => json_encode([
             'grant_type' => 'password',
-            'username' => SALAXY_USERNAME,
-            'password' => SALAXY_PASSWORD
+            'username'   => $username,
+            'password'   => $password,
         ]),
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT        => 30,
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
     if ($httpCode !== 200) {
         error_log("Salaxy token fetch failed: HTTP $httpCode - $response");
         return null;
     }
-    
+
     $data = json_decode($response, true);
     if (!isset($data['access_token'])) {
         error_log("Salaxy token fetch: no access_token in response");
         return null;
     }
-    
-    // Tallenna cacheen
-    $cacheData = [
-        'access_token' => $data['access_token'],
-        'token_type' => $data['token_type'] ?? 'Bearer',
-        'fetched_at' => time()
-    ];
-    
-    $dataDir = dirname(TOKEN_FILE);
+
+    $dataDir = dirname($tokenFile);
     if (!is_dir($dataDir)) {
         mkdir($dataDir, 0775, true);
     }
-    file_put_contents(TOKEN_FILE, json_encode($cacheData, JSON_PRETTY_PRINT));
-    
+    file_put_contents($tokenFile, json_encode([
+        'access_token' => $data['access_token'],
+        'token_type'   => $data['token_type'] ?? 'Bearer',
+        'fetched_at'   => time(),
+    ], JSON_PRETTY_PRINT));
+
     return $data['access_token'];
 }
 
@@ -84,13 +88,14 @@ function getSalaxyAccessToken(): ?string {
  * Tee API-kutsu Salaxyyn
  */
 function salaxyRequest(string $method, string $endpoint, ?array $data = null): array {
-    // Hae token dynaamisesti
+    global $_salaxyCompanyCreds;
     $token = getSalaxyAccessToken();
     if (!$token) {
         return ['success' => false, 'error' => 'Failed to get Salaxy access token', 'httpCode' => 0];
     }
-    
-    $url = SALAXY_API_URL . $endpoint;
+
+    $apiUrl = $_salaxyCompanyCreds['api_url'] ?? SALAXY_API_URL;
+    $url    = $apiUrl . $endpoint;
     
     // Debug: log the full URL
     error_log("Salaxy API call: $method $url");
@@ -169,7 +174,7 @@ $lastApiError = null;
  * Hae tai luo tämän päivän palkkalistan luonnos (jaettu kaikille työntekijöille)
  */
 function getOrCreateTodaysDraft(string $employmentId): ?array {
-    global $lastApiError;
+    global $lastApiError, $_salaxyCompanyCreds;
     $today = date('Y-m-d');
     
     // Lue tallennettu luonnos
@@ -226,7 +231,7 @@ function getOrCreateTodaysDraft(string $employmentId): ?array {
     
     // Tallenna virhe debuggausta varten
     $lastApiError = [
-        'fullUrl' => SALAXY_API_URL . '/payroll',
+        'fullUrl' => ($_salaxyCompanyCreds['api_url'] ?? SALAXY_API_URL) . '/payroll',
         'endpoint' => '/payroll',
         'method' => 'POST',
         'sentData' => $payrollData,

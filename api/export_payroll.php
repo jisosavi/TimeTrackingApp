@@ -231,6 +231,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!defined('SALAXY_SYNC_AS_LIBRARY')) define('SALAXY_SYNC_AS_LIBRARY', true);
     require_once __DIR__ . '/../salaxy_sync.php';
 
+    // Inject per-company Salaxy credentials so salaxy_sync functions use the right account
+    $credsRow = $masterDb->prepare('SELECT salaxy_api_url, salaxy_username, salaxy_password FROM companies WHERE id = ?');
+    $credsRow->execute([$admin['company_id']]);
+    $companyCreds = $credsRow->fetch() ?: [];
+    global $_salaxyCompanyCreds;
+    $_salaxyCompanyCreds = [
+        'api_url'    => $companyCreds['salaxy_api_url']  ?: SALAXY_API_URL,
+        'token_url'  => SALAXY_TOKEN_URL,
+        'username'   => $companyCreds['salaxy_username'] ?: SALAXY_USERNAME,
+        'password'   => $companyCreds['salaxy_password'] ?: SALAXY_PASSWORD,
+        'company_id' => (int) $admin['company_id'],
+    ];
+
     $totalSent    = 0;
     $totalAdded   = 0;
     $totalAlready = 0;
