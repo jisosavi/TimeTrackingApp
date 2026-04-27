@@ -70,6 +70,20 @@ export function useAdminData() {
     }
   }
 
+  async function clearSyncFromSalaxy() {
+    syncMessage.value = null
+    try {
+      const data = await apiFetch<{ added: number; deleted: number; total: number }>(
+        '/api/sync_employees_from_salaxy.php',
+        { method: 'POST', body: JSON.stringify({ clear: true }) },
+      )
+      syncMessage.value = `Clear sync done: ${data.deleted} deleted, ${data.added} added from Salaxy (${data.total} in Salaxy)`
+      await fetchEmployees()
+    } catch (e) {
+      syncMessage.value = `Clear sync failed: ${e instanceof Error ? e.message : 'Unknown error'}`
+    }
+  }
+
   async function fetchSupervisors() {
     loadingSups.value = true
     error.value = null
@@ -172,6 +186,7 @@ export function useAdminData() {
     fetchEmployees,
     saveEmployee,
     syncFromSalaxy,
+    clearSyncFromSalaxy,
     fetchSupervisors,
     saveSupervisor,
     deleteSupervisor,

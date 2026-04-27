@@ -21,7 +21,7 @@ const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
-  fetchEmployees, saveEmployee, syncFromSalaxy,
+  fetchEmployees, saveEmployee, syncFromSalaxy, clearSyncFromSalaxy,
   fetchSupervisors, saveSupervisor, deleteSupervisor, fetchTeam, saveTeam,
 } = useAdminData()
 
@@ -140,6 +140,16 @@ async function doSync() {
   syncing.value = true
   await syncFromSalaxy()
   syncing.value = false
+}
+
+const showClearConfirm = ref(false)
+const clearSyncing = ref(false)
+
+async function doClearSync() {
+  clearSyncing.value = true
+  showClearConfirm.value = false
+  await clearSyncFromSalaxy()
+  clearSyncing.value = false
 }
 
 // ── Supervisor form ───────────────────────────────────────────────────────────
@@ -325,6 +335,27 @@ async function submitAddForm() {
     </div>
 
     <p v-if="syncMessage" class="text-sm text-muted-foreground">{{ syncMessage }}</p>
+
+    <!-- Testing tools -->
+    <div class="rounded border border-dashed border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">
+      <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Testing only</p>
+      <div v-if="!showClearConfirm" class="flex items-center gap-3">
+        <Button variant="outline" size="sm" class="text-xs border-amber-400/60 text-amber-700 dark:text-amber-400" :disabled="clearSyncing" @click="showClearConfirm = true">
+          {{ clearSyncing ? 'Clearing…' : 'Clear all employees &amp; re-sync from Salaxy' }}
+        </Button>
+      </div>
+      <div v-else class="space-y-2">
+        <p class="text-xs text-amber-800 dark:text-amber-300 font-medium">
+          This will permanently delete all {{ employees.length }} employees and their time entries from this company, then fetch fresh from Salaxy. This cannot be undone.
+        </p>
+        <div class="flex gap-2">
+          <Button size="sm" class="text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground" :disabled="clearSyncing" @click="doClearSync">
+            Delete all &amp; sync from Salaxy
+          </Button>
+          <Button size="sm" variant="ghost" class="text-xs" @click="showClearConfirm = false">Cancel</Button>
+        </div>
+      </div>
+    </div>
 
     <!-- Filter + search bar -->
     <div class="flex items-center gap-3 flex-wrap">

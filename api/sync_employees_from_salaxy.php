@@ -122,10 +122,24 @@ function getEmployeesFromSalaxy(string $apiUrl, int $companyId, string $tokenUrl
 }
 
 try {
+    $payload    = getJsonPayload();
+    $clearFirst = !empty($payload['clear']);
+    $deleted    = 0;
+
+    if ($clearFirst) {
+        $deleted = (int) $db->query(
+            'SELECT COUNT(*) FROM employees WHERE company_id = ' . $companyId
+        )->fetchColumn();
+        $db->exec('DELETE FROM time_entries WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ' . $companyId . ')');
+        $db->exec('DELETE FROM supervisor_employees WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ' . $companyId . ')');
+        $db->exec('DELETE FROM pin_rate_limit WHERE company_id = ' . $companyId);
+        $db->exec('DELETE FROM employees WHERE company_id = ' . $companyId);
+    }
+
     $salaxyEmployees = getEmployeesFromSalaxy($salaxyApiUrl, $companyId, SALAXY_TOKEN_URL, $salaxyUser, $salaxyPass);
 
     if (empty($salaxyEmployees)) {
-        sendJson(['success' => true, 'message' => 'No employees found in Salaxy', 'added' => 0, 'updated' => 0, 'total' => 0]);
+        sendJson(['success' => true, 'message' => 'No employees found in Salaxy', 'added' => 0, 'updated' => 0, 'total' => 0, 'deleted' => $deleted]);
     }
 
     $added   = 0;
@@ -191,6 +205,7 @@ try {
         'added'   => $added,
         'updated' => $updated,
         'total'   => count($salaxyEmployees),
+        'deleted' => $deleted,
     ]);
 } catch (Throwable $e) {
     error_log('Sync employees error: ' . $e->getMessage());
