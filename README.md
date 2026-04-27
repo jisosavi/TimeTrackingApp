@@ -86,6 +86,7 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 - Company Salaxy ID visible in Settings (read-only; editable by super-admins only)
 
 **Super-admin** (`/admin/`)
+- Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins whitelist and a JWT is issued. First login auto-links the Salaxy account if only one unlinked super-admin exists.
 - Create and manage companies with a slug-based URL and admin account
 - Enable or disable time tracking per company via an inline toggle
 - Manage admins of each company
@@ -138,6 +139,8 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 ## Recent Changes
 
 ### 2026-04-27
+- **Salaxy OAuth2 super-admin login**: Super-admin login now uses the Salaxy Authorization Code flow instead of a local password. The callback lands at the SPA root (no `.htaccess` rewrite required); the router forwards `?code=` to `/admin` client-side. The PHP callback (`api/salaxy_oauth_callback.php`) exchanges the code, fetches `session/current`, matches `currentAccount.id` against the `super_admins` whitelist, and issues a JWT. First login auto-links the account when exactly one unlinked super-admin exists. Set `VITE_SUPERADMIN_PASSWORD_LOGIN=true` in `.env.local` to keep the password form visible for local development.
+- **Apache `.htaccess` fix**: Added `Options -MultiViews` to the generated `.htaccess`. Without it, Apache's content negotiation returns 404 for SPA routes before mod_rewrite can handle them.
 - **Per-company SQLite databases**: Each company now has its own isolated database file at `data/companies/{id}.sqlite`. A separate `data/master.sqlite` holds the company registry and super-admin accounts. Super-admins are now stored in dedicated `super_admin_orgs` / `super_admins` tables (previously a role variant in `company_admins`). Run `php migrate.php` once to split a legacy `data/app.sqlite` into the new layout — the script is idempotent.
 
 ### 2026-04-25
@@ -195,7 +198,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/{slug}/admin/payroll-summary` | Export Payrolls to Salaxy — default admin landing (authenticated) |
 | `/{slug}/admin/payroll` | Redirects to `/payroll-summary` |
 | `/{slug}/admin/payroll-settings` | Payroll period settings (authenticated) |
-| `/admin` | Super-admin login |
+| `/admin` | Super-admin login (Salaxy OAuth2) |
 | `/admin/dashboard` | Super-admin company list (authenticated) |
 | `/api/employees.php` | Employee CRUD |
 | `/api/supervisors.php` | Supervisor CRUD |
@@ -207,6 +210,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/api/sync_employees_from_salaxy.php` | Sync employees from Salaxy |
 | `/api/update_language.php` | Update UI language per user |
 | `/api/company_lang.php` | Get company default language |
+| `/api/salaxy_oauth_callback.php` | Exchange Salaxy OAuth2 code for app JWT (super-admin only) |
 | `/api/health.php` | Health check endpoint |
 
 ---
@@ -278,6 +282,8 @@ The Vite dev server proxies `/api/` requests to `localhost:8000`, so both server
 
 Default accounts are created on first run: super-admin `superadmin@timeapp.local` in `master.sqlite` and company admin `admin@timeapp.local` in the test company DB. Default passwords are defined in `bootstrap.php` — change before deploying to any shared environment.
 
+In production, super-admin login uses Salaxy OAuth2. For local development, add `VITE_SUPERADMIN_PASSWORD_LOGIN=true` to `frontend/.env.local` to show the email/password form alongside the OAuth button.
+
 ### Frontend development commands
 
 ```bash
@@ -313,6 +319,7 @@ npm run lint         # ESLint + Oxlint
 │   ├── cors.php                          # CORS headers for cross-origin dev setup
 │   ├── jwt.php                           # JWT sign / verify
 │   ├── admin_login.php                   # Company admin login → JWT
+│   ├── salaxy_oauth_callback.php         # Salaxy OAuth2 callback — exchange code, match super-admin, issue JWT
 │   ├── companies.php                     # List companies / toggle active
 │   ├── company_admins.php                # CRUD for company admin users
 │   ├── company_lang.php                  # Get company default UI language
