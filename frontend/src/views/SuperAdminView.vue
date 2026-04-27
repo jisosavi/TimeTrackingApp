@@ -14,7 +14,7 @@ import { useRefresh } from '@/composables/useRefresh'
 
 const { t } = useI18n({ useScope: 'global' })
 
-const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin } = useSuperAdmin()
+const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin, deleteAdmin } = useSuperAdmin()
 const { refreshTick } = useRefresh()
 
 const companyAdmins = ref<Record<number, CompanyAdmin[]>>({})
@@ -82,6 +82,12 @@ const activePwForm = ref<{
   companyId: number; adminId: number; email: string; name: string
   password: string; saving: boolean; error: string
 } | null>(null)
+
+async function removeAdmin(companyId: number, adminId: number) {
+  await deleteAdmin(companyId, adminId)
+  companyAdmins.value[companyId] = await fetchCompanyAdmins(companyId)
+  if (activePwForm.value?.adminId === adminId) activePwForm.value = null
+}
 
 function openPwForm(companyId: number, admin: CompanyAdmin) {
   activePwForm.value = { companyId, adminId: admin.id, email: admin.email, name: admin.name ?? '', password: '', saving: false, error: '' }
@@ -303,10 +309,14 @@ async function toggleApprovals(id: number, currentValue: number) {
         <div v-for="admin in companyAdmins[company.id]" :key="admin.id" class="space-y-1">
           <div class="flex items-center justify-between gap-2">
             <p class="text-xs font-mono truncate text-muted-foreground">{{ admin.email }}</p>
-            <Button
-              size="sm" variant="ghost" class="h-6 text-xs shrink-0"
-              @click="openPwForm(company.id, admin)"
-            >Set password</Button>
+            <div class="flex items-center gap-1 shrink-0">
+              <Button size="sm" variant="ghost" class="h-6 text-xs" @click="openPwForm(company.id, admin)">Set password</Button>
+              <Button
+                v-if="(companyAdmins[company.id]?.length ?? 0) > 1"
+                size="sm" variant="ghost" class="h-6 text-xs text-destructive hover:text-destructive"
+                @click="removeAdmin(company.id, admin.id)"
+              >Delete</Button>
+            </div>
           </div>
           <template v-if="activePwForm?.companyId === company.id && activePwForm?.adminId === admin.id">
             <form class="space-y-1.5" @submit.prevent="submitPwForm">

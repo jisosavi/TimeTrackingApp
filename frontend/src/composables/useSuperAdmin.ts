@@ -83,5 +83,12 @@ export function useSuperAdmin() {
     })
   }
 
-  return { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin }
+  async function deleteAdmin(companyId: number, adminId: number): Promise<void> {
+    await apiFetch('/api/company_admins.php', {
+      method: 'DELETE',
+      body: JSON.stringify({ company_id: companyId, id: adminId }),
+    })
+  }
+
+  return { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin, deleteAdmin }
 }
