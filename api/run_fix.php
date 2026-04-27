@@ -35,14 +35,19 @@ if (count($active) === 1 && !$active[0]['salaxy_account_id']) {
 
 $keep = $active[0];
 
-$db->prepare('UPDATE super_admins SET salaxy_account_id = NULL, active = 1, email = :email WHERE id = :id')
-   ->execute([':email' => 'janne@donkeyhotel.fi', ':id' => $keep['id']]);
+// Keep the record with email=superadmin@timeapp.local so bootstrap doesn't re-seed on next deploy
+$keepLocal = array_values(array_filter($active, fn($a) => $a['email'] === 'superadmin@timeapp.local'));
+$keep      = $keepLocal[0] ?? $active[0];
 
-foreach (array_slice($active, 1) as $extra) {
-    $db->prepare('UPDATE super_admins SET active = 0 WHERE id = :id')->execute([':id' => $extra['id']]);
-    $log[] = "Deactivated id={$extra['id']} ({$extra['email']})";
+$db->prepare('UPDATE super_admins SET salaxy_account_id = NULL, active = 1 WHERE id = :id')
+   ->execute([':id' => $keep['id']]);
+
+foreach ($active as $a) {
+    if ($a['id'] === $keep['id']) continue;
+    $db->prepare('UPDATE super_admins SET active = 0 WHERE id = :id')->execute([':id' => $a['id']]);
+    $log[] = "Deactivated id={$a['id']} ({$a['email']})";
 }
 
-$log[] = "Fixed: id={$keep['id']} reset, salaxy_account_id cleared, email set to janne@donkeyhotel.fi";
+$log[] = "Fixed: id={$keep['id']} ({$keep['email']}) is now the only active super admin with salaxy_account_id=NULL";
 
 echo json_encode(['success' => true, 'message' => 'Fixed. Log in via Salaxy as janne@donkeyhotel.fi.', 'log' => $log]);
