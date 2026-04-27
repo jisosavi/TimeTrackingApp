@@ -73,13 +73,16 @@ function computeStat(period: { from: string; to: string; label: string }, allEnt
     period,
     employeeCount: employees.size,
     totalEntries: countable.length,
-    pendingCount: inPeriod.filter(e =>
-      e.status === 'pending' || e.status === 'clarified' ||
-      (e.km > 0 && e.km_status === 'pending'),
-    ).length,
-    approvedCount: inPeriod.filter(e =>
-      e.status === 'approved' && (e.km === 0 || e.km_status === 'approved'),
-    ).length,
+    pendingCount: inPeriod.filter(e => {
+      if (e.status === 'pending' || e.status === 'clarified') return true
+      const isDual = e.hours > 0 && e.km > 0
+      return isDual && e.km_status === 'pending'
+    }).length,
+    approvedCount: inPeriod.filter(e => {
+      if (e.status !== 'approved') return false
+      const isDual = e.hours > 0 && e.km > 0
+      return !isDual || e.km_status === 'approved'
+    }).length,
     projectRows,
     totalHours: projectRows.reduce((s, r) => s + r.hours, 0),
     totalKm: projectRows.reduce((s, r) => s + r.km, 0),
