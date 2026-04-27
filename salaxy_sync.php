@@ -605,22 +605,29 @@ function exportEmployeeEntries(
     $calculationId      = $calcResult['calculationId'];
     $calcObject         = $calcResult['calcObject'];
     $isNewCalc          = $calcResult['isNew'];
-    $defaultHourlyPrice = getEmployeeDefaultHourlyPrice($employmentId) ?? 0;
+    $defaultHourlyPrice = getEmployeeDefaultHourlyPrice($employmentId);
 
     $baseRows = $calcObject['rows'] ?? [];
 
-    // For a fresh calculation remove the placeholder hourlySalary default row;
-    // we replace it with per-entry rows.
+    // For a fresh calculation remove the placeholder hourlySalary default row
+    // and capture its configured price — Salaxy silently drops rows with price=0.
+    $templateHourlyPrice = null;
     if ($isNewCalc) {
         $removed  = false;
-        $baseRows = array_values(array_filter($baseRows, function ($r) use (&$removed) {
+        $newBase  = [];
+        foreach ($baseRows as $r) {
             if (!$removed && ($r['rowType'] ?? '') === 'hourlySalary') {
+                $templateHourlyPrice = $r['price'] ?? null;
                 $removed = true;
-                return false;
+            } else {
+                $newBase[] = $r;
             }
-            return true;
-        }));
+        }
+        $baseRows = array_values($newBase);
     }
+
+    // Priority: template row price → fetched employment price → 0
+    $defaultHourlyPrice = $templateHourlyPrice ?? $defaultHourlyPrice ?? 0;
 
     $maxIdx = array_reduce($baseRows, fn($c, $r) => max($c, $r['rowIndex'] ?? -1), -1);
 
