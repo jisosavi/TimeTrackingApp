@@ -260,10 +260,9 @@ async function toggleApprovals(id: number, currentValue: number) {
         <div class="space-y-0.5 min-w-0">
           <p class="font-medium text-sm">{{ company.name }}</p>
           <p class="text-xs text-muted-foreground font-mono">/{{ company.slug }}</p>
-          <p v-if="company.business_id" class="text-xs text-muted-foreground font-mono">
-            Business ID: {{ company.business_id }}
+          <p class="text-xs text-muted-foreground font-mono">
+            Salaxy ID: {{ company.business_id || '—' }}
           </p>
-          <p v-else class="text-xs text-muted-foreground italic">No Business ID set</p>
           <p v-if="company.db_file" class="text-xs text-muted-foreground/50 font-mono">
             DB: {{ company.db_file }}
           </p>
@@ -354,7 +353,7 @@ async function toggleApprovals(id: number, currentValue: number) {
             </p>
           </div>
           <div class="space-y-1 sm:col-span-2">
-            <Label class="text-xs">Business ID (Y-tunnus)</Label>
+            <Label class="text-xs">Salaxy Company ID</Label>
             <div class="flex gap-2">
               <Input v-model="editForm.business_id" placeholder="e.g. 1234567-8" class="font-mono text-xs" />
               <Button
