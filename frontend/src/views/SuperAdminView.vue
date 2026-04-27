@@ -338,7 +338,7 @@ async function toggleApprovals(id: number, currentValue: number) {
       </Button>
 
       <!-- Inline edit form -->
-      <div v-if="editingId === company.id" class="space-y-3 pt-1 border-t">
+      <form v-if="editingId === company.id" class="space-y-3 pt-1 border-t" @submit.prevent="submitEdit">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="space-y-1">
             <Label class="text-xs">Company Name</Label>
@@ -382,12 +382,12 @@ async function toggleApprovals(id: number, currentValue: number) {
         </div>
         <p v-if="editError" class="text-xs text-destructive">{{ editError }}</p>
         <div class="flex gap-2">
-          <Button size="sm" :disabled="saving" @click="submitEdit">
+          <Button type="submit" size="sm" :disabled="saving">
             {{ saving ? 'Saving…' : 'Save' }}
           </Button>
-          <Button size="sm" variant="ghost" @click="cancelEdit">Cancel</Button>
+          <Button type="button" size="sm" variant="ghost" @click="cancelEdit">Cancel</Button>
         </div>
-      </div>
+      </form>
     </div>
 
     <EmptyState
