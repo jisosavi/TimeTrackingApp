@@ -2,6 +2,14 @@ import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import type { Company } from '@/types'
 
+export interface CompanyAdmin {
+  id: number
+  email: string
+  name: string | null
+  role: string
+  active: number
+}
+
 export function validateSlug(slug: string): string | null {
   const s = slug.trim()
   if (!s) return 'Slug is required'
@@ -63,5 +71,17 @@ export function useSuperAdmin() {
     return data.business_id
   }
 
-  return { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId }
+  async function fetchCompanyAdmins(companyId: number): Promise<CompanyAdmin[]> {
+    const data = await apiFetch<{ admins: CompanyAdmin[] }>(`/api/company_admins.php?company_id=${companyId}`)
+    return data.admins
+  }
+
+  async function saveAdmin(companyId: number, admin: { id: number; email: string; name: string; password: string }): Promise<void> {
+    await apiFetch('/api/company_admins.php', {
+      method: 'POST',
+      body: JSON.stringify({ company_id: companyId, ...admin }),
+    })
+  }
+
+  return { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin }
 }

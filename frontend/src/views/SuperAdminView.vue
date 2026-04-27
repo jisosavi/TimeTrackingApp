@@ -9,15 +9,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
+import type { CompanyAdmin } from '@/composables/useSuperAdmin'
 import { useRefresh } from '@/composables/useRefresh'
 
 const { t } = useI18n({ useScope: 'global' })
 
-const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId } = useSuperAdmin()
+const { companies, loading, error, fetchCompanies, createCompany, updateCompany, fetchBusinessId, fetchCompanyAdmins, saveAdmin } = useSuperAdmin()
 const { refreshTick } = useRefresh()
 
-onMounted(fetchCompanies)
-watch(refreshTick, fetchCompanies)
+const companyAdmins = ref<Record<number, CompanyAdmin[]>>({})
+
+async function loadAll() {
+  await fetchCompanies()
+  for (const c of companies.value) {
+    companyAdmins.value[c.id] = await fetchCompanyAdmins(c.id)
+  }
+}
+
+onMounted(loadAll)
+watch(refreshTick, loadAll)
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
@@ -67,6 +77,38 @@ async function submitCreate() {
   }
 }
 
+// ── Admin password form ───────────────────────────────────────────────────────
+const activePwForm = ref<{
+  companyId: number; adminId: number; email: string; name: string
+  password: string; saving: boolean; error: string
+} | null>(null)
+
+function openPwForm(companyId: number, admin: CompanyAdmin) {
+  activePwForm.value = { companyId, adminId: admin.id, email: admin.email, name: admin.name ?? '', password: '', saving: false, error: '' }
+  editingId.value = null
+}
+
+async function submitPwForm() {
+  if (!activePwForm.value) return
+  if (activePwForm.value.password.length < 6) { activePwForm.value.error = 'Min 6 characters'; return }
+  activePwForm.value.saving = true
+  activePwForm.value.error = ''
+  try {
+    await saveAdmin(activePwForm.value.companyId, {
+      id: activePwForm.value.adminId,
+      email: activePwForm.value.email,
+      name: activePwForm.value.name,
+      password: activePwForm.value.password,
+    })
+    activePwForm.value = null
+  } catch (e) {
+    if (activePwForm.value) {
+      activePwForm.value.error = e instanceof Error ? e.message : 'Save failed'
+      activePwForm.value.saving = false
+    }
+  }
+}
+
 // ── Edit form ─────────────────────────────────────────────────────────────────
 const editingId = ref<number | null>(null)
 const editForm = ref({ name: '', slug: '', business_id: '' })
@@ -83,6 +125,7 @@ function openEdit(id: number) {
   editForm.value = { name: c.name, slug: c.slug, business_id: c.business_id ?? '' }
   editError.value = null
   showCreateForm.value = false
+  activePwForm.value = null
 }
 
 function cancelEdit() {
@@ -246,6 +289,30 @@ async function toggleApprovals(id: number, currentValue: number) {
           <span class="text-muted-foreground">Approvals: </span>
           <RouterLink :to="`/${company.slug}/approval`" target="_blank" class="text-primary hover:underline">/{{ company.slug }}/approval</RouterLink>
         </p>
+      </div>
+
+      <!-- Admin credentials -->
+      <div v-if="(companyAdmins[company.id] ?? []).length" class="border-t pt-2 space-y-1.5">
+        <p class="text-xs text-muted-foreground font-medium">Admin accounts</p>
+        <div v-for="admin in companyAdmins[company.id]" :key="admin.id" class="space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-mono truncate text-muted-foreground">{{ admin.email }}</p>
+            <Button
+              size="sm" variant="ghost" class="h-6 text-xs shrink-0"
+              @click="openPwForm(company.id, admin)"
+            >Set password</Button>
+          </div>
+          <template v-if="activePwForm?.companyId === company.id && activePwForm?.adminId === admin.id">
+            <div class="flex gap-2">
+              <Input v-model="activePwForm.password" type="password" placeholder="New password (min 6)" class="h-7 text-xs" />
+              <Button size="sm" class="h-7 text-xs shrink-0" :disabled="activePwForm.saving" @click="submitPwForm">
+                {{ activePwForm.saving ? '…' : 'Save' }}
+              </Button>
+              <Button size="sm" variant="ghost" class="h-7 text-xs" @click="activePwForm = null">✕</Button>
+            </div>
+            <p v-if="activePwForm.error" class="text-xs text-destructive">{{ activePwForm.error }}</p>
+          </template>
+        </div>
       </div>
 
       <Button variant="outline" size="sm" class="h-7 text-xs" @click="openEdit(company.id)">
