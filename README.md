@@ -93,7 +93,7 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 
 ---
 
-## Screenshots (OLD!)
+## Screenshots (OLD, MUST BE UPDATED!)
 
 **Simple PIN login** — each company has its own login URL at `/{slug}/`.
 Employees and managers/supervisors only need to open the URL on any device and give their unique PIN.
