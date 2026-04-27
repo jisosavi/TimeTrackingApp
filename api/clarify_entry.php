@@ -16,7 +16,7 @@ if (!$id || !in_array($action, ['clarify', 'clarify_km', 'delete'], true)) {
     sendJson(['success' => false, 'error' => 'id ja action (clarify|clarify_km|delete) vaaditaan'], 400);
 }
 
-$db = getDb();
+$db = getCompanyDb((int) $emp['company_id']);
 
 // ── Km clarification — handled separately before the hours-only check ────────
 if ($action === 'clarify_km') {

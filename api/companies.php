@@ -5,19 +5,29 @@ require_once __DIR__ . '/common.php';
 
 requireSuperAdmin();
 
-$db = getDb();
+$db = getMasterDb();
+
+function countActiveEmployees(int $companyId): int
+{
+    try {
+        return (int) getCompanyDb($companyId)->query('SELECT COUNT(*) FROM employees WHERE active = 1')->fetchColumn();
+    } catch (Throwable) {
+        return 0;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $stmt = $db->query(
-        'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language,
-                c.salaxy_company_id AS business_id,
-                COUNT(e.id) AS employee_count
-         FROM companies c
-         LEFT JOIN employees e ON e.company_id = c.id AND e.active = 1
-         GROUP BY c.id
-         ORDER BY c.name ASC'
+    $stmt      = $db->query(
+        'SELECT id, name, slug, active, approvals_enabled, ui_language,
+                salaxy_company_id AS business_id, db_file
+         FROM companies
+         ORDER BY name ASC'
     );
-    sendJson(['success' => true, 'companies' => $stmt->fetchAll()]);
+    $companies = $stmt->fetchAll();
+    foreach ($companies as &$c) {
+        $c['employee_count'] = countActiveEmployees((int) $c['id']);
+    }
+    sendJson(['success' => true, 'companies' => $companies]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $active = array_key_exists('active', $payload) ? (int) $payload['active'] : null;
         $ae     = array_key_exists('approvals_enabled', $payload) ? (int) $payload['approvals_enabled'] : null;
         $lang   = array_key_exists('ui_language', $payload) ? trim((string) $payload['ui_language']) : null;
-        // Accept both new key and legacy key
         $businessId = null;
         if (array_key_exists('business_id', $payload)) {
             $businessId = trim((string) $payload['business_id']);
@@ -71,15 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $stmt = $db->prepare(
-            'SELECT c.id, c.name, c.slug, c.active, c.approvals_enabled, c.ui_language,
-                    c.salaxy_company_id AS business_id,
-                    COUNT(e.id) AS employee_count
-             FROM companies c
-             LEFT JOIN employees e ON e.company_id = c.id AND e.active = 1
-             WHERE c.id = :id GROUP BY c.id'
+            'SELECT id, name, slug, active, approvals_enabled, ui_language,
+                    salaxy_company_id AS business_id, db_file
+             FROM companies WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
-        sendJson(['success' => true, 'company' => $stmt->fetch()]);
+        $company                  = $stmt->fetch();
+        $company['employee_count'] = countActiveEmployees($id);
+        sendJson(['success' => true, 'company' => $company]);
     }
 
     // Create new company
@@ -105,10 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $chk->execute([':slug' => $slug]);
     if ($chk->fetch()) sendJson(['success' => false, 'error' => 'Slug already taken'], 409);
 
-    $chk = $db->prepare('SELECT id FROM company_admins WHERE email = :email');
-    $chk->execute([':email' => $email]);
-    if ($chk->fetch()) sendJson(['success' => false, 'error' => 'Email already registered'], 409);
-
     $db->prepare(
         'INSERT INTO companies (name, slug, salaxy_api_url, salaxy_username, salaxy_password)
          VALUES (:name, :slug, :api_url, :username, :password)'
@@ -121,7 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
     $companyId = (int) $db->lastInsertId();
 
-    $db->prepare(
+    $db->prepare('UPDATE companies SET db_file = :f WHERE id = :id')
+       ->execute([':f' => 'companies/' . $companyId . '.sqlite', ':id' => $companyId]);
+
+    // Init company DB and insert first admin
+    $companyDb = getCompanyDb($companyId);
+    $companyDb->prepare(
         'INSERT INTO company_admins (company_id, email, password_hash, name, role, active)
          VALUES (:cid, :email, :hash, :name, :role, 1)'
     )->execute([

@@ -3,11 +3,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-$db = getDb();
-
 // POST — employee submits entries
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $emp     = requireEmployee();
+    $emp = requireEmployee();
+    $db  = getCompanyDb((int) $emp['company_id']);
     $payload = getJsonPayload();
     $entries = $payload['entries'] ?? [];
 
@@ -56,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if ($view === 'mine') {
         $emp = requireEmployee();
+        $db  = getCompanyDb((int) $emp['company_id']);
         $stmt = $db->prepare(
             'SELECT * FROM time_entries
              WHERE employee_id = :eid AND status != \'deleted\'
@@ -66,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     // Admin or supervisor reading a specific employee's entries
-    $reviewer   = requireAdminOrSupervisor();
+    $reviewer = requireAdminOrSupervisor();
+    $db       = getCompanyDb((int) $reviewer['company_id']);
     $employeeId = isset($_GET['employee_id']) ? (int) $_GET['employee_id'] : null;
     $statusFilter = $_GET['status'] ?? '';
     $dateFrom     = $_GET['date_from'] ?? '';
@@ -127,7 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // DELETE — employee soft-deletes their own pending entry (used by chat update flow)
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-    $emp     = requireEmployee();
+    $emp = requireEmployee();
+    $db  = getCompanyDb((int) $emp['company_id']);
     $payload = getJsonPayload();
     $id      = isset($payload['id']) ? (int) $payload['id'] : null;
 

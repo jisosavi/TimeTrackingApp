@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/common.php';
 
 $sup = requireSupervisor();
-$db  = getDb();
+$db  = getCompanyDb((int) $sup['company_id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(

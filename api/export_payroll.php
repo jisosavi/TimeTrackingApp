@@ -4,15 +4,16 @@ declare(strict_types=1);
 require_once __DIR__ . '/common.php';
 require_once __DIR__ . '/../config.php';
 
-$admin = requireAdmin();
-$db    = getDb();
+$admin    = requireAdmin();
+$db       = getCompanyDb((int) $admin['company_id']);
+$masterDb = getMasterDb();
 
 // ----------------------------------------------------------------
 // Load payroll period settings for a company.
 // ----------------------------------------------------------------
-function getCompanyPayrollSettings(PDO $db, int $companyId): array
+function getCompanyPayrollSettings(PDO $masterDb, int $companyId): array
 {
-    $stmt = $db->prepare('SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = :id');
+    $stmt = $masterDb->prepare('SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = :id');
     $stmt->execute([':id' => $companyId]);
     return $stmt->fetch() ?: ['payroll_period' => 'monthly', 'payday_1' => 15, 'payday_2' => 0];
 }
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         sendJson(['success' => false, 'error' => 'date_from ja date_to vaaditaan'], 400);
     }
 
-    $settings = getCompanyPayrollSettings($db, (int) $admin['company_id']);
+    $settings = getCompanyPayrollSettings($masterDb, (int) $admin['company_id']);
 
     // Pre-populate ALL periods in range (including empty ones)
     $byPeriod = [];
@@ -175,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sendJson(['success' => false, 'error' => 'date_from ja date_to vaaditaan'], 400);
     }
 
-    $settings   = getCompanyPayrollSettings($db, (int) $admin['company_id']);
+    $settings   = getCompanyPayrollSettings($masterDb, (int) $admin['company_id']);
     $allPeriods = getPeriodsForRange($dateFrom, $dateTo, $settings);
 
     // Load entries grouped by period → salaxy_employment_id

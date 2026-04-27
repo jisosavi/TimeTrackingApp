@@ -14,7 +14,7 @@ if (!$companyId) {
     sendJson(['success' => false, 'error' => 'company_id required'], 400);
 }
 
-$db   = getDb();
+$db   = getMasterDb();
 $stmt = $db->prepare('SELECT salaxy_api_url, salaxy_username, salaxy_password FROM companies WHERE id = :id');
 $stmt->execute([':id' => $companyId]);
 $company = $stmt->fetch();

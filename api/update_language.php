@@ -19,37 +19,39 @@ if (!$isClear && !in_array($lang, $allowed, true)) {
 }
 $langValue = $isClear ? null : $lang;
 
-$db = getDb();
-
 // Employee updating their own language
 if ($targetType === 'employee') {
     $employee = requireEmployee();
-    $db->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $langValue, ':id' => (int) $employee['id']]);
+    getCompanyDb((int) $employee['company_id'])
+        ->prepare('UPDATE employees SET ui_language = :lang WHERE id = :id')
+        ->execute([':lang' => $langValue, ':id' => (int) $employee['id']]);
     sendJson(['success' => true]);
 }
 
 // Supervisor updating their own language
 if ($targetType === 'supervisor_self') {
     $supervisor = requireSupervisor();
-    $db->prepare('UPDATE supervisors SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $langValue, ':id' => (int) $supervisor['id']]);
+    getCompanyDb((int) $supervisor['company_id'])
+        ->prepare('UPDATE supervisors SET ui_language = :lang WHERE id = :id')
+        ->execute([':lang' => $langValue, ':id' => (int) $supervisor['id']]);
     sendJson(['success' => true]);
 }
 
 // Admin updating their own language
 if ($targetType === 'admin') {
     $admin = requireAdmin();
-    $db->prepare('UPDATE company_admins SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $lang, ':id' => (int) $admin['id']]);
+    getCompanyDb((int) $admin['company_id'])
+        ->prepare('UPDATE company_admins SET ui_language = :lang WHERE id = :id')
+        ->execute([':lang' => $lang, ':id' => (int) $admin['id']]);
     sendJson(['success' => true]);
 }
 
 // Company admin updating company default language
 if ($targetType === 'company') {
     $admin = requireAdmin();
-    $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
-       ->execute([':lang' => $lang, ':id' => (int) $admin['company_id']]);
+    getMasterDb()
+        ->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
+        ->execute([':lang' => $lang, ':id' => (int) $admin['company_id']]);
     sendJson(['success' => true]);
 }
 

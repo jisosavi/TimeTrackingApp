@@ -7,7 +7,7 @@ require_once __DIR__ . '/../bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    $db = getDb();
+    requireSuperAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $companyId = isset($_GET['company_id']) ? (int) $_GET['company_id'] : 0;
@@ -16,6 +16,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'company_id required']);
             exit;
         }
+        $db   = getCompanyDb($companyId);
         $stmt = $db->prepare(
             'SELECT id, email, name, role, active FROM company_admins
              WHERE company_id = :cid ORDER BY email ASC'
@@ -44,6 +45,8 @@ try {
             echo json_encode(['success' => false, 'error' => 'Virheellinen sähköpostiosoite']);
             exit;
         }
+
+        $db = getCompanyDb($companyId);
 
         if ($id) {
             if ($password !== '') {
@@ -96,14 +99,16 @@ try {
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
-        $id = isset($payload['id']) ? (int) $payload['id'] : 0;
-        if (!$id) {
+        $payload   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id        = isset($payload['id']) ? (int) $payload['id'] : 0;
+        $companyId = isset($payload['company_id']) ? (int) $payload['company_id'] : 0;
+        if (!$id || !$companyId) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'id required']);
+            echo json_encode(['success' => false, 'error' => 'id and company_id required']);
             exit;
         }
-        $db->prepare('DELETE FROM company_admins WHERE id = :id')->execute([':id' => $id]);
+        getCompanyDb($companyId)->prepare('DELETE FROM company_admins WHERE id = :id AND company_id = :cid')
+            ->execute([':id' => $id, ':cid' => $companyId]);
         echo json_encode(['success' => true]);
         exit;
     }

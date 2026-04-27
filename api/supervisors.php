@@ -5,7 +5,7 @@ require_once __DIR__ . '/common.php';
 require_once __DIR__ . '/pin_rate_limit.php';
 
 $admin = requireAdmin();
-$db    = getDb();
+$db    = getCompanyDb((int) $admin['company_id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(

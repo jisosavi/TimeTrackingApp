@@ -255,7 +255,7 @@ async function loginWithPassword() {
   const res = await fetch(`${apiBase}/api/admin_login.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email.value, password: password.value }),
+    body: JSON.stringify({ email: email.value, password: password.value, slug }),
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.error ?? 'Invalid credentials')

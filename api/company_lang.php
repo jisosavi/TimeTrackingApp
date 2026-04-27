@@ -15,7 +15,7 @@ if ($slug === '') {
 }
 
 try {
-    $db   = getDb();
+    $db   = getMasterDb();
     $stmt = $db->prepare('SELECT ui_language FROM companies WHERE slug = :slug AND active = 1 LIMIT 1');
     $stmt->execute([':slug' => $slug]);
     $row  = $stmt->fetch();

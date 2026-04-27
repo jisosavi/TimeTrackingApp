@@ -27,12 +27,11 @@ if ($pin === '') {
 }
 
 try {
-    $db = getDb();
-
-    // Resolve company_id from slug for rate limiting
+    // Resolve company from master DB
+    $masterDb  = getMasterDb();
     $companyId = null;
     if ($slug !== '') {
-        $compStmt = $db->prepare('SELECT id FROM companies WHERE slug = :slug AND active = 1 LIMIT 1');
+        $compStmt = $masterDb->prepare('SELECT id FROM companies WHERE slug = :slug AND active = 1 LIMIT 1');
         $compStmt->execute([':slug' => $slug]);
         $company = $compStmt->fetch();
         if ($company) {
@@ -40,9 +39,11 @@ try {
         }
     }
 
+    $companyDb = $companyId !== null ? getCompanyDb($companyId) : null;
+
     // Check device rate limit before doing anything else
-    if ($deviceId !== '' && $companyId !== null) {
-        $rl = checkPinRateLimit($db, $deviceId, $companyId);
+    if ($deviceId !== '' && $companyId !== null && $companyDb) {
+        $rl = checkPinRateLimit($companyDb, $deviceId, $companyId);
         if (isset($rl['error'])) {
             http_response_code(429);
             echo json_encode(['valid' => false, 'lockout' => $rl['error']] + $rl);
@@ -52,19 +53,9 @@ try {
 
     $pinHash = hashPin($pin);
 
-    // Look up employee — include pin_locked so we can reject even on correct PIN
-    if ($slug !== '') {
-        $stmt = $db->prepare(
-            'SELECT e.id, e.name, e.ssn, e.pin_locked,
-                    e.salaxy_employment_id AS employmentId, e.company_id AS companyId
-             FROM employees e
-             JOIN companies c ON c.id = e.company_id
-             WHERE e.pin = :pin AND e.active = 1 AND c.slug = :slug
-             LIMIT 1'
-        );
-        $stmt->execute([':pin' => $pinHash, ':slug' => $slug]);
-    } else {
-        $stmt = $db->prepare(
+    // Look up employee in company DB
+    if ($companyDb) {
+        $stmt = $companyDb->prepare(
             'SELECT id, name, ssn, pin_locked,
                     salaxy_employment_id AS employmentId, company_id AS companyId
              FROM employees
@@ -72,6 +63,10 @@ try {
              LIMIT 1'
         );
         $stmt->execute([':pin' => $pinHash]);
+    } else {
+        http_response_code(400);
+        echo json_encode(['valid' => false, 'error' => 'Company not found']);
+        exit;
     }
 
     $employee = $stmt->fetch();
@@ -86,36 +81,36 @@ try {
 
         // Success — reset rate limit
         if ($deviceId !== '' && $companyId !== null) {
-            recordPinSuccess($db, $deviceId, $companyId, (int) $employee['id'], 'employee');
+            recordPinSuccess($companyDb, $deviceId, $companyId, (int) $employee['id'], 'employee');
         }
 
-        $empRow = $db->prepare('SELECT ui_language FROM employees WHERE id = :id LIMIT 1');
+        $empRow = $companyDb->prepare('SELECT ui_language FROM employees WHERE id = :id LIMIT 1');
         $empRow->execute([':id' => (int) $employee['id']]);
         $empData = $empRow->fetch();
         $empLang = ($empData && $empData['ui_language']) ? $empData['ui_language'] : null;
 
-        $compRow = $db->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
-        $compRow->execute([':id' => (int) $employee['companyId']]);
+        $compRow = $masterDb->prepare('SELECT ui_language FROM companies WHERE id = :id LIMIT 1');
+        $compRow->execute([':id' => $companyId]);
         $compData      = $compRow->fetch();
         $compLang      = ($compData && $compData['ui_language']) ? $compData['ui_language'] : 'en';
         $effectiveLang = $empLang ?: $compLang;
 
-        $token = generateToken((int) $employee['id'], 'employee', (int) $employee['companyId']);
+        $token = generateToken((int) $employee['id'], 'employee', $companyId);
 
         echo json_encode([
             'valid'        => true,
             'token'        => $token,
             'id'           => (int) $employee['id'],
             'name'         => $employee['name'],
-            'companyId'    => (int) $employee['companyId'],
+            'companyId'    => $companyId,
             'employmentId' => $employee['employmentId'] ?? null,
             'ui_language'  => $effectiveLang,
         ]);
     } else {
         // Wrong PIN — record failure
         $result = ['valid' => false, 'error' => 'Väärä PIN'];
-        if ($deviceId !== '' && $companyId !== null) {
-            $rl = recordPinFailure($db, $deviceId, $companyId);
+        if ($deviceId !== '' && $companyId !== null && $companyDb) {
+            $rl = recordPinFailure($companyDb, $deviceId, $companyId);
             if (isset($rl['error'])) {
                 http_response_code(429);
                 echo json_encode(['valid' => false, 'lockout' => $rl['error']] + $rl);

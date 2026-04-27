@@ -17,12 +17,14 @@ if ($pin === '') {
     sendJson(['success' => false, 'error' => 'PIN puuttuu'], 400);
 }
 
-$db = getDb();
-
-// Resolve company_id for rate limiting
+// Resolve company from master DB
+$masterDb  = getMasterDb();
 $companyId = null;
+$company   = null;
 if ($slug !== '') {
-    $compStmt = $db->prepare('SELECT id FROM companies WHERE slug = :slug AND active = 1 LIMIT 1');
+    $compStmt = $masterDb->prepare(
+        'SELECT id, name, ui_language, approvals_enabled FROM companies WHERE slug = :slug AND active = 1 LIMIT 1'
+    );
     $compStmt->execute([':slug' => $slug]);
     $company = $compStmt->fetch();
     if ($company) {
@@ -30,9 +32,19 @@ if ($slug !== '') {
     }
 }
 
+if (!$companyId || !$company) {
+    sendJson(['success' => false, 'error' => 'Company not found'], 404);
+}
+
+if (!(int) $company['approvals_enabled']) {
+    sendJson(['success' => false, 'error' => 'Supervisor approvals are not enabled for this company.'], 403);
+}
+
+$companyDb = getCompanyDb($companyId);
+
 // Check device rate limit
-if ($deviceId !== '' && $companyId !== null) {
-    $rl = checkPinRateLimit($db, $deviceId, $companyId);
+if ($deviceId !== '' ) {
+    $rl = checkPinRateLimit($companyDb, $deviceId, $companyId);
     if (isset($rl['error'])) {
         sendJson(['success' => false, 'lockout' => $rl['error']] + $rl, 429);
     }
@@ -40,25 +52,16 @@ if ($deviceId !== '' && $companyId !== null) {
 
 $pinHash = hashPin($pin);
 
-if ($slug !== '') {
-    $stmt = $db->prepare(
-        'SELECT s.* FROM supervisors s
-         JOIN companies c ON c.id = s.company_id
-         WHERE s.pin = :pin AND s.active = 1 AND c.slug = :slug
-         LIMIT 1'
-    );
-    $stmt->execute([':pin' => $pinHash, ':slug' => $slug]);
-} else {
-    $stmt = $db->prepare('SELECT * FROM supervisors WHERE pin = :pin AND active = 1 LIMIT 1');
-    $stmt->execute([':pin' => $pinHash]);
-}
-
+$stmt = $companyDb->prepare(
+    'SELECT * FROM supervisors WHERE pin = :pin AND active = 1 LIMIT 1'
+);
+$stmt->execute([':pin' => $pinHash]);
 $supervisor = $stmt->fetch();
 
 if (!$supervisor) {
     $result = ['success' => false, 'error' => 'Väärä PIN'];
-    if ($deviceId !== '' && $companyId !== null) {
-        $rl = recordPinFailure($db, $deviceId, $companyId);
+    if ($deviceId !== '') {
+        $rl = recordPinFailure($companyDb, $deviceId, $companyId);
         if (isset($rl['error'])) {
             sendJson(['success' => false, 'lockout' => $rl['error']] + $rl, 429);
         }
@@ -72,24 +75,16 @@ if ((int) $supervisor['pin_locked'] === 1) {
     sendJson(['success' => false, 'lockout' => 'locked'], 403);
 }
 
-$compLangStmt = $db->prepare('SELECT name, ui_language, approvals_enabled FROM companies WHERE id = :id LIMIT 1');
-$compLangStmt->execute([':id' => (int) $supervisor['company_id']]);
-$compRow = $compLangStmt->fetch();
-
-if (!$compRow || !(int) $compRow['approvals_enabled']) {
-    sendJson(['success' => false, 'error' => 'Supervisor approvals are not enabled for this company.'], 403);
-}
-
 // Success — reset rate limit
-if ($deviceId !== '' && $companyId !== null) {
-    recordPinSuccess($db, $deviceId, $companyId, (int) $supervisor['id'], 'supervisor');
+if ($deviceId !== '') {
+    recordPinSuccess($companyDb, $deviceId, $companyId, (int) $supervisor['id'], 'supervisor');
 }
 
-$companyLang   = ($compRow && $compRow['ui_language']) ? $compRow['ui_language'] : 'en';
+$companyLang   = $company['ui_language'] ?? 'en';
 $supLang       = $supervisor['ui_language'] ?? null;
 $effectiveLang = $supLang ?: $companyLang;
 
-$token = generateToken((int) $supervisor['id'], 'supervisor', (int) $supervisor['company_id']);
+$token = generateToken((int) $supervisor['id'], 'supervisor', $companyId);
 
 sendJson([
     'success'      => true,
@@ -100,6 +95,6 @@ sendJson([
         'last_name'  => $supervisor['last_name'],
         'email'      => $supervisor['email'],
     ],
-    'company_name' => $compRow['name'] ?? '',
+    'company_name' => $company['name'] ?? '',
     'ui_language'  => $effectiveLang,
 ]);

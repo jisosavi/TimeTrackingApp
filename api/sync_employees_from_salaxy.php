@@ -5,10 +5,18 @@ require_once __DIR__ . '/common.php'; // cors + bootstrap (→ config.php) + jwt
 
 $admin     = requireAdmin();
 $companyId = (int) $admin['company_id'];
-$db        = getDb();
+$db        = getCompanyDb($companyId);
 
-function getSalaxyAccessToken(): ?string {
-    $tokenFile = __DIR__ . '/../data/salaxy_token.json';
+// Load per-company Salaxy credentials from master DB
+$credsRow  = getMasterDb()->prepare('SELECT salaxy_api_url, salaxy_username, salaxy_password FROM companies WHERE id = :id');
+$credsRow->execute([':id' => $companyId]);
+$creds     = $credsRow->fetch() ?: [];
+$salaxyApiUrl  = $creds['salaxy_api_url']  ?: SALAXY_API_URL;
+$salaxyUser    = $creds['salaxy_username'] ?: SALAXY_USERNAME;
+$salaxyPass    = $creds['salaxy_password'] ?: SALAXY_PASSWORD;
+
+function getSalaxyAccessToken(int $companyId, string $tokenUrl, string $username, string $password): ?string {
+    $tokenFile = DB_DIR . '/salaxy_token_' . $companyId . '.json';
 
     if (file_exists($tokenFile)) {
         $cached = json_decode(file_get_contents($tokenFile), true);
@@ -19,15 +27,15 @@ function getSalaxyAccessToken(): ?string {
         }
     }
 
-    $ch = curl_init(SALAXY_TOKEN_URL);
+    $ch = curl_init($tokenUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
         CURLOPT_POSTFIELDS     => json_encode([
             'grant_type' => 'password',
-            'username'   => SALAXY_USERNAME,
-            'password'   => SALAXY_PASSWORD,
+            'username'   => $username,
+            'password'   => $password,
         ]),
         CURLOPT_TIMEOUT        => 30,
         CURLOPT_SSL_VERIFYPEER => true,
@@ -47,8 +55,6 @@ function getSalaxyAccessToken(): ?string {
         return null;
     }
 
-    $dataDir = dirname($tokenFile);
-    if (!is_dir($dataDir)) mkdir($dataDir, 0775, true);
     file_put_contents($tokenFile, json_encode([
         'access_token' => $data['access_token'],
         'fetched_at'   => time(),
@@ -57,13 +63,13 @@ function getSalaxyAccessToken(): ?string {
     return $data['access_token'];
 }
 
-function salaxyRequest(string $method, string $endpoint): array {
-    $token = getSalaxyAccessToken();
+function salaxyRequest(string $method, string $endpoint, string $apiUrl, int $companyId, string $tokenUrl, string $username, string $password): array {
+    $token = getSalaxyAccessToken($companyId, $tokenUrl, $username, $password);
     if (!$token) {
         return ['success' => false, 'error' => 'Failed to get Salaxy access token'];
     }
 
-    $ch = curl_init(SALAXY_API_URL . $endpoint);
+    $ch = curl_init($apiUrl . $endpoint);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => [
@@ -90,8 +96,8 @@ function salaxyRequest(string $method, string $endpoint): array {
     ];
 }
 
-function getEmployeesFromSalaxy(): array {
-    $response = salaxyRequest('GET', '/employments');
+function getEmployeesFromSalaxy(string $apiUrl, int $companyId, string $tokenUrl, string $username, string $password): array {
+    $response = salaxyRequest('GET', '/employments', $apiUrl, $companyId, $tokenUrl, $username, $password);
     if (!$response['success']) return [];
 
     $data = $response['data'];
@@ -116,7 +122,7 @@ function getEmployeesFromSalaxy(): array {
 }
 
 try {
-    $salaxyEmployees = getEmployeesFromSalaxy();
+    $salaxyEmployees = getEmployeesFromSalaxy($salaxyApiUrl, $companyId, SALAXY_TOKEN_URL, $salaxyUser, $salaxyPass);
 
     if (empty($salaxyEmployees)) {
         sendJson(['success' => true, 'message' => 'No employees found in Salaxy', 'added' => 0, 'updated' => 0, 'total' => 0]);

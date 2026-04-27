@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/common.php';
 
 $admin = requireAdmin();
-$db    = getDb();
+$db    = getMasterDb();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $db->prepare(

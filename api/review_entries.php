@@ -19,7 +19,7 @@ if (empty($ids) || !in_array($action, ['approve', 'reject', 'delete'], true)) {
     sendJson(['success' => false, 'error' => 'ids ja action (approve|reject|delete) vaaditaan'], 400);
 }
 
-$db = getDb();
+$db = getCompanyDb((int) $reviewer['company_id']);
 
 // Build placeholders
 $placeholders = implode(',', array_fill(0, count($ids), '?'));

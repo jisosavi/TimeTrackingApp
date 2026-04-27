@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/common.php';
 
 $admin = requireAdmin();
-$db    = getDb();
+$db    = getCompanyDb((int) $admin['company_id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $supervisorId = isset($_GET['supervisor_id']) ? (int) $_GET['supervisor_id'] : 0;
