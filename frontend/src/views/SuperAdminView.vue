@@ -114,7 +114,7 @@ async function submitPwForm() {
 
 // ── Edit form ─────────────────────────────────────────────────────────────────
 const editingId = ref<number | null>(null)
-const editForm = ref({ name: '', slug: '', business_id: '' })
+const editForm = ref({ name: '', slug: '', business_id: '', salaxy_api_url: '', salaxy_username: '', salaxy_password: '' })
 const editError = ref<string | null>(null)
 const saving = ref(false)
 const fetchingBid = ref(false)
@@ -125,7 +125,7 @@ function openEdit(id: number) {
   const c = companies.value.find(c => c.id === id)
   if (!c) return
   editingId.value = id
-  editForm.value = { name: c.name, slug: c.slug, business_id: c.business_id ?? '' }
+  editForm.value = { name: c.name, slug: c.slug, business_id: c.business_id ?? '', salaxy_api_url: c.salaxy_api_url ?? '', salaxy_username: c.salaxy_username ?? '', salaxy_password: '' }
   editError.value = null
   showCreateForm.value = false
   activePwForm.value = null
@@ -162,6 +162,9 @@ async function submitEdit() {
       name: editForm.value.name.trim(),
       slug: editForm.value.slug.trim(),
       business_id: editForm.value.business_id.trim() || null,
+      salaxy_api_url: editForm.value.salaxy_api_url.trim() || null,
+      salaxy_username: editForm.value.salaxy_username.trim() || null,
+      ...(editForm.value.salaxy_password ? { salaxy_password: editForm.value.salaxy_password } : {}),
     })
     cancelEdit()
   } catch (e) {
@@ -354,6 +357,18 @@ async function toggleApprovals(id: number, currentValue: number) {
                 {{ fetchingBid ? 'Fetching…' : 'Fetch from Salaxy' }}
               </Button>
             </div>
+          </div>
+          <div class="space-y-1 sm:col-span-2">
+            <Label class="text-xs">Salaxy API URL</Label>
+            <Input v-model="editForm.salaxy_api_url" placeholder="https://api.salaxy.com/v03/api" class="text-xs font-mono" />
+          </div>
+          <div class="space-y-1">
+            <Label class="text-xs">Salaxy Username</Label>
+            <Input v-model="editForm.salaxy_username" placeholder="user@company.fi" class="text-xs" />
+          </div>
+          <div class="space-y-1">
+            <Label class="text-xs">Salaxy Password</Label>
+            <Input v-model="editForm.salaxy_password" type="password" placeholder="Leave blank to keep existing" class="text-xs" />
           </div>
         </div>
         <p v-if="editError" class="text-xs text-destructive">{{ editError }}</p>

@@ -19,7 +19,8 @@ function countActiveEmployees(int $companyId): int
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt      = $db->query(
         'SELECT id, name, slug, active, approvals_enabled, ui_language,
-                salaxy_company_id AS business_id, db_file
+                salaxy_company_id AS business_id, db_file,
+                salaxy_api_url, salaxy_username
          FROM companies
          ORDER BY name ASC'
     );
@@ -78,10 +79,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare('UPDATE companies SET salaxy_company_id = :sid WHERE id = :id')
                ->execute([':sid' => $businessId ?: null, ':id' => $id]);
         }
+        if (array_key_exists('salaxy_api_url', $payload)) {
+            $db->prepare('UPDATE companies SET salaxy_api_url = :v WHERE id = :id')
+               ->execute([':v' => trim((string) $payload['salaxy_api_url']) ?: null, ':id' => $id]);
+        }
+        if (array_key_exists('salaxy_username', $payload)) {
+            $db->prepare('UPDATE companies SET salaxy_username = :v WHERE id = :id')
+               ->execute([':v' => trim((string) $payload['salaxy_username']) ?: null, ':id' => $id]);
+        }
+        if (array_key_exists('salaxy_password', $payload) && trim((string) $payload['salaxy_password']) !== '') {
+            $db->prepare('UPDATE companies SET salaxy_password = :v WHERE id = :id')
+               ->execute([':v' => trim((string) $payload['salaxy_password']), ':id' => $id]);
+        }
 
         $stmt = $db->prepare(
             'SELECT id, name, slug, active, approvals_enabled, ui_language,
-                    salaxy_company_id AS business_id, db_file
+                    salaxy_company_id AS business_id, db_file,
+                    salaxy_api_url, salaxy_username
              FROM companies WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);

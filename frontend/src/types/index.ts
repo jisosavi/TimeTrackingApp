@@ -34,6 +34,8 @@ export interface Company {
   employee_count: number
   business_id: string | null
   db_file?: string | null
+  salaxy_api_url?: string | null
+  salaxy_username?: string | null
 }
 
 export interface Employee {
