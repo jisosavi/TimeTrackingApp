@@ -33,7 +33,7 @@ const showPasswordLogin = import.meta.env.VITE_SUPERADMIN_PASSWORD_LOGIN === 'tr
 const oauthLoading = ref(false)
 
 function getSuperAdminRedirectUri(): string {
-  return window.location.origin + window.location.pathname
+  return window.location.origin + import.meta.env.BASE_URL
 }
 
 function loginWithSalaxyOAuth() {

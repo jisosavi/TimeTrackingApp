@@ -82,7 +82,7 @@ const router = createRouter({
       ],
     },
 
-    { path: '/:pathMatch(.*)*', redirect: '/admin' },
+    { path: '/:pathMatch(.*)*', redirect: to => ({ path: '/admin', query: to.query }) },
   ],
 })
 
