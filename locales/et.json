@@ -27,6 +27,7 @@
   "login.pin_label": "PIN-kood",
   "login.button": "Logi sisse",
   "login.sign_in_button": "Logi sisse",
+  "login.sign_in_with_salaxy": "Logi sisse Salaxyga",
   "login.email_label": "E-post",
   "login.password_label": "Parool",
   "login.error_enter_pin": "Sisesta PIN-kood.",

@@ -27,6 +27,7 @@
   "login.pin_label": "PIN-koodi",
   "login.button": "Kirjaudu",
   "login.sign_in_button": "Kirjaudu sisään",
+  "login.sign_in_with_salaxy": "Kirjaudu Salaxylla",
   "login.email_label": "Sähköposti",
   "login.password_label": "Salasana",
   "login.error_enter_pin": "Syötä PIN-koodi.",

@@ -27,6 +27,7 @@
   "login.pin_label": "PIN-kod",
   "login.button": "Logga in",
   "login.sign_in_button": "Logga in",
+  "login.sign_in_with_salaxy": "Logga in med Salaxy",
   "login.email_label": "E-post",
   "login.password_label": "Lösenord",
   "login.error_enter_pin": "Ange PIN-kod.",

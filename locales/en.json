@@ -27,6 +27,7 @@
   "login.pin_label": "PIN code",
   "login.button": "Log in",
   "login.sign_in_button": "Sign in",
+  "login.sign_in_with_salaxy": "Sign in with Salaxy",
   "login.email_label": "Email",
   "login.password_label": "Password",
   "login.error_enter_pin": "Please enter your PIN code.",

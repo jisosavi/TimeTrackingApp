@@ -121,6 +121,10 @@ function initializeMasterDb(PDO $db): void
     if (!in_array('super_admin_org_id', $cols))
         $db->exec('ALTER TABLE companies ADD COLUMN super_admin_org_id INTEGER');
 
+    $saCols = array_column($db->query('PRAGMA table_info(super_admins)')->fetchAll(), 'name');
+    if (!in_array('salaxy_account_id', $saCols))
+        $db->exec('ALTER TABLE super_admins ADD COLUMN salaxy_account_id TEXT');
+
     ensureDefaultSuperAdminOrg($db);
     ensureDefaultSuperAdmin($db);
     ensureDefaultCompany($db);

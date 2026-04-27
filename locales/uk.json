@@ -27,6 +27,7 @@
   "login.pin_label": "PIN-код",
   "login.button": "Увійти",
   "login.sign_in_button": "Увійти",
+  "login.sign_in_with_salaxy": "Увійти через Salaxy",
   "login.email_label": "Електронна пошта",
   "login.password_label": "Пароль",
   "login.error_enter_pin": "Введіть PIN-код.",

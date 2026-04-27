@@ -27,6 +27,7 @@
   "login.pin_label": "I-PIN",
   "login.button": "Ngena",
   "login.sign_in_button": "Ngena",
+  "login.sign_in_with_salaxy": "Ngena nge-Salaxy",
   "login.email_label": "I-imeyile",
   "login.password_label": "Igama lokugqitha",
   "login.error_enter_pin": "Nceda ufake i-PIN yakho.",

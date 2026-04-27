@@ -28,6 +28,52 @@ type LoginType = 'employee' | 'supervisor' | 'admin' | 'superadmin'
 const loginType = route.meta.loginType as LoginType
 const slug = (route.params.slug as string) ?? ''
 
+const SALAXY_AUTHORIZE_URL = 'https://test-secure.salaxy.com/oauth2/authorize'
+const showPasswordLogin = import.meta.env.VITE_SUPERADMIN_PASSWORD_LOGIN === 'true'
+const oauthLoading = ref(false)
+
+function getSuperAdminRedirectUri(): string {
+  return window.location.origin + window.location.pathname
+}
+
+function loginWithSalaxyOAuth() {
+  const params = new URLSearchParams({
+    client_id: 'time',
+    response_type: 'code',
+    redirect_uri: getSuperAdminRedirectUri(),
+  })
+  window.location.href = `${SALAXY_AUTHORIZE_URL}?${params.toString()}`
+}
+
+async function handleOAuthCallback(code: string) {
+  oauthLoading.value = true
+  error.value = ''
+  try {
+    const res = await fetch(`${apiBase}/api/salaxy_oauth_callback.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: getSuperAdminRedirectUri() }),
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.error ?? 'Authentication failed')
+    const user: AuthUser = {
+      id: data.user.id,
+      type: 'superadmin',
+      companyId: 0,
+      companySlug: '',
+      name: data.user.name,
+      email: data.user.email,
+      uiLanguage: data.user.uiLanguage ?? 'en',
+    }
+    auth.setAuth(data.token, user)
+    router.push({ name: 'superadmin-dashboard' })
+  } catch (e) {
+    error.value = (e as Error).message
+    oauthLoading.value = false
+    router.replace({ path: '/admin' })
+  }
+}
+
 const PIN_MAX = 6
 
 const pin = ref('')
@@ -115,6 +161,10 @@ onMounted(() => {
     dateStr.value = formatDate()
   }, 30000)
   if (isPinLogin.value) window.addEventListener('keydown', onGlobalKeydown)
+  if (loginType === 'superadmin') {
+    const code = route.query.code as string | undefined
+    if (code) handleOAuthCallback(code)
+  }
 })
 
 onUnmounted(() => {
@@ -381,7 +431,65 @@ async function loginWithPassword() {
 
   </div>
 
-  <!-- ── Password login (admin / superadmin) ────────────────────────────── -->
+  <!-- ── Salaxy OAuth2 login (superadmin) ──────────────────────────────── -->
+  <div v-else-if="loginType === 'superadmin'" class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div class="w-full max-w-sm space-y-6">
+
+      <div class="text-center space-y-1">
+        <img src="/salaxy-logo.png" alt="Salaxy" class="h-10 mx-auto mb-2" />
+        <p class="text-sm text-muted-foreground">{{ loginTypeLabel }}</p>
+      </div>
+
+      <div v-if="oauthLoading" class="text-center text-sm text-muted-foreground">
+        {{ t('login.logging_in') }}…
+      </div>
+      <template v-else>
+        <Button class="w-full" @click="loginWithSalaxyOAuth">
+          {{ t('login.sign_in_with_salaxy') }}
+        </Button>
+        <p v-if="error" class="text-sm text-destructive text-center">{{ error }}</p>
+        <form v-if="showPasswordLogin" class="space-y-4 pt-2 border-t" @submit.prevent="submit">
+          <div class="space-y-2">
+            <Label for="email">{{ t('login.email_label') }}</Label>
+            <Input
+              id="email"
+              v-model="email"
+              type="email"
+              name="email"
+              autocomplete="email"
+              placeholder="admin@example.com"
+              @input="clearError"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label for="password">{{ t('login.password_label') }}</Label>
+            <Input
+              id="password"
+              v-model="password"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              @input="clearError"
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="outline"
+            class="w-full"
+            :disabled="loading || !email || !password"
+          >
+            {{ loading ? t('login.logging_in') : t('login.sign_in_button') }}
+          </Button>
+        </form>
+      </template>
+
+      <p class="text-center text-xs text-muted-foreground/30">TimeTrackingApp</p>
+
+    </div>
+  </div>
+
+  <!-- ── Password login (company admin) ────────────────────────────────── -->
   <div v-else class="min-h-screen flex items-center justify-center bg-background p-4">
     <div class="w-full max-w-sm space-y-6">
 
