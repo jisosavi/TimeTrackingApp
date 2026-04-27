@@ -15,4 +15,5 @@ define('SALAXY_USERNAME',       getenv('SALAXY_USERNAME')       ?: '');
 define('SALAXY_PASSWORD',       getenv('SALAXY_PASSWORD')       ?: '');
 define('SALAXY_EMPLOYMENT_ID',  getenv('SALAXY_EMPLOYMENT_ID')  ?: '');
 
-define('DB_FILE', __DIR__ . '/data/app.sqlite');
+define('DB_DIR',  __DIR__ . '/data');
+define('DB_FILE', DB_DIR . '/app.sqlite'); // legacy source for migrate.php
