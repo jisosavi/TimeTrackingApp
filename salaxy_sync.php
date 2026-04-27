@@ -538,7 +538,7 @@ function addMileageRow(string $payrollId, array $entry, ?string $existingCalcId,
     // rowType: taxFreeKmAllowance = Oman auton käyttö (tulorekisterikoodi 311)
     $calcObject['rows'][] = [
         'rowIndex' => $maxRowIndex + 1,
-        'rowType' => 'taxFreeKmAllowance',
+        'rowType' => 'milageOwnCar',
         'count' => $mileage,
         'price' => 0.25, // Verottajan kilometrikorvaus 2024, Salaxy voi ylikirjoittaa oletuksella
         'unit' => 'km',
@@ -679,7 +679,7 @@ function exportEmployeeEntries(
             if (!isset($existingMsgs[$msg])) {
                 $addedRows[] = [
                     'rowIndex'   => ++$maxIdx,
-                    'rowType'    => 'taxFreeKmAllowance',
+                    'rowType'    => 'milageOwnCar',
                     'count'      => $mileage,
                     'price'      => 0.25,
                     'unit'       => 'km',
