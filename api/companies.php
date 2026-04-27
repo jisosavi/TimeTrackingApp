@@ -79,17 +79,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare('UPDATE companies SET salaxy_company_id = :sid WHERE id = :id')
                ->execute([':sid' => $businessId ?: null, ':id' => $id]);
         }
+        $salaxyCredsChanged = false;
         if (array_key_exists('salaxy_api_url', $payload)) {
             $db->prepare('UPDATE companies SET salaxy_api_url = :v WHERE id = :id')
                ->execute([':v' => trim((string) $payload['salaxy_api_url']) ?: null, ':id' => $id]);
+            $salaxyCredsChanged = true;
         }
         if (array_key_exists('salaxy_username', $payload)) {
             $db->prepare('UPDATE companies SET salaxy_username = :v WHERE id = :id')
                ->execute([':v' => trim((string) $payload['salaxy_username']) ?: null, ':id' => $id]);
+            $salaxyCredsChanged = true;
         }
         if (array_key_exists('salaxy_password', $payload) && trim((string) $payload['salaxy_password']) !== '') {
             $db->prepare('UPDATE companies SET salaxy_password = :v WHERE id = :id')
                ->execute([':v' => trim((string) $payload['salaxy_password']), ':id' => $id]);
+            $salaxyCredsChanged = true;
+        }
+        if ($salaxyCredsChanged) {
+            @unlink(DB_DIR . '/salaxy_token_' . $id . '.json');
         }
 
         $stmt = $db->prepare(
