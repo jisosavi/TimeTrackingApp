@@ -81,10 +81,7 @@ async function logout() {
   const user = auth.user
   const slug = user?.companySlug
 
-  await fetch('/api/logout.php', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${auth.token}` },
-  }).catch(() => {})
+  await apiFetch('/api/logout.php', { method: 'POST' }).catch(() => {})
   auth.clearAuth()
 
   if (user?.type === 'employee')        router.push(`/${slug}`)
