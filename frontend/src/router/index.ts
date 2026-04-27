@@ -118,7 +118,13 @@ router.beforeEach((to) => {
 
   // Not authenticated — redirect to appropriate login
   if (!to.meta.public && !auth.isAuthenticated) {
-    return loginRouteForPath(to)
+    const target = loginRouteForPath(to)
+    if (to.query.code) {
+      return typeof target === 'object'
+        ? { ...target, query: { code: to.query.code } }
+        : { path: String(target), query: { code: to.query.code } }
+    }
+    return target
   }
 
   // Wrong role for this route
