@@ -374,4 +374,8 @@ foreach ($companyIdMap as $oldId => $newId) {
     echo "  pin_rate_limit: $rlCount inserted\n";
 }
 
+// Rename source so re-runs on Railway startup don't overwrite migrated settings
+rename($srcFile, $srcFile . '.migrated');
+echo "Renamed $srcFile → {$srcFile}.migrated\n";
+
 echo "\nDone.\n";
