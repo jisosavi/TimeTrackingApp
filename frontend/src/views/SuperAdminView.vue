@@ -209,6 +209,9 @@ async function toggleApprovals(id: number, currentValue: number) {
             Business ID: {{ company.business_id }}
           </p>
           <p v-else class="text-xs text-muted-foreground italic">No Business ID set</p>
+          <p v-if="company.db_file" class="text-xs text-muted-foreground/50 font-mono">
+            DB: {{ company.db_file }}
+          </p>
         </div>
         <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
           <Badge variant="secondary" class="text-[10px]">{{ company.employee_count }} emp</Badge>

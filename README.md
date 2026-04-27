@@ -137,6 +137,9 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 
 ## Recent Changes
 
+### 2026-04-27
+- **Per-company SQLite databases**: Each company now has its own isolated database file at `data/companies/{id}.sqlite`. A separate `data/master.sqlite` holds the company registry and super-admin accounts. Super-admins are now stored in dedicated `super_admin_orgs` / `super_admins` tables (previously a role variant in `company_admins`). Run `php migrate.php` once to split a legacy `data/app.sqlite` into the new layout — the script is idempotent.
+
 ### 2026-04-25
 - **PIN security hardening**: Employee and supervisor PINs are now stored as HMAC-SHA256 hashes instead of plain text. The server-side `JWT_SECRET` is used as the HMAC key, so an attacker needs both a database dump *and* the secret to crack any PIN. The migration runs automatically on the next request — no manual steps needed. API endpoints no longer return PIN values; the admin edit form no longer pre-fills the PIN field (leave it blank to keep the existing PIN unchanged).
 
@@ -241,7 +244,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
    **Option B — local override file** (for local dev):
    Copy `config.local.php.example` to `config.local.php` and fill in your values. This file is gitignored and loaded automatically by `config.php`.
 
-3. Make sure the `data/` directory is writable. The SQLite database is created automatically on first run.
+3. Make sure the `data/` directory is writable. Databases are created automatically on first run: `data/master.sqlite` (company registry and super-admins) and `data/companies/{id}.sqlite` (one file per company). If you have a legacy `data/app.sqlite` from a previous install, run `php migrate.php` once to split it into the new layout.
 
 4. Install frontend dependencies and build:
    ```bash
@@ -273,7 +276,7 @@ The Vite dev server proxies `/api/` requests to `localhost:8000`, so both server
 | `http://localhost:5173/{slug}/approval` | Supervisor/manager login |
 | `http://localhost:5173/admin` | Super-admin login |
 
-A default super-admin (`superadmin@timeapp.local`) and a test company admin (`admin@timeapp.local`) are created on first run with default passwords defined in `bootstrap.php`. Change these before deploying to any shared environment.
+Default accounts are created on first run: super-admin `superadmin@timeapp.local` in `master.sqlite` and company admin `admin@timeapp.local` in the test company DB. Default passwords are defined in `bootstrap.php` — change before deploying to any shared environment.
 
 ### Frontend development commands
 
@@ -297,10 +300,11 @@ npm run lint         # ESLint + Oxlint
 ## Project Structure
 
 ```
-├── bootstrap.php                         # DB init, schema migrations, PIN hashing helper
+├── bootstrap.php                         # DB accessors (getMasterDb/getCompanyDb), schema migrations, PIN hashing
 ├── config.php                            # Reads credentials from env vars; loads config.local.php if present
 ├── config.local.php.example             # Config template
 ├── deploy-frontend.sh                    # rsync dist/ to remote; derives path from VITE_APP_BASE automatically
+├── migrate.php                           # One-time migration: splits legacy app.sqlite into master + per-company DBs
 ├── nixpacks.toml / railway.toml         # Deployment configuration (Railway)
 ├── .env.production.example              # Template for VITE_API_BASE and VITE_APP_BASE
 │
@@ -383,7 +387,9 @@ npm run lint         # ESLint + Oxlint
 │
 ├── screenshots/
 └── data/
-    └── app.sqlite                        # Auto-created SQLite DB, not in git
+    ├── master.sqlite                     # Company registry + super-admin accounts (auto-created, not in git)
+    └── companies/
+        └── {id}.sqlite                   # One SQLite file per company (auto-created, not in git)
 ```
 
 ---

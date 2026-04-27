@@ -34,7 +34,7 @@ Local dev uses two servers simultaneously: Vite on `:5173`, PHP on `:8000`. The 
 
 **Frontend** — Vue 3 SPA (`frontend/src/`) built with Vite. Single `index.html` entry point; history-mode routing; deployed to `frontend/dist/`. Apache `.htaccess` is auto-generated at build time by a Vite plugin in `vite.config.ts` — it sets `RewriteBase` from `VITE_APP_BASE` and routes all non-file requests to `index.html`.
 
-**Backend** — Flat PHP 8 files under `api/`. No framework. Every endpoint is a standalone `.php` file that requires `api/common.php` (which in turn loads `bootstrap.php` → `config.php`). The database is SQLite, initialized and migrated automatically by `bootstrap.php` on every `getDb()` call.
+**Backend** — Flat PHP 8 files under `api/`. No framework. Every endpoint is a standalone `.php` file that requires `api/common.php` (which in turn loads `bootstrap.php` → `config.php`). SQLite databases are initialized and migrated automatically by `bootstrap.php` on first access via the DB accessor functions.
 
 ### Authentication flow
 
@@ -67,15 +67,23 @@ Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_pas
 
 `config.php` reads from environment variables first; falls back to constants defined in `config.local.php` (gitignored). For local dev, copy `config.local.php.example` to `config.local.php`. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB, not global config (except `SALAXY_*` env vars which are legacy defaults).
 
-### Database schema (key tables)
+### Database layout
 
-- `companies` — slug, active flag, per-company Salaxy credentials, payroll settings
-- `company_admins` — superadmins (`role='superadmin'`, `company_id=NULL`) and company admins (`role='company_admin'`)
+Two SQLite files, both under `data/`. Accessors in `bootstrap.php`: `getMasterDb()`, `getCompanyDb(int $id)`, `getCompanyDbBySlug(string $slug)` — all static-cached per request.
+
+**`data/master.sqlite`** — company registry and super-admin accounts:
+- `companies` — slug, active flag, per-company Salaxy credentials, payroll settings, `db_file` path
+- `super_admin_orgs` — super-admin organizations (one default org)
+- `super_admins` — super-admin accounts (reference `super_admin_orgs`)
+
+**`data/companies/{id}.sqlite`** — one file per company, all operational data:
+- `company_admins` — company-level admins (`role='company_admin'`)
 - `employees` / `supervisors` — PIN (HMAC hash), `salaxy_employment_id` for sync
 - `time_entries` — status: `pending | approved | rejected`; `hours` and `km` are separate approval targets; `exported_to_salaxy` flag
 - `payroll_exports` — deduplication guard for Salaxy payroll creation
+- `pin_rate_limit` — per-device brute-force protection
 
-Schema migrations run inline in `bootstrap.php` via `ALTER TABLE IF NOT EXISTS` patterns on every request — check there before adding columns.
+Schema migrations run inline in `bootstrap.php` via `ALTER TABLE` checks on every request — check there before adding columns. To split a legacy single-file `data/app.sqlite` into the new layout, run `php migrate.php` (idempotent).
 
 ### Production deployment
 

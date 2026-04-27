@@ -33,6 +33,7 @@ export interface Company {
   ui_language: string
   employee_count: number
   business_id: string | null
+  db_file?: string | null
 }
 
 export interface Employee {
