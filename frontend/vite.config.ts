@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
     Deny from all
 </Files>
 
+Options -MultiViews
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase ${appBase}
