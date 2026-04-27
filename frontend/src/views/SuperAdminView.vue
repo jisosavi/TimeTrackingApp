@@ -90,16 +90,19 @@ function openPwForm(companyId: number, admin: CompanyAdmin) {
 
 async function submitPwForm() {
   if (!activePwForm.value) return
-  if (activePwForm.value.password.length < 6) { activePwForm.value.error = 'Min 6 characters'; return }
+  if (!activePwForm.value.email.trim()) { activePwForm.value.error = 'Email is required'; return }
+  if (activePwForm.value.password && activePwForm.value.password.length < 6) { activePwForm.value.error = 'Min 6 characters'; return }
   activePwForm.value.saving = true
   activePwForm.value.error = ''
+  const cid = activePwForm.value.companyId
   try {
-    await saveAdmin(activePwForm.value.companyId, {
+    await saveAdmin(cid, {
       id: activePwForm.value.adminId,
-      email: activePwForm.value.email,
+      email: activePwForm.value.email.trim(),
       name: activePwForm.value.name,
       password: activePwForm.value.password,
     })
+    companyAdmins.value[cid] = await fetchCompanyAdmins(cid)
     activePwForm.value = null
   } catch (e) {
     if (activePwForm.value) {
@@ -303,14 +306,17 @@ async function toggleApprovals(id: number, currentValue: number) {
             >Set password</Button>
           </div>
           <template v-if="activePwForm?.companyId === company.id && activePwForm?.adminId === admin.id">
-            <div class="flex gap-2">
-              <Input v-model="activePwForm.password" type="password" placeholder="New password (min 6)" class="h-7 text-xs" />
-              <Button size="sm" class="h-7 text-xs shrink-0" :disabled="activePwForm.saving" @click="submitPwForm">
-                {{ activePwForm.saving ? '…' : 'Save' }}
-              </Button>
-              <Button size="sm" variant="ghost" class="h-7 text-xs" @click="activePwForm = null">✕</Button>
-            </div>
-            <p v-if="activePwForm.error" class="text-xs text-destructive">{{ activePwForm.error }}</p>
+            <form class="space-y-1.5" @submit.prevent="submitPwForm">
+              <Input v-model="activePwForm.email" type="email" placeholder="Email" class="h-7 text-xs" />
+              <div class="flex gap-2">
+                <Input v-model="activePwForm.password" type="password" placeholder="New password (leave blank to keep)" class="h-7 text-xs" />
+                <Button type="submit" size="sm" class="h-7 text-xs shrink-0" :disabled="activePwForm.saving">
+                  {{ activePwForm.saving ? '…' : 'Save' }}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" class="h-7 text-xs" @click="activePwForm = null">✕</Button>
+              </div>
+              <p v-if="activePwForm.error" class="text-xs text-destructive">{{ activePwForm.error }}</p>
+            </form>
           </template>
         </div>
       </div>
