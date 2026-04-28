@@ -186,18 +186,27 @@ error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
     . ' sesAvat_keys=' . implode(',', array_keys($sesAvat))
     . ' av_keys=' . (is_array($av) ? implode(',', array_keys($av)) : gettype($av)));
 
+// Always link salaxy_account_id and sync name (no UNIQUE constraint on these)
 $masterDb->prepare(
     'UPDATE super_admins
      SET salaxy_account_id = :sid,
-         name  = CASE WHEN :name  != "" THEN :name2  ELSE name  END,
-         email = CASE WHEN :email != "" THEN :email2 ELSE email END
+         name = CASE WHEN :name != "" THEN :name2 ELSE name END
      WHERE id = :id'
 )->execute([
-    ':sid'    => $salaxyAccountId,
-    ':name'   => $salaxyName,  ':name2'  => $salaxyName,
-    ':email'  => $salaxyEmail, ':email2' => $salaxyEmail,
-    ':id'     => $admin['id'],
+    ':sid'   => $salaxyAccountId,
+    ':name'  => $salaxyName, ':name2' => $salaxyName,
+    ':id'    => $admin['id'],
 ]);
+// Only fill email if the row currently has none (avoids UNIQUE conflict with other rows)
+if ($salaxyEmail) {
+    try {
+        $masterDb->prepare(
+            'UPDATE super_admins SET email = :email WHERE id = :id AND (email IS NULL OR email = "")'
+        )->execute([':email' => $salaxyEmail, ':id' => $admin['id']]);
+    } catch (PDOException $e) {
+        error_log('super_admin email update skipped: ' . $e->getMessage());
+    }
+}
 $admin = $masterDb->query('SELECT * FROM super_admins WHERE id = ' . (int) $admin['id'])->fetch();
 
 // ── Step 5: issue app JWT ─────────────────────────────────────────────────────
