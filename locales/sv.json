@@ -453,5 +453,10 @@
   "super.drawer.debug_title": "Debug & länkar",
   "super.drawer.debug_db": "DB-fil",
   "super.drawer.debug_links": "Djuplänkar",
-  "super.drawer.debug_copied": "Kopierad!"
+  "super.drawer.debug_copied": "Kopierad!",
+  "super.drawer.features_time_app_desc": "Anställda kan logga timmar",
+  "super.drawer.features_supervisor_desc": "Godkännanden går till handledare innan de når administratören",
+  "super.drawer.features_confirm_title": "Inaktivera {feature}?",
+  "super.drawer.features_confirm_body": "{name} har haft aktivitet de senaste 14 dagarna. Att inaktivera {feature} påverkar aktiva användare omedelbart.",
+  "super.drawer.features_disable_confirm": "Inaktivera"
 }

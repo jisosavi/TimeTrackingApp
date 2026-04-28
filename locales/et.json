@@ -453,5 +453,10 @@
   "super.drawer.debug_title": "Debug & lingid",
   "super.drawer.debug_db": "DB-fail",
   "super.drawer.debug_links": "Süvalingid",
-  "super.drawer.debug_copied": "Kopeeritud!"
+  "super.drawer.debug_copied": "Kopeeritud!",
+  "super.drawer.features_time_app_desc": "Töötajad saavad logida tunde",
+  "super.drawer.features_supervisor_desc": "Kinnitused lähevad juhenditele enne administraatorini jõudmist",
+  "super.drawer.features_confirm_title": "Keelata {feature}?",
+  "super.drawer.features_confirm_body": "{name} on olnud aktiivne viimase 14 päeva jooksul. {feature} keelamine mõjutab aktiivseid kasutajaid kohe.",
+  "super.drawer.features_disable_confirm": "Keela"
 }

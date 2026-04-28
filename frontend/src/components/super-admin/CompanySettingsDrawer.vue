@@ -9,6 +9,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { toast } from 'vue-sonner'
+import { Switch } from '@/components/ui/switch'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useApi } from '@/composables/useApi'
 import type { Company } from '@/types'
 
@@ -54,6 +60,26 @@ const editPw        = ref('')
 const editPwError   = ref<string | null>(null)
 const editPwSaving  = ref(false)
 
+// ── Features ──────────────────────────────────────────────────────────────────
+const features = reactive<{ time_app_enabled: 0|1; supervisor_ui_enabled: 0|1 }>({
+  time_app_enabled: 1, supervisor_ui_enabled: 1,
+})
+const featureSaving     = ref<'time_app_enabled' | 'supervisor_ui_enabled' | null>(null)
+const showConfirmDialog = ref(false)
+const pendingToggle     = ref<{ feature: 'time_app_enabled' | 'supervisor_ui_enabled'; prev: 0|1 } | null>(null)
+
+const isRecentlyActive = computed(() => {
+  const ts = props.company?.last_activity_at
+  if (!ts) return false
+  return Date.now() - new Date(ts.replace(' ', 'T')).getTime() < 14 * 24 * 60 * 60 * 1000
+})
+
+const pendingFeatureLabel = computed(() =>
+  pendingToggle.value?.feature === 'time_app_enabled'
+    ? t('super.list.col_time_app')
+    : t('super.list.col_supervisor_ui'),
+)
+
 // ── Saving / debug ────────────────────────────────────────────────────────────
 const saving    = ref(false)
 const saveError = ref<string | null>(null)
@@ -78,6 +104,9 @@ watch(
       generalForm.name  = c.name
       generalForm.slug  = c.slug
       generalInitial.value = { name: c.name, slug: c.slug }
+
+      features.time_app_enabled     = (c.time_app_enabled     ? 1 : 0) as 0|1
+      features.supervisor_ui_enabled = (c.supervisor_ui_enabled ? 1 : 0) as 0|1
 
       salaxyForm.business_id     = c.business_id ?? ''
       salaxyForm.salaxy_api_url  = c.salaxy_api_url ?? ''
@@ -305,6 +334,55 @@ async function removeAdmin(admin: Admin) {
   }
 }
 
+// ── Feature toggles ───────────────────────────────────────────────────────────
+function onToggleFeature(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newValue: boolean) {
+  if (!props.company || featureSaving.value !== null) return
+  if (!newValue && isRecentlyActive.value) {
+    features[feature] = 0
+    pendingToggle.value = { feature, prev: newValue ? 0 : 1 }
+    showConfirmDialog.value = true
+    return
+  }
+  void applyFeatureToggle(feature, newValue)
+}
+
+function onConfirmDialogChange(open: boolean) {
+  showConfirmDialog.value = open
+  if (!open && pendingToggle.value) {
+    features[pendingToggle.value.feature] = pendingToggle.value.prev
+    pendingToggle.value = null
+  }
+}
+
+async function confirmFeatureToggle() {
+  const pending = pendingToggle.value
+  pendingToggle.value = null
+  if (!pending) return
+  await applyFeatureToggle(pending.feature, false)
+}
+
+async function applyFeatureToggle(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newEnabled: boolean) {
+  if (!props.company) return
+  const prev = features[feature]
+  const enabled = newEnabled ? 1 as const : 0 as const
+  features[feature] = enabled
+  featureSaving.value = feature
+  emit('saved', { ...props.company, [feature]: enabled } as Company)
+  try {
+    const res = await apiFetch<{ success: boolean; company: Company }>(
+      '/api/super_admin/set_feature.php',
+      { method: 'POST', body: JSON.stringify({ company_id: props.company.id, feature, enabled }) },
+    )
+    emit('saved', res.company)
+  } catch (e) {
+    features[feature] = prev
+    emit('saved', { ...props.company, [feature]: prev } as Company)
+    toast.error(e instanceof Error ? e.message : t('common.save_failed'))
+  } finally {
+    featureSaving.value = null
+  }
+}
+
 // ── Copy to clipboard ─────────────────────────────────────────────────────────
 function copyText(key: string, text: string) {
   navigator.clipboard.writeText(text)
@@ -332,7 +410,7 @@ function copyText(key: string, text: string) {
           <TabsTrigger value="general"  class="text-xs">{{ t('super.drawer.tab_general') }}</TabsTrigger>
           <TabsTrigger value="salaxy"   class="text-xs">{{ t('super.drawer.tab_salaxy') }}</TabsTrigger>
           <TabsTrigger value="admins"   class="text-xs">{{ t('super.drawer.tab_admins') }}</TabsTrigger>
-          <TabsTrigger value="features" class="text-xs" disabled>{{ t('super.drawer.tab_features') }}</TabsTrigger>
+          <TabsTrigger value="features" class="text-xs">{{ t('super.drawer.tab_features') }}</TabsTrigger>
           <TabsTrigger value="danger"   class="text-xs" disabled>{{ t('super.drawer.tab_danger') }}</TabsTrigger>
         </TabsList>
 
@@ -525,9 +603,41 @@ function copyText(key: string, text: string) {
           </template>
         </TabsContent>
 
-        <!-- Stub tabs -->
-        <TabsContent value="features" class="flex-1 px-6 py-4 text-sm text-muted-foreground">Coming soon</TabsContent>
-        <TabsContent value="danger"   class="flex-1 px-6 py-4 text-sm text-muted-foreground">Coming soon</TabsContent>
+        <!-- Features tab -->
+        <TabsContent value="features" class="flex-1 overflow-y-auto px-6 py-4">
+          <div class="divide-y">
+            <!-- Time App -->
+            <div class="flex items-center justify-between py-4">
+              <div class="space-y-0.5 pr-4">
+                <p class="text-sm font-medium">{{ t('super.list.col_time_app') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_time_app_desc') }}</p>
+              </div>
+              <Switch
+                :checked="features.time_app_enabled === 1"
+                :disabled="featureSaving !== null"
+                @update:checked="(v: boolean) => onToggleFeature('time_app_enabled', v)"
+              />
+            </div>
+
+            <!-- Supervisor UI -->
+            <div class="flex items-center justify-between py-4">
+              <div class="space-y-0.5 pr-4">
+                <p class="text-sm font-medium">{{ t('super.list.col_supervisor_ui') }}</p>
+                <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_supervisor_desc') }}</p>
+              </div>
+              <Switch
+                :checked="features.supervisor_ui_enabled === 1"
+                :disabled="featureSaving !== null"
+                @update:checked="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <!-- Danger tab -->
+        <TabsContent value="danger" class="flex-1 px-6 py-4 text-sm text-muted-foreground">
+          Archive company / Delete company — coming in Phase 2.
+        </TabsContent>
       </Tabs>
 
       <!-- Footer -->
@@ -542,6 +652,24 @@ function copyText(key: string, text: string) {
           @click="save"
         >{{ saving ? t('common.saving') : t('super.drawer.save_button') }}</Button>
       </SheetFooter>
+      <!-- Feature disable confirmation -->
+      <AlertDialog :open="showConfirmDialog" @update:open="onConfirmDialogChange">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{{ t('super.drawer.features_confirm_title', { feature: pendingFeatureLabel }) }}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {{ t('super.drawer.features_confirm_body', { name: company?.name, feature: pendingFeatureLabel }) }}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+            <AlertDialogAction
+              class="bg-destructive text-white hover:bg-destructive/90"
+              @click="confirmFeatureToggle"
+            >{{ t('super.drawer.features_disable_confirm') }}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SheetContent>
   </Sheet>
 </template>

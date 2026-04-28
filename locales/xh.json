@@ -453,5 +453,10 @@
   "super.drawer.debug_title": "Debug & links",
   "super.drawer.debug_db": "DB file",
   "super.drawer.debug_links": "Deep links",
-  "super.drawer.debug_copied": "Copied!"
+  "super.drawer.debug_copied": "Copied!",
+  "super.drawer.features_time_app_desc": "Employees can log hours",
+  "super.drawer.features_supervisor_desc": "Approvals go to supervisors before reaching the admin",
+  "super.drawer.features_confirm_title": "Disable {feature}?",
+  "super.drawer.features_confirm_body": "{name} has had activity in the last 14 days. Disabling {feature} will immediately affect active users.",
+  "super.drawer.features_disable_confirm": "Disable"
 }

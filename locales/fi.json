@@ -453,5 +453,10 @@
   "super.drawer.debug_title": "Debug & linkit",
   "super.drawer.debug_db": "Tietokantatiedosto",
   "super.drawer.debug_links": "Syvälinkit",
-  "super.drawer.debug_copied": "Kopioitu!"
+  "super.drawer.debug_copied": "Kopioitu!",
+  "super.drawer.features_time_app_desc": "Työntekijät voivat kirjata tunteja",
+  "super.drawer.features_supervisor_desc": "Hyväksynnät menevät esimiehille ennen adminille saapumista",
+  "super.drawer.features_confirm_title": "Poistetaanko {feature} käytöstä?",
+  "super.drawer.features_confirm_body": "{name} on ollut aktiivinen viimeisen 14 päivän aikana. {feature}-ominaisuuden poistaminen käytöstä vaikuttaa välittömästi aktiivisiin käyttäjiin.",
+  "super.drawer.features_disable_confirm": "Poista käytöstä"
 }
