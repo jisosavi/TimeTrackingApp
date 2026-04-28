@@ -3,6 +3,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Settings, Search } from 'lucide-vue-next'
 import { refDebounced, useEventListener } from '@vueuse/core'
+import { formatDistanceToNowStrict } from 'date-fns'
+import { enUS, fi, sv, et, uk } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -10,53 +13,71 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import OnOff from '@/components/ui/OnOff.vue'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
 import { useRefresh } from '@/composables/useRefresh'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n({ useScope: 'global' })
+const auth = useAuthStore()
 const { companies, loading, error, fetchCompanies, createCompany } = useSuperAdmin()
 const { refreshTick } = useRefresh()
 
 onMounted(fetchCompanies)
 watch(refreshTick, fetchCompanies)
 
+// ── date-fns locale map ───────────────────────────────────────────────────────
+const DATE_FNS_LOCALES: Record<string, Locale> = { en: enUS, fi, sv, et, uk }
+
+function relativeTime(ts: string | null | undefined): string {
+  if (!ts) return t('super.list.never')
+  const locale = DATE_FNS_LOCALES[auth.user?.uiLanguage ?? 'en'] ?? enUS
+  return formatDistanceToNowStrict(new Date(ts.replace(' ', 'T')), { addSuffix: true, locale })
+}
+
 // ── Filters ───────────────────────────────────────────────────────────────────
-const searchRaw       = ref('')
-const searchQuery     = refDebounced(searchRaw, 200)
-const timeAppFilter   = ref<string>('all')
+const searchRaw        = ref('')
+const searchQuery      = refDebounced(searchRaw, 200)
+const timeAppFilter    = ref<string>('all')
 const supervisorFilter = ref<string>('all')
 
-// Counts for the ToggleGroup labels — over the full unfiltered list
 const timeAppCounts = computed(() => ({
-  on:  companies.value.filter(c => c.active).length,
-  off: companies.value.filter(c => !c.active).length,
+  on:  companies.value.filter(c => c.time_app_enabled).length,
+  off: companies.value.filter(c => !c.time_app_enabled).length,
 }))
 const supervisorCounts = computed(() => ({
-  on:  companies.value.filter(c => c.approvals_enabled).length,
-  off: companies.value.filter(c => !c.approvals_enabled).length,
+  on:  companies.value.filter(c => c.supervisor_ui_enabled).length,
+  off: companies.value.filter(c => !c.supervisor_ui_enabled).length,
 }))
 
 const filteredCompanies = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  const ta = timeAppFilter.value || 'all'
+  const q  = searchQuery.value.trim().toLowerCase()
+  const ta = timeAppFilter.value    || 'all'
   const sv = supervisorFilter.value || 'all'
 
-  return companies.value.filter(c => {
-    if (q) {
-      const haystack = `${c.name} ${c.slug} ${c.business_id ?? ''}`.toLowerCase()
-      if (!haystack.includes(q)) return false
-    }
-    if (ta === 'on'  && !c.active) return false
-    if (ta === 'off' &&  c.active) return false
-    if (sv === 'on'  && !c.approvals_enabled) return false
-    if (sv === 'off' &&  c.approvals_enabled) return false
-    return true
-  })
+  return companies.value
+    .filter(c => {
+      if (q) {
+        const hay = `${c.name} ${c.slug} ${c.business_id ?? ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      if (ta === 'on'  && !c.time_app_enabled)    return false
+      if (ta === 'off' &&  c.time_app_enabled)    return false
+      if (sv === 'on'  && !c.supervisor_ui_enabled) return false
+      if (sv === 'off' &&  c.supervisor_ui_enabled) return false
+      return true
+    })
+    .sort((a, b) => {
+      // last activity desc; nulls last
+      if (!a.last_activity_at && !b.last_activity_at) return 0
+      if (!a.last_activity_at) return 1
+      if (!b.last_activity_at) return -1
+      return b.last_activity_at.localeCompare(a.last_activity_at)
+    })
 })
 
 // ⌘K / Ctrl+K → focus search
 const searchInputRef = ref<InstanceType<typeof Input> | null>(null)
-
 useEventListener('keydown', (e: KeyboardEvent) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault()
@@ -132,7 +153,6 @@ async function submitCreate() {
     <!-- Filter bar -->
     <div class="flex items-center gap-3 flex-wrap">
 
-      <!-- Search -->
       <div class="relative">
         <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
         <Input
@@ -146,22 +166,20 @@ async function submitCreate() {
         </kbd>
       </div>
 
-      <!-- Time App filter -->
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.time_app_label') }}</span>
         <ToggleGroup v-model="timeAppFilter" type="single" variant="outline" size="sm">
           <ToggleGroupItem value="all" class="h-7 px-2 text-xs">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on" class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="on"  class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
           <ToggleGroupItem value="off" class="h-7 px-2 text-xs">{{ t('super.filters.off') }} ({{ timeAppCounts.off }})</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
-      <!-- Supervisor UI filter -->
       <div class="flex items-center gap-1.5">
         <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.supervisor_label') }}</span>
         <ToggleGroup v-model="supervisorFilter" type="single" variant="outline" size="sm">
           <ToggleGroupItem value="all" class="h-7 px-2 text-xs">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on" class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="on"  class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
           <ToggleGroupItem value="off" class="h-7 px-2 text-xs">{{ t('super.filters.off') }} ({{ supervisorCounts.off }})</ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -256,26 +274,16 @@ async function submitCreate() {
               {{ company.employee_count }}
             </TableCell>
 
-            <!-- Time App status (placeholder dot — will become a toggle with confirm) -->
             <TableCell class="px-3 py-1.5">
-              <span
-                :class="company.active ? 'bg-green-500' : 'bg-muted-foreground/30'"
-                class="inline-block size-2 rounded-full"
-                :title="company.active ? 'Active' : 'Inactive'"
-              />
+              <OnOff :value="!!company.time_app_enabled" color="indigo" />
             </TableCell>
 
-            <!-- Supervisor UI status (placeholder dot — will become a toggle with confirm) -->
             <TableCell class="px-3 py-1.5">
-              <span
-                :class="company.approvals_enabled ? 'bg-green-500' : 'bg-muted-foreground/30'"
-                class="inline-block size-2 rounded-full"
-                :title="company.approvals_enabled ? 'On' : 'Off'"
-              />
+              <OnOff :value="!!company.supervisor_ui_enabled" color="green" />
             </TableCell>
 
             <TableCell class="px-3 py-1.5 text-xs text-muted-foreground">
-              —
+              {{ relativeTime(company.last_activity_at) }}
             </TableCell>
 
             <TableCell class="px-3 py-1.5">

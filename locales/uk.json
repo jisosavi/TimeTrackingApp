@@ -417,5 +417,6 @@
   "super.filters.all": "All",
   "super.filters.on": "On",
   "super.filters.off": "Off",
-  "super.filters.no_match": "No companies match '{query}'"
+  "super.filters.no_match": "No companies match '{query}'",
+  "super.list.never": "Never"
 }

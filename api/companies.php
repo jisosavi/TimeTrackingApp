@@ -16,17 +16,32 @@ function countActiveEmployees(int $companyId): int
     }
 }
 
+function getLastActivity(?string $dbFile): ?string
+{
+    if (!$dbFile) return null;
+    $path = DB_DIR . '/' . $dbFile;
+    if (!file_exists($path)) return null;
+    try {
+        $db  = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $val = $db->query('SELECT MAX(submitted_at) FROM time_entries')->fetchColumn();
+        return $val ?: null;
+    } catch (Throwable) {
+        return null;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt      = $db->query(
-        'SELECT id, name, slug, active, approvals_enabled, ui_language,
-                salaxy_company_id AS business_id, db_file,
+        'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
+                ui_language, salaxy_company_id AS business_id, db_file,
                 salaxy_api_url, salaxy_username
          FROM companies
          ORDER BY name ASC'
     );
     $companies = $stmt->fetchAll();
     foreach ($companies as &$c) {
-        $c['employee_count'] = countActiveEmployees((int) $c['id']);
+        $c['employee_count']   = countActiveEmployees((int) $c['id']);
+        $c['last_activity_at'] = getLastActivity($c['db_file'] ?? null);
     }
     sendJson(['success' => true, 'companies' => $companies]);
 }
@@ -71,6 +86,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare('UPDATE companies SET approvals_enabled = :ae WHERE id = :id')
                ->execute([':ae' => $ae, ':id' => $id]);
         }
+        if (array_key_exists('time_app_enabled', $payload)) {
+            $db->prepare('UPDATE companies SET time_app_enabled = :v WHERE id = :id')
+               ->execute([':v' => (int) $payload['time_app_enabled'], ':id' => $id]);
+        }
+        if (array_key_exists('supervisor_ui_enabled', $payload)) {
+            $db->prepare('UPDATE companies SET supervisor_ui_enabled = :v WHERE id = :id')
+               ->execute([':v' => (int) $payload['supervisor_ui_enabled'], ':id' => $id]);
+        }
         if ($lang !== null && in_array($lang, ['en', 'fi', 'sv', 'et', 'uk', 'xh'], true)) {
             $db->prepare('UPDATE companies SET ui_language = :lang WHERE id = :id')
                ->execute([':lang' => $lang, ':id' => $id]);
@@ -100,14 +123,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $stmt = $db->prepare(
-            'SELECT id, name, slug, active, approvals_enabled, ui_language,
-                    salaxy_company_id AS business_id, db_file,
+            'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
+                    ui_language, salaxy_company_id AS business_id, db_file,
                     salaxy_api_url, salaxy_username
              FROM companies WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
-        $company                  = $stmt->fetch();
-        $company['employee_count'] = countActiveEmployees($id);
+        $company                    = $stmt->fetch();
+        $company['employee_count']   = countActiveEmployees($id);
+        $company['last_activity_at'] = getLastActivity($company['db_file'] ?? null);
         sendJson(['success' => true, 'company' => $company]);
     }
 

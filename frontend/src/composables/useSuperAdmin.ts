@@ -54,7 +54,7 @@ export function useSuperAdmin() {
 
   async function updateCompany(
     id: number,
-    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled' | 'business_id' | 'salaxy_api_url' | 'salaxy_username'>> & { salaxy_password?: string },
+    fields: Partial<Pick<Company, 'name' | 'slug' | 'active' | 'approvals_enabled' | 'time_app_enabled' | 'supervisor_ui_enabled' | 'business_id' | 'salaxy_api_url' | 'salaxy_username'>> & { salaxy_password?: string },
   ) {
     const data = await apiFetch<{ company: Company }>('/api/companies.php', {
       method: 'POST',

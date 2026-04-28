@@ -30,12 +30,15 @@ export interface Company {
   slug: string
   active: number
   approvals_enabled: number
+  time_app_enabled: number
+  supervisor_ui_enabled: number
   ui_language: string
   employee_count: number
   business_id: string | null
   db_file?: string | null
   salaxy_api_url?: string | null
   salaxy_username?: string | null
+  last_activity_at?: string | null
 }
 
 export interface Employee {

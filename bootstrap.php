@@ -120,6 +120,10 @@ function initializeMasterDb(PDO $db): void
         $db->exec('ALTER TABLE companies ADD COLUMN db_file TEXT');
     if (!in_array('super_admin_org_id', $cols))
         $db->exec('ALTER TABLE companies ADD COLUMN super_admin_org_id INTEGER');
+    if (!in_array('time_app_enabled', $cols))
+        $db->exec('ALTER TABLE companies ADD COLUMN time_app_enabled INTEGER NOT NULL DEFAULT 1');
+    if (!in_array('supervisor_ui_enabled', $cols))
+        $db->exec('ALTER TABLE companies ADD COLUMN supervisor_ui_enabled INTEGER NOT NULL DEFAULT 1');
 
     $saCols = array_column($db->query('PRAGMA table_info(super_admins)')->fetchAll(), 'name');
     if (!in_array('salaxy_account_id', $saCols))
