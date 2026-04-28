@@ -152,11 +152,16 @@ $salaxyName = trim(
 $salaxyEmail = trim(
     $cur['email']
     ?? $cur['login']        // Salaxy login field is often the email address
+    ?? $cur['loginName']
     ?? $av['email']
     ?? $session['email']
     ?? $session['login']
     ?? ''
 );
+error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
+    . ' salaxyName=' . ($salaxyName ?: 'EMPTY')
+    . ' cur_keys=' . implode(',', array_keys($cur))
+    . ' session_keys=' . implode(',', array_keys($session)));
 
 $masterDb->prepare(
     'UPDATE super_admins
