@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search } from 'lucide-vue-next'
+import { Search, Plus, ChevronRight } from 'lucide-vue-next'
 import CompanySettingsDrawer from '@/components/super-admin/CompanySettingsDrawer.vue'
 import { refDebounced, useEventListener } from '@vueuse/core'
 import { formatDistanceToNowStrict } from 'date-fns'
@@ -10,7 +10,6 @@ import type { Locale } from 'date-fns'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -86,6 +85,27 @@ useEventListener('keydown', (e: KeyboardEvent) => {
     ;(searchInputRef.value?.$el as HTMLInputElement | undefined)?.focus()
   }
 })
+
+// ── Segmented filter keyboard nav ─────────────────────────────────────────────
+const SEGMENT_OPTS = ['all', 'on', 'off'] as const
+
+function makeSegmentHandler(filter: Ref<string>) {
+  return (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    const idx = SEGMENT_OPTS.indexOf(filter.value as typeof SEGMENT_OPTS[number])
+    filter.value = e.key === 'ArrowRight'
+      ? SEGMENT_OPTS[(idx + 1) % SEGMENT_OPTS.length]!
+      : SEGMENT_OPTS[(idx - 1 + SEGMENT_OPTS.length) % SEGMENT_OPTS.length]!
+    nextTick(() => {
+      const btn = (e.currentTarget as HTMLElement).querySelector<HTMLButtonElement>(`[data-value="${filter.value}"]`)
+      btn?.focus()
+    })
+  }
+}
+
+const onTimeAppKey      = makeSegmentHandler(timeAppFilter)
+const onSupervisorKey   = makeSegmentHandler(supervisorFilter)
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
 const drawerOpen    = ref(false)
@@ -163,20 +183,23 @@ async function submitCreate() {
           {{ auth.user?.email || auth.user?.name }}
         </p>
       </div>
-      <Button size="sm" @click="openCreateForm">+ {{ t('super.list.new_company') }}</Button>
+      <Button variant="indigoSoft" size="default" @click="openCreateForm">
+        <Plus class="size-[13px]" />{{ t('super.list.actions.newCompany') }}
+      </Button>
     </div>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
     <!-- Filter bar -->
-    <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex items-end gap-6 flex-wrap">
 
+      <!-- Search -->
       <div class="relative">
         <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
         <Input
           ref="searchInputRef"
           v-model="searchRaw"
-          class="pl-8 h-8 w-56 text-sm pr-10"
+          class="pl-8 h-9 w-[280px] text-sm pr-10"
           :placeholder="t('super.filters.search_placeholder')"
         />
         <kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden select-none items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:flex">
@@ -184,22 +207,78 @@ async function submitCreate() {
         </kbd>
       </div>
 
-      <div class="flex items-center gap-1.5 rounded-full border bg-muted/30 pl-3 pr-1 h-8">
-        <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.time_app_label') }}</span>
-        <ToggleGroup v-model="timeAppFilter" type="single" variant="outline" size="sm">
-          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
-          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.off') }} ({{ timeAppCounts.off }})</ToggleGroupItem>
-        </ToggleGroup>
+      <!-- Time App segmented control -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-xs font-semibold text-muted-foreground leading-none">{{ t('super.filters.time_app_label') }}</span>
+        <div
+          role="radiogroup"
+          :aria-label="t('super.filters.time_app_label')"
+          class="flex bg-[#F8F7F4] border border-[#E6E5E1] rounded-[9px] p-[3px]"
+          @keydown="onTimeAppKey"
+        >
+          <button
+            v-for="opt in [
+              { value: 'all', label: t('super.filters.all') },
+              { value: 'on',  label: t('super.filters.on'),  count: timeAppCounts.on },
+              { value: 'off', label: t('super.filters.off'), count: timeAppCounts.off },
+            ]"
+            :key="opt.value"
+            type="button"
+            role="radio"
+            :aria-checked="timeAppFilter === opt.value"
+            :tabindex="timeAppFilter === opt.value ? 0 : -1"
+            :data-value="opt.value"
+            class="inline-flex items-center gap-[5px] py-[5px] px-[11px] rounded-[6px] text-xs font-semibold border-0 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C1EEB] focus-visible:ring-offset-1"
+            :class="timeAppFilter === opt.value
+              ? 'bg-white text-foreground shadow-[0_1px_2px_rgba(40,50,55,0.08),0_0_0_1px_rgba(40,50,55,0.06)]'
+              : 'bg-transparent text-muted-foreground hover:text-foreground'"
+            @click="timeAppFilter = opt.value"
+          >
+            {{ opt.label }}
+            <span
+              v-if="opt.count !== undefined"
+              class="tabular-nums font-medium"
+              :class="timeAppFilter === opt.value ? 'text-muted-foreground' : 'text-muted-foreground/60'"
+            >{{ opt.count }}</span>
+          </button>
+        </div>
       </div>
 
-      <div class="flex items-center gap-1.5 rounded-full border bg-muted/30 pl-3 pr-1 h-8">
-        <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.supervisor_label') }}</span>
-        <ToggleGroup v-model="supervisorFilter" type="single" variant="outline" size="sm">
-          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
-          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.off') }} ({{ supervisorCounts.off }})</ToggleGroupItem>
-        </ToggleGroup>
+      <!-- Supervisor UI segmented control -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-xs font-semibold text-muted-foreground leading-none">{{ t('super.filters.supervisor_label') }}</span>
+        <div
+          role="radiogroup"
+          :aria-label="t('super.filters.supervisor_label')"
+          class="flex bg-[#F8F7F4] border border-[#E6E5E1] rounded-[9px] p-[3px]"
+          @keydown="onSupervisorKey"
+        >
+          <button
+            v-for="opt in [
+              { value: 'all', label: t('super.filters.all') },
+              { value: 'on',  label: t('super.filters.on'),  count: supervisorCounts.on },
+              { value: 'off', label: t('super.filters.off'), count: supervisorCounts.off },
+            ]"
+            :key="opt.value"
+            type="button"
+            role="radio"
+            :aria-checked="supervisorFilter === opt.value"
+            :tabindex="supervisorFilter === opt.value ? 0 : -1"
+            :data-value="opt.value"
+            class="inline-flex items-center gap-[5px] py-[5px] px-[11px] rounded-[6px] text-xs font-semibold border-0 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C1EEB] focus-visible:ring-offset-1"
+            :class="supervisorFilter === opt.value
+              ? 'bg-white text-foreground shadow-[0_1px_2px_rgba(40,50,55,0.08),0_0_0_1px_rgba(40,50,55,0.06)]'
+              : 'bg-transparent text-muted-foreground hover:text-foreground'"
+            @click="supervisorFilter = opt.value"
+          >
+            {{ opt.label }}
+            <span
+              v-if="opt.count !== undefined"
+              class="tabular-nums font-medium"
+              :class="supervisorFilter === opt.value ? 'text-muted-foreground' : 'text-muted-foreground/60'"
+            >{{ opt.count }}</span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -305,11 +384,10 @@ async function submitCreate() {
 
             <TableCell class="px-3 py-1.5">
               <Button
+                variant="indigoSoft"
                 size="sm"
-                variant="outline"
-                class="h-7 px-3 rounded-lg text-xs"
                 @click="openDrawer(company)"
-              >Settings</Button>
+              >{{ t('super.list.actions.settings') }}<ChevronRight class="size-3" /></Button>
             </TableCell>
           </TableRow>
 

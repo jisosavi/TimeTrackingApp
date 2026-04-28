@@ -411,6 +411,8 @@
   "super.list.col_supervisor_ui": "Supervisor UI",
   "super.list.col_last_activity": "Last activity",
   "super.list.no_companies": "No companies",
+  "super.list.actions.newCompany": "New Company",
+  "super.list.actions.settings": "Settings",
   "super.filters.search_placeholder": "Search companies…",
   "super.filters.time_app_label": "Time App",
   "super.filters.supervisor_label": "Supervisor UI",
