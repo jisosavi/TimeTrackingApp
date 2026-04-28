@@ -121,6 +121,11 @@ function onDrawerSaved(updated: Company) {
   if (idx >= 0) companies.value[idx] = { ...companies.value[idx]!, ...updated }
 }
 
+function onDrawerDeleted(companyId: number) {
+  companies.value = companies.value.filter(c => c.id !== companyId)
+  drawerOpen.value = false
+}
+
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
 const createForm = ref({ name: '', slug: '', email: '', password: '' })
@@ -417,5 +422,6 @@ async function submitCreate() {
     :company="drawerCompany"
     @close="drawerOpen = false"
     @saved="onDrawerSaved"
+    @deleted="onDrawerDeleted"
   />
 </template>

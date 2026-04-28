@@ -22,6 +22,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   saved: [company: Company]
+  deleted: [companyId: number]
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
@@ -62,6 +63,11 @@ const features = reactive<{ time_app_enabled: 0|1; supervisor_ui_enabled: 0|1 }>
 })
 const featureSaving = ref<'time_app_enabled' | 'supervisor_ui_enabled' | null>(null)
 
+// ── Danger zone ───────────────────────────────────────────────────────────────
+const deleteSlugInput = ref('')
+const deleteLoading   = ref(false)
+const deleteError     = ref<string | null>(null)
+
 // ── Saving / debug ────────────────────────────────────────────────────────────
 const saving    = ref(false)
 const saveError = ref<string | null>(null)
@@ -81,6 +87,8 @@ watch(
     editingPwFor.value = null
     fetchedId.value    = null
     fetchIdError.value = null
+    deleteSlugInput.value = ''
+    deleteError.value     = null
 
     if (c) {
       generalForm.name  = c.name
@@ -344,6 +352,25 @@ async function applyFeatureToggle(feature: 'time_app_enabled' | 'supervisor_ui_e
   }
 }
 
+// ── Delete company ────────────────────────────────────────────────────────────
+async function deleteCompany() {
+  if (!props.company || deleteSlugInput.value !== props.company.slug) return
+  deleteLoading.value = true
+  deleteError.value   = null
+  try {
+    await apiFetch('/api/super_admin/delete_company.php', {
+      method: 'DELETE',
+      body: JSON.stringify({ company_id: props.company.id, confirm_slug: deleteSlugInput.value }),
+    })
+    emit('deleted', props.company.id)
+    emit('close')
+  } catch (e) {
+    deleteError.value = e instanceof Error ? e.message : t('common.save_failed')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
 // ── Copy to clipboard ─────────────────────────────────────────────────────────
 function copyText(key: string, text: string) {
   navigator.clipboard.writeText(text)
@@ -371,7 +398,7 @@ function copyText(key: string, text: string) {
           <TabsTrigger value="general"  class="text-xs">{{ t('super.drawer.tab_general') }}</TabsTrigger>
           <TabsTrigger value="salaxy"   class="text-xs">{{ t('super.drawer.tab_salaxy') }}</TabsTrigger>
           <TabsTrigger value="admins"   class="text-xs">{{ t('super.drawer.tab_admins') }}</TabsTrigger>
-          <TabsTrigger value="danger" class="text-xs" disabled>{{ t('super.drawer.tab_danger') }}</TabsTrigger>
+          <TabsTrigger value="danger" class="text-xs text-destructive data-[state=active]:text-destructive">{{ t('super.drawer.tab_danger') }}</TabsTrigger>
         </TabsList>
 
         <!-- General tab -->
@@ -591,8 +618,46 @@ function copyText(key: string, text: string) {
         </TabsContent>
 
         <!-- Danger tab -->
-        <TabsContent value="danger" class="flex-1 px-6 py-4 text-sm text-muted-foreground">
-          Archive company / Delete company — coming in Phase 2.
+        <TabsContent value="danger" class="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+          <!-- Warning banner -->
+          <div class="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3">
+            <p class="text-[11px] font-bold tracking-[0.08em] text-amber-700 dark:text-amber-400 uppercase mb-0.5">
+              {{ t('super.drawer.danger_badge') }}
+            </p>
+            <p class="text-xs text-amber-700/80 dark:text-amber-400/80">
+              {{ t('super.drawer.danger_badge_desc') }}
+            </p>
+          </div>
+
+          <!-- Delete section -->
+          <div class="rounded-lg border border-destructive/30 px-4 py-4 space-y-4">
+            <div>
+              <p class="text-sm font-semibold text-destructive">{{ t('super.drawer.danger_delete_title') }}</p>
+              <p class="text-xs text-muted-foreground mt-1">
+                {{ t('super.drawer.danger_delete_desc', { name: company?.name ?? '' }) }}
+              </p>
+            </div>
+            <div class="space-y-1.5">
+              <Label class="text-xs">{{ t('super.drawer.danger_slug_label', { slug: company?.slug ?? '' }) }}</Label>
+              <Input
+                v-model="deleteSlugInput"
+                :placeholder="company?.slug"
+                class="font-mono"
+                autocomplete="off"
+              />
+            </div>
+            <p v-if="deleteError" class="text-xs text-destructive">{{ deleteError }}</p>
+            <Button
+              variant="destructive"
+              size="sm"
+              :disabled="deleteSlugInput !== company?.slug || deleteLoading"
+              @click="deleteCompany"
+            >
+              {{ deleteLoading
+                ? t('super.drawer.danger_deleting')
+                : t('super.drawer.danger_delete_btn', { name: company?.name ?? '' }) }}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
 
