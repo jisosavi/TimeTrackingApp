@@ -399,5 +399,16 @@
   "admin.pin_temp_locked_badge": "Jahutusaeg",
   "approval.filter_all": "Kõik",
   "approval.filter_hours": "Tunnid",
-  "approval.filter_km": "Kilomeetrid"
+  "approval.filter_km": "Kilomeetrid",
+  "super.title": "Super Admin",
+  "super.list.company_singular": "company",
+  "super.list.company_plural": "companies",
+  "super.list.new_company": "New Company",
+  "super.list.col_company": "Company",
+  "super.list.col_salaxy_id": "Salaxy ID",
+  "super.list.col_emp": "Emp",
+  "super.list.col_time_app": "Time App",
+  "super.list.col_supervisor_ui": "Supervisor UI",
+  "super.list.col_last_activity": "Last activity",
+  "super.list.no_companies": "No companies"
 }
