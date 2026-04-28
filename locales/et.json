@@ -465,7 +465,12 @@
   "super.features.approvals.title": "🟡 Kinnitused",
   "super.features.approvals.short": "🟡 Kinnitused",
   "super.features.approvals.description": "🟡 Kinnitused tehakse ettevõtte juhendajate või administraatorite poolt.",
+  "super.features.approvals.consequences": "🟡 Kinnitused lähevad otse administraatoritele, jättes vahele ettevõtte juhendajad.",
   "super.features.supervisorUi.title": "🟡 Kinnitused",
   "super.features.supervisorUi.short": "🟡 Kinnitused",
-  "super.features.supervisorUi.description": "🟡 Kinnitused tehakse ettevõtte juhendajate või administraatorite poolt."
+  "super.features.supervisorUi.description": "🟡 Kinnitused tehakse ettevõtte juhendajate või administraatorite poolt.",
+  "super.features.timeApp.consequences": "🟡 {company} töötajad ei saa enam tunde logida.",
+  "super.features.deactivate.title": "🟡 Keelata {feature} ettevõtte {company} jaoks?",
+  "super.features.deactivate.confirm": "Keela",
+  "super.features.deactivate.preserved": "🟡 Olemasolevad andmed säilivad. Saate selle igal ajal uuesti lubada."
 }

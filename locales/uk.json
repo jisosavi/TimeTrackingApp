@@ -465,7 +465,12 @@
   "super.features.approvals.title": "🟡 Затвердження",
   "super.features.approvals.short": "🟡 Затвердження",
   "super.features.approvals.description": "🟡 Затвердження виконуються керівниками або адміністраторами компанії.",
+  "super.features.approvals.consequences": "🟡 Затвердження надходитимуть безпосередньо адміністраторам, минаючи керівників.",
   "super.features.supervisorUi.title": "🟡 Затвердження",
   "super.features.supervisorUi.short": "🟡 Затвердження",
-  "super.features.supervisorUi.description": "🟡 Затвердження виконуються керівниками або адміністраторами компанії."
+  "super.features.supervisorUi.description": "🟡 Затвердження виконуються керівниками або адміністраторами компанії.",
+  "super.features.timeApp.consequences": "🟡 Співробітники {company} більше не зможуть реєструвати години.",
+  "super.features.deactivate.title": "🟡 Вимкнути {feature} для {company}?",
+  "super.features.deactivate.confirm": "Вимкнути",
+  "super.features.deactivate.preserved": "🟡 Існуючі дані зберігаються. Ви можете знову увімкнути це будь-коли."
 }

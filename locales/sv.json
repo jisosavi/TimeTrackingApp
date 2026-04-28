@@ -465,7 +465,12 @@
   "super.features.approvals.title": "Godkännanden",
   "super.features.approvals.short": "Godkännanden",
   "super.features.approvals.description": "Godkännanden hanteras av företagets handledare eller administratörer.",
+  "super.features.approvals.consequences": "Godkännanden går direkt till administratörer och hoppar över handledare.",
   "super.features.supervisorUi.title": "Godkännanden",
   "super.features.supervisorUi.short": "Godkännanden",
-  "super.features.supervisorUi.description": "Godkännanden hanteras av företagets handledare eller administratörer."
+  "super.features.supervisorUi.description": "Godkännanden hanteras av företagets handledare eller administratörer.",
+  "super.features.timeApp.consequences": "Anställda på {company} kommer inte längre att kunna logga timmar.",
+  "super.features.deactivate.title": "Inaktivera {feature} för {company}?",
+  "super.features.deactivate.confirm": "Inaktivera",
+  "super.features.deactivate.preserved": "Befintliga data bevaras. Du kan återaktivera detta när som helst."
 }

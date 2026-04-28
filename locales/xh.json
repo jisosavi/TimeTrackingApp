@@ -465,7 +465,12 @@
   "super.features.approvals.title": "🟡 Imvume",
   "super.features.approvals.short": "🟡 Imvume",
   "super.features.approvals.description": "🟡 Imvume yenziwa ngabaphathi bezinkampani okanye abalawuli.",
+  "super.features.approvals.consequences": "🟡 Imvume iya koondlela balawulo ngqo, igqitha abaphathi bezinkampani.",
   "super.features.supervisorUi.title": "🟡 Imvume",
   "super.features.supervisorUi.short": "🟡 Imvume",
-  "super.features.supervisorUi.description": "🟡 Imvume yenziwa ngabaphathi bezinkampani okanye abalawuli."
+  "super.features.supervisorUi.description": "🟡 Imvume yenziwa ngabaphathi bezinkampani okanye abalawuli.",
+  "super.features.timeApp.consequences": "🟡 Abasebenzi be-{company} abasayi kuba nako ukubhalisela amaxesha.",
+  "super.features.deactivate.title": "🟡 Khubaza {feature} ku-{company}?",
+  "super.features.deactivate.confirm": "Khubaza",
+  "super.features.deactivate.preserved": "🟡 Idatha ekhona igcinwa. Unokuphinda uyivule nangaliphi na ixesha."
 }

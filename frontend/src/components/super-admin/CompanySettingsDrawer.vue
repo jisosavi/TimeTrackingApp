@@ -11,10 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'vue-sonner'
 import FeatureToggleCard from './FeatureToggleCard.vue'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { useApi } from '@/composables/useApi'
 import type { Company } from '@/types'
 
@@ -64,21 +60,7 @@ const editPwSaving  = ref(false)
 const features = reactive<{ time_app_enabled: 0|1; supervisor_ui_enabled: 0|1 }>({
   time_app_enabled: 1, supervisor_ui_enabled: 1,
 })
-const featureSaving     = ref<'time_app_enabled' | 'supervisor_ui_enabled' | null>(null)
-const showConfirmDialog = ref(false)
-const pendingToggle     = ref<{ feature: 'time_app_enabled' | 'supervisor_ui_enabled'; prev: 0|1 } | null>(null)
-
-const pendingFeatureLabel = computed(() =>
-  pendingToggle.value?.feature === 'time_app_enabled'
-    ? t('super.list.col_time_app')
-    : t('super.list.col_supervisor_ui'),
-)
-
-const pendingConfirmBody = computed(() =>
-  pendingToggle.value?.feature === 'time_app_enabled'
-    ? t('super.drawer.features_time_app_confirm_body', { name: props.company?.name })
-    : t('super.drawer.features_approvals_confirm_body', { name: props.company?.name }),
-)
+const featureSaving = ref<'time_app_enabled' | 'supervisor_ui_enabled' | null>(null)
 
 // ── Saving / debug ────────────────────────────────────────────────────────────
 const saving    = ref(false)
@@ -337,28 +319,7 @@ async function removeAdmin(admin: Admin) {
 // ── Feature toggles ───────────────────────────────────────────────────────────
 function onToggleFeature(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newValue: boolean) {
   if (!props.company || featureSaving.value !== null) return
-  if (!newValue) {
-    features[feature] = 0
-    pendingToggle.value = { feature, prev: newValue ? 0 : 1 }
-    showConfirmDialog.value = true
-    return
-  }
   void applyFeatureToggle(feature, newValue)
-}
-
-function onConfirmDialogChange(open: boolean) {
-  showConfirmDialog.value = open
-  if (!open && pendingToggle.value) {
-    features[pendingToggle.value.feature] = pendingToggle.value.prev
-    pendingToggle.value = null
-  }
-}
-
-async function confirmFeatureToggle() {
-  const pending = pendingToggle.value
-  pendingToggle.value = null
-  if (!pending) return
-  await applyFeatureToggle(pending.feature, false)
 }
 
 async function applyFeatureToggle(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newEnabled: boolean) {
@@ -420,16 +381,22 @@ function copyText(key: string, text: string) {
             <FeatureToggleCard
               :title="t('super.list.col_time_app')"
               :description="t('super.drawer.features_time_app_desc')"
-              :value="features.time_app_enabled === 1"
+              :model-value="features.time_app_enabled === 1"
+              :company-name="company?.name ?? ''"
+              feature-key="time_app"
+              :consequences-copy="t('super.features.timeApp.consequences', { company: company?.name ?? '' })"
               :disabled="featureSaving !== null"
-              @toggle="(v: boolean) => onToggleFeature('time_app_enabled', v)"
+              @update:model-value="(v: boolean) => onToggleFeature('time_app_enabled', v)"
             />
             <FeatureToggleCard
               :title="t('super.list.col_supervisor_ui')"
               :description="t('super.drawer.features_supervisor_desc')"
-              :value="features.supervisor_ui_enabled === 1"
+              :model-value="features.supervisor_ui_enabled === 1"
+              :company-name="company?.name ?? ''"
+              feature-key="supervisor_ui"
+              :consequences-copy="t('super.features.approvals.consequences', { company: company?.name ?? '' })"
               :disabled="featureSaving !== null"
-              @toggle="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
+              @update:model-value="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
             />
           </div>
 
@@ -641,24 +608,6 @@ function copyText(key: string, text: string) {
           @click="save"
         >{{ saving ? t('common.saving') : t('super.drawer.save_button') }}</Button>
       </SheetFooter>
-      <!-- Feature disable confirmation -->
-      <AlertDialog :open="showConfirmDialog" @update:open="onConfirmDialogChange">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{{ t('super.drawer.features_confirm_title', { feature: pendingFeatureLabel, name: company?.name }) }}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {{ pendingConfirmBody }}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-            <AlertDialogAction
-              class="bg-destructive text-white hover:bg-destructive/90"
-              @click="confirmFeatureToggle"
-            >{{ t('super.drawer.features_disable_confirm') }}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </SheetContent>
   </Sheet>
 </template>

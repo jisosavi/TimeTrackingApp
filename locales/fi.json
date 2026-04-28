@@ -465,7 +465,12 @@
   "super.features.approvals.title": "Hyväksynnät",
   "super.features.approvals.short": "Hyväksynnät",
   "super.features.approvals.description": "Hyväksynnät tehdään yrityksen esimiehillä tai ylläpitäjillä.",
+  "super.features.approvals.consequences": "Hyväksynnät menevät suoraan ylläpitäjille, ohittaen yrityksen esimiehet.",
   "super.features.supervisorUi.title": "Hyväksynnät",
   "super.features.supervisorUi.short": "Hyväksynnät",
-  "super.features.supervisorUi.description": "Hyväksynnät tehdään yrityksen esimiehillä tai ylläpitäjillä."
+  "super.features.supervisorUi.description": "Hyväksynnät tehdään yrityksen esimiehillä tai ylläpitäjillä.",
+  "super.features.timeApp.consequences": "{company} työntekijät eivät enää voi kirjata tunteja.",
+  "super.features.deactivate.title": "Poistetaanko {feature} käytöstä yritykseltä {company}?",
+  "super.features.deactivate.confirm": "Poista käytöstä",
+  "super.features.deactivate.preserved": "Olemassa olevat tiedot säilyvät. Voit ottaa tämän uudelleen käyttöön milloin tahansa."
 }

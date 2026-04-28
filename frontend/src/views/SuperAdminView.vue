@@ -371,7 +371,7 @@ async function submitCreate() {
             </TableCell>
 
             <TableCell class="px-3 py-1.5">
-              <OnOff :value="!!company.time_app_enabled" color="indigo" />
+              <OnOff :value="!!company.time_app_enabled" color="green" />
             </TableCell>
 
             <TableCell class="px-3 py-1.5">

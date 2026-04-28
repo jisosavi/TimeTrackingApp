@@ -465,7 +465,12 @@
   "super.features.approvals.title": "Approvals",
   "super.features.approvals.short": "Approvals",
   "super.features.approvals.description": "Approvals are done by company supervisors or company admins.",
+  "super.features.approvals.consequences": "Approvals will go directly to admins, skipping company supervisors.",
   "super.features.supervisorUi.title": "Approvals",
   "super.features.supervisorUi.short": "Approvals",
-  "super.features.supervisorUi.description": "Approvals are done by company supervisors or company admins."
+  "super.features.supervisorUi.description": "Approvals are done by company supervisors or company admins.",
+  "super.features.timeApp.consequences": "Employees of {company} will no longer be able to log hours.",
+  "super.features.deactivate.title": "Deactivate {feature} for {company}?",
+  "super.features.deactivate.confirm": "Deactivate",
+  "super.features.deactivate.preserved": "Existing data is preserved. You can re-enable this at any time."
 }
