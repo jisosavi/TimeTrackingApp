@@ -141,33 +141,34 @@ if (!$authResult['granted']) {
 // ── Step 4: refresh identity from Salaxy session and persist ─────────────────
 $admin = $authResult['admin'];
 
-$cur = $session['currentAccount'] ?? $session['account'] ?? $session ?? [];
-$av  = $cur['avatar'] ?? [];
+$cur     = $session['currentAccount'] ?? $session['account'] ?? $session ?? [];
+$av      = $cur['avatar'] ?? [];
+$cred    = $session['currentCredential'] ?? [];
+$sesAvat = $session['avatar'] ?? [];
+$contact = $cur['contact'] ?? [];
 
 $salaxyName = trim(
-    ($cur['name'] ?? '')
-    ?: (trim(($av['firstName'] ?? '') . ' ' . ($av['lastName'] ?? '')))
+    trim(($sesAvat['firstName'] ?? '') . ' ' . ($sesAvat['lastName'] ?? ''))
+    ?: trim(($av['firstName'] ?? '') . ' ' . ($av['lastName'] ?? ''))
+    ?: ($cur['name'] ?? '')
     ?: ($session['name'] ?? '')
-    ?: (trim((($session['user']['firstName'] ?? $session['person']['firstName'] ?? '') . ' '
-            . ($session['user']['lastName']  ?? $session['person']['lastName']  ?? ''))))
 );
-$usr = $session['user'] ?? $session['person'] ?? $session['contact'] ?? [];
 $salaxyEmail = trim(
-    $cur['email']
+    $cred['login']              // currentCredential.login  — most likely the email
+    ?? $cred['username']
+    ?? $cred['email']
+    ?? $contact['email']        // currentAccount.contact.email
+    ?? $contact['login']
+    ?? $sesAvat['email']        // session-level avatar
+    ?? $sesAvat['login']
+    ?? $cur['email']
     ?? $cur['login']
-    ?? $cur['loginName']
-    ?? $av['email']
-    ?? $usr['email']
-    ?? $usr['login']
-    ?? $usr['loginName']
-    ?? $session['email']
-    ?? $session['login']
     ?? ''
 );
 error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
-    . ' cur_keys=' . implode(',', array_keys($cur))
-    . ' usr_keys=' . implode(',', array_keys($usr))
-    . ' session_keys=' . implode(',', array_keys($session)));
+    . ' cred_keys=' . implode(',', array_keys($cred))
+    . ' contact_keys=' . implode(',', array_keys($contact))
+    . ' sesAvat_keys=' . implode(',', array_keys($sesAvat)));
 
 $masterDb->prepare(
     'UPDATE super_admins
