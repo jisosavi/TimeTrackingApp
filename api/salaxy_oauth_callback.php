@@ -149,7 +149,14 @@ $salaxyName = trim(
     ?: (trim(($av['firstName'] ?? '') . ' ' . ($av['lastName'] ?? '')))
     ?: ($session['name'] ?? '')
 );
-$salaxyEmail = trim($cur['email'] ?? $session['email'] ?? '');
+$salaxyEmail = trim(
+    $cur['email']
+    ?? $cur['login']        // Salaxy login field is often the email address
+    ?? $av['email']
+    ?? $session['email']
+    ?? $session['login']
+    ?? ''
+);
 
 $masterDb->prepare(
     'UPDATE super_admins
@@ -177,7 +184,7 @@ sendJson([
         'type'       => 'superadmin',
         'companyId'  => 0,
         'name'       => $admin['name']  ?: ($salaxyName  ?: 'Super Admin'),
-        'email'      => $admin['email'] ?: $salaxyEmail,
+        'email'      => $salaxyEmail ?: $admin['email'],
         'uiLanguage' => $admin['ui_language'] ?? 'en',
     ],
 ]);
