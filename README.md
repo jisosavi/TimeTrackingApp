@@ -86,15 +86,15 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 - Company Salaxy ID visible in Settings (read-only; editable by super-admins only)
 
 **Super-admin** (`/admin/`)
-- Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins whitelist and a JWT is issued. First login auto-links the Salaxy account if only one unlinked super-admin exists.
+- Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins whitelist and a JWT is issued. First login auto-links the Salaxy account if only one unlinked super-admin exists. The header shows the logged-in user's Salaxy avatar, name, and email.
 - Create and manage companies with a slug-based URL and admin account
-- Enable or disable time tracking per company via an inline toggle
+- Enable or disable **Time App** and **Approvals** per company via toggle cards; disabling requires a confirmation dialog and preserves all existing data
 - Manage admins of each company
 - Navigate directly to each company's admin panel
 
 ---
 
-## Screenshots (OLD, MUST BE UPDATED!)
+## Screenshots
 
 **Simple PIN login** — each company has its own login URL at `/{slug}/`.
 Employees and managers/supervisors only need to open the URL on any device and give their unique PIN.
@@ -137,6 +137,12 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 ---
 
 ## Recent Changes
+
+### 2026-04-28
+- **Super-admin avatar**: The super-admin header now shows the logged-in user's Salaxy profile photo (from `session.avatar.url`), name, and email. Falls back to an initials circle when no photo is available.
+- **Feature toggle cards**: The per-company feature toggles (Time App, Approvals) are now `FeatureToggleCard` components with a custom animated switch, on/off status dot, and a confirmation dialog when disabling a feature (preserves data, can be re-enabled at any time).
+- **"Supervisor UI" renamed to "Approvals"**: All UI labels, filter buttons, locale keys, and DB column references for the supervisor-facing feature are now consistently "Approvals".
+- **Salaxy OAuth `salaxy_skin` parameter**: The authorization URL now passes `salaxy_skin=salaxy.min` (was incorrectly named `salaxy_authorize_mode`).
 
 ### 2026-04-27
 - **Salaxy OAuth2 super-admin login**: Super-admin login now uses the Salaxy Authorization Code flow instead of a local password. The callback lands at the SPA root (no `.htaccess` rewrite required); the router forwards `?code=` to `/admin` client-side. The PHP callback (`api/salaxy_oauth_callback.php`) exchanges the code, fetches `session/current`, matches `currentAccount.id` against the `super_admins` whitelist, and issues a JWT. First login auto-links the account when exactly one unlinked super-admin exists. Set `VITE_SUPERADMIN_PASSWORD_LOGIN=true` in `.env.local` to keep the password form visible for local development.
@@ -230,7 +236,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
    ```bash
    git clone https://github.com/jisosavi/TimeTrackingApp.git
    cd TimeTrackingApp
-   git checkout vue-migration
+   git checkout main
    ```
 
 2. Set credentials via environment variables or a local override file:
@@ -378,6 +384,9 @@ npm run lint         # ESLint + Oxlint
 │   │   │   │   ├── ChatPanel.vue         # AI chat: message history, editable preview card before saving
 │   │   │   │   ├── EntryList.vue         # Entry list (all entries or rejected-only mode via prop)
 │   │   │   │   └── EntryCard.vue         # Single entry: status badge, type pills, rejection notes, clarify/delete
+│   │   │   ├── super-admin/
+│   │   │   │   ├── CompanySettingsDrawer.vue  # Per-company settings drawer (feature toggles, Salaxy ID, admins)
+│   │   │   │   └── FeatureToggleCard.vue      # Feature on/off card with animated switch + deactivation confirm dialog
 │   │   │   └── ui/
 │   │   │       ├── EmptyState.vue        # Reusable empty state (icon slot, title, body, action link/callback)
 │   │   │       └── …                     # shadcn-vue primitives (Badge, Button, Input, …)
