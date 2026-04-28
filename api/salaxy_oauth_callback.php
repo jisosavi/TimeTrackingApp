@@ -90,41 +90,69 @@ if (!$salaxyAccountId) {
 
 $salaxyAccountId = (string) $salaxyAccountId;
 
-// ── Step 3: match against super_admins whitelist ──────────────────────────────
+// ── Step 3: check Time app super-admin authorisation ─────────────────────────
+//
+// checkTimeAppSuperAdminAccess() abstracts the authorisation check.
+//
+// FUTURE: Salaxy will include an authorisation claim in the session response,
+// e.g. $session['currentAccount']['timeAppAccess']['superAdmin'] === true.
+// When that ships, update the function body to read the real claim and remove
+// the whitelist fallback below.
+//
+function checkTimeAppSuperAdminAccess(array $session, string $salaxyAccountId, PDO $masterDb): array
+{
+    // ── Future Salaxy claim (not yet provided by Salaxy) ──────────────────────
+    // When Salaxy ships the claim, this will be the primary check:
+    //   $claim = $session['currentAccount']['timeAppAccess']['superAdmin'] ?? null;
+    //   if ($claim !== null) {
+    //       return ['granted' => (bool) $claim, 'via' => 'salaxy_claim'];
+    //   }
 
-$masterDb = getMasterDb();
+    // ── Mock / fallback: local super_admins whitelist ─────────────────────────
+    // Simulates the future Salaxy-side authorisation until the real claim arrives.
 
-// Try by salaxy_account_id first
-$stmt = $masterDb->prepare('SELECT * FROM super_admins WHERE salaxy_account_id = :sid AND active = 1');
-$stmt->execute([':sid' => $salaxyAccountId]);
-$admin = $stmt->fetch();
+    // Try by linked salaxy_account_id
+    $stmt = $masterDb->prepare('SELECT * FROM super_admins WHERE salaxy_account_id = :sid AND active = 1');
+    $stmt->execute([':sid' => $salaxyAccountId]);
+    $admin = $stmt->fetch();
+    if ($admin) {
+        return ['granted' => true, 'via' => 'whitelist', 'admin' => $admin];
+    }
 
-// Bootstrap: if exactly one super-admin exists with no salaxy_account_id, auto-link
-if (!$admin) {
-    $countStmt = $masterDb->query('SELECT COUNT(*) FROM super_admins WHERE active = 1');
-    $total     = (int) $countStmt->fetchColumn();
-
+    // Bootstrap: if exactly one super-admin exists with no salaxy_account_id, auto-link
+    $total    = (int) $masterDb->query('SELECT COUNT(*) FROM super_admins WHERE active = 1')->fetchColumn();
     $unlinked = $masterDb->query('SELECT * FROM super_admins WHERE salaxy_account_id IS NULL AND active = 1 LIMIT 1')->fetch();
 
     if ($total === 1 && $unlinked) {
-        $name  = trim(($session['currentAccount']['name'] ?? $session['name'] ?? ''));
-        $email = trim(($session['currentAccount']['email'] ?? $session['email'] ?? ''));
-        $masterDb->prepare(
-            'UPDATE super_admins SET salaxy_account_id = :sid, name = COALESCE(:name, name), email = COALESCE(:email, email)
-             WHERE id = :id'
-        )->execute([
-            ':sid'   => $salaxyAccountId,
-            ':name'  => $name ?: null,
-            ':email' => $email ?: null,
-            ':id'    => $unlinked['id'],
-        ]);
-        $admin = $masterDb->prepare('SELECT * FROM super_admins WHERE id = :id')->execute([':id' => $unlinked['id']]) ? $masterDb->query('SELECT * FROM super_admins WHERE id = ' . (int) $unlinked['id'])->fetch() : null;
+        return ['granted' => true, 'via' => 'autolink', 'admin' => $unlinked];
     }
+
+    return ['granted' => false, 'via' => 'whitelist'];
 }
 
-if (!$admin) {
+$masterDb = getMasterDb();
+$authResult = checkTimeAppSuperAdminAccess($session, $salaxyAccountId, $masterDb);
+
+if (!$authResult['granted']) {
     error_log('Salaxy OAuth2: unauthorized account ID: ' . $salaxyAccountId);
     sendJson(['success' => false, 'error' => 'Not authorized'], 403);
+}
+
+// Persist the link and name/email when auto-linking
+$admin = $authResult['admin'];
+if ($authResult['via'] === 'autolink') {
+    $name  = trim(($session['currentAccount']['name']  ?? $session['name']  ?? ''));
+    $email = trim(($session['currentAccount']['email'] ?? $session['email'] ?? ''));
+    $masterDb->prepare(
+        'UPDATE super_admins SET salaxy_account_id = :sid, name = COALESCE(:name, name), email = COALESCE(:email, email)
+         WHERE id = :id'
+    )->execute([
+        ':sid'   => $salaxyAccountId,
+        ':name'  => $name  ?: null,
+        ':email' => $email ?: null,
+        ':id'    => $admin['id'],
+    ]);
+    $admin = $masterDb->query('SELECT * FROM super_admins WHERE id = ' . (int) $admin['id'])->fetch();
 }
 
 // ── Step 4: issue app JWT ─────────────────────────────────────────────────────
