@@ -504,7 +504,8 @@ function copyText(key: string, text: string) {
         </TabsContent>
 
         <!-- Salaxy tab -->
-        <TabsContent value="salaxy" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <TabsContent value="salaxy" class="flex-1 overflow-y-auto">
+          <form class="px-6 py-4 space-y-4" autocomplete="off" @submit.prevent="save">
           <!-- Salaxy Company ID + fetch -->
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.salaxy_id_label') }}</Label>
@@ -544,9 +545,11 @@ function copyText(key: string, text: string) {
             <Input
               v-model="salaxyForm.salaxy_password"
               type="password"
+              autocomplete="new-password"
               :placeholder="t('super.drawer.salaxy_pw_hint')"
             />
           </div>
+          </form>
         </TabsContent>
 
         <!-- Admins tab -->
