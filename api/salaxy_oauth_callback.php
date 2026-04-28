@@ -148,19 +148,25 @@ $salaxyName = trim(
     ($cur['name'] ?? '')
     ?: (trim(($av['firstName'] ?? '') . ' ' . ($av['lastName'] ?? '')))
     ?: ($session['name'] ?? '')
+    ?: (trim((($session['user']['firstName'] ?? $session['person']['firstName'] ?? '') . ' '
+            . ($session['user']['lastName']  ?? $session['person']['lastName']  ?? ''))))
 );
+$usr = $session['user'] ?? $session['person'] ?? $session['contact'] ?? [];
 $salaxyEmail = trim(
     $cur['email']
-    ?? $cur['login']        // Salaxy login field is often the email address
+    ?? $cur['login']
     ?? $cur['loginName']
     ?? $av['email']
+    ?? $usr['email']
+    ?? $usr['login']
+    ?? $usr['loginName']
     ?? $session['email']
     ?? $session['login']
     ?? ''
 );
 error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
-    . ' salaxyName=' . ($salaxyName ?: 'EMPTY')
     . ' cur_keys=' . implode(',', array_keys($cur))
+    . ' usr_keys=' . implode(',', array_keys($usr))
     . ' session_keys=' . implode(',', array_keys($session)));
 
 $masterDb->prepare(
