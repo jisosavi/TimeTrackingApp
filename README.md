@@ -114,7 +114,7 @@ Employees can see the entries they have made and follow the approval process. Th
 
 **Company admin** — manage employees, reset PINs, and sync from Salaxy. Sync status and timestamp are shown inline next to the sync button.
 
-<img src="screenshots/03-company-admin.png" width="600" alt="Company admin employee list">
+<img src="screenshots/03-company-admin.png" width="260" alt="Company admin employee list">
 
 ---
 
@@ -122,13 +122,13 @@ Employees can see the entries they have made and follow the approval process. Th
 Managers only need to open the URL on any device and give their unique PIN.
 Nothing else is needed for onboarding, no configuration or installing anything!
 
-<img src="screenshots/05-approval.png" width="600" alt="Approval view">
+<img src="screenshots/05-approval.png" width="260" alt="Approval view">
 
 ---
 
 **Super-admin** — all companies in one table. The first column toggles time tracking on/off per company without leaving the page.
 
-<img src="screenshots/04-super-admin.png" width="600" alt="Super-admin company list">
+<img src="screenshots/04-super-admin.png" width="260" alt="Super-admin company list">
 
 ---
 
