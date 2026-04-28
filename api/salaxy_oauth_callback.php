@@ -70,9 +70,6 @@ curl_close($ch);
 
 $session = json_decode((string) $sessionRaw, true);
 
-// Log full response on every call — helps identify correct field structure
-error_log('Salaxy session/current HTTP ' . $sessionCode . ': ' . $sessionRaw);
-
 if ($sessionCode !== 200 || !is_array($session)) {
     sendJson(['success' => false, 'error' => 'Failed to fetch Salaxy session'], 502);
 }
@@ -179,12 +176,6 @@ $salaxyAvatarUrl = trim(
     ?? $av['thumbnailUrl']
     ?? ''
 );
-error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
-    . ' salaxyAvatarUrl=' . ($salaxyAvatarUrl ?: 'EMPTY')
-    . ' cred_keys=' . implode(',', array_keys($cred))
-    . ' contact_keys=' . implode(',', array_keys($contact))
-    . ' sesAvat_keys=' . implode(',', array_keys($sesAvat))
-    . ' av_keys=' . (is_array($av) ? implode(',', array_keys($av)) : gettype($av)));
 
 // Always link salaxy_account_id and sync name (no UNIQUE constraint on these)
 $masterDb->prepare(
