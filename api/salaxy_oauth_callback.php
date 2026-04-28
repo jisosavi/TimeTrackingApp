@@ -138,24 +138,34 @@ if (!$authResult['granted']) {
     sendJson(['success' => false, 'error' => 'Not authorized'], 403);
 }
 
-// Persist the link and name/email when auto-linking
+// ── Step 4: refresh identity from Salaxy session and persist ─────────────────
 $admin = $authResult['admin'];
-if ($authResult['via'] === 'autolink') {
-    $name  = trim(($session['currentAccount']['name']  ?? $session['name']  ?? ''));
-    $email = trim(($session['currentAccount']['email'] ?? $session['email'] ?? ''));
-    $masterDb->prepare(
-        'UPDATE super_admins SET salaxy_account_id = :sid, name = COALESCE(:name, name), email = COALESCE(:email, email)
-         WHERE id = :id'
-    )->execute([
-        ':sid'   => $salaxyAccountId,
-        ':name'  => $name  ?: null,
-        ':email' => $email ?: null,
-        ':id'    => $admin['id'],
-    ]);
-    $admin = $masterDb->query('SELECT * FROM super_admins WHERE id = ' . (int) $admin['id'])->fetch();
-}
 
-// ── Step 4: issue app JWT ─────────────────────────────────────────────────────
+$cur = $session['currentAccount'] ?? $session['account'] ?? $session ?? [];
+$av  = $cur['avatar'] ?? [];
+
+$salaxyName = trim(
+    ($cur['name'] ?? '')
+    ?: (trim(($av['firstName'] ?? '') . ' ' . ($av['lastName'] ?? '')))
+    ?: ($session['name'] ?? '')
+);
+$salaxyEmail = trim($cur['email'] ?? $session['email'] ?? '');
+
+$masterDb->prepare(
+    'UPDATE super_admins
+     SET salaxy_account_id = :sid,
+         name  = CASE WHEN :name  != "" THEN :name2  ELSE name  END,
+         email = CASE WHEN :email != "" THEN :email2 ELSE email END
+     WHERE id = :id'
+)->execute([
+    ':sid'    => $salaxyAccountId,
+    ':name'   => $salaxyName,  ':name2'  => $salaxyName,
+    ':email'  => $salaxyEmail, ':email2' => $salaxyEmail,
+    ':id'     => $admin['id'],
+]);
+$admin = $masterDb->query('SELECT * FROM super_admins WHERE id = ' . (int) $admin['id'])->fetch();
+
+// ── Step 5: issue app JWT ─────────────────────────────────────────────────────
 
 $token = generateToken((int) $admin['id'], 'superadmin', 0);
 
@@ -166,8 +176,8 @@ sendJson([
         'id'         => (int) $admin['id'],
         'type'       => 'superadmin',
         'companyId'  => 0,
-        'name'       => $admin['name'] ?? 'Super Admin',
-        'email'      => $admin['email'],
+        'name'       => $admin['name']  ?: ($salaxyName  ?: 'Super Admin'),
+        'email'      => $admin['email'] ?: $salaxyEmail,
         'uiLanguage' => $admin['ui_language'] ?? 'en',
     ],
 ]);
