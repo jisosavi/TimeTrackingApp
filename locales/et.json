@@ -418,5 +418,18 @@
   "super.filters.on": "On",
   "super.filters.off": "Off",
   "super.filters.no_match": "No companies match '{query}'",
-  "super.list.never": "Never"
+  "super.list.never": "Never",
+  "super.drawer.tab_general": "Üldine",
+  "super.drawer.tab_salaxy": "Salaxy",
+  "super.drawer.tab_admins": "Administraatorid",
+  "super.drawer.tab_features": "Funktsioonid",
+  "super.drawer.tab_danger": "Ohtlik tsoon",
+  "super.drawer.name_label": "Ettevõtte nimi",
+  "super.drawer.slug_label": "URL-lühend",
+  "super.drawer.slug_min": "Lühend peab olema vähemalt 2 tähemärki",
+  "super.drawer.slug_max": "Lühend võib olla kuni 40 tähemärki",
+  "super.drawer.slug_chars": "Ainult väiketähed, numbrid ja sidekriipsud",
+  "super.drawer.name_required": "Nimi on nõutav",
+  "super.drawer.discard_confirm": "Loobuda salvestamata muudatustest?",
+  "super.drawer.save_button": "Salvesta muudatused"
 }

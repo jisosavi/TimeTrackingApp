@@ -418,5 +418,18 @@
   "super.filters.on": "On",
   "super.filters.off": "Off",
   "super.filters.no_match": "No companies match '{query}'",
-  "super.list.never": "Never"
+  "super.list.never": "Never",
+  "super.drawer.tab_general": "Yleistä",
+  "super.drawer.tab_salaxy": "Salaxy",
+  "super.drawer.tab_admins": "Ylläpitäjät",
+  "super.drawer.tab_features": "Ominaisuudet",
+  "super.drawer.tab_danger": "Vaaravyöhyke",
+  "super.drawer.name_label": "Yrityksen nimi",
+  "super.drawer.slug_label": "URL-tunniste",
+  "super.drawer.slug_min": "Tunnisteen on oltava vähintään 2 merkkiä",
+  "super.drawer.slug_max": "Tunniste saa olla enintään 40 merkkiä",
+  "super.drawer.slug_chars": "Vain pienet kirjaimet, numerot ja väliviivat",
+  "super.drawer.name_required": "Nimi on pakollinen",
+  "super.drawer.discard_confirm": "Hylätäänkö tallentamattomat muutokset?",
+  "super.drawer.save_button": "Tallenna muutokset"
 }

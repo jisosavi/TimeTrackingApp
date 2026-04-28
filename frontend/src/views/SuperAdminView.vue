@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Settings, Search } from 'lucide-vue-next'
+import CompanySettingsDrawer from '@/components/super-admin/CompanySettingsDrawer.vue'
 import { refDebounced, useEventListener } from '@vueuse/core'
 import { formatDistanceToNowStrict } from 'date-fns'
 import { enUS, fi, sv, et, uk } from 'date-fns/locale'
@@ -15,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import OnOff from '@/components/ui/OnOff.vue'
 import { useSuperAdmin, validateSlug } from '@/composables/useSuperAdmin'
+import type { Company } from '@/types'
 import { useRefresh } from '@/composables/useRefresh'
 import { useAuthStore } from '@/stores/auth'
 
@@ -84,6 +86,21 @@ useEventListener('keydown', (e: KeyboardEvent) => {
     ;(searchInputRef.value?.$el as HTMLInputElement | undefined)?.focus()
   }
 })
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+const drawerOpen    = ref(false)
+const drawerCompany = ref<Company | null>(null)
+
+function openDrawer(company: Company) {
+  drawerCompany.value = company
+  drawerOpen.value    = true
+}
+
+function onDrawerSaved(updated: Company) {
+  const idx = companies.value.findIndex(c => c.id === updated.id)
+  if (idx >= 0) companies.value[idx] = updated
+  drawerOpen.value = false
+}
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
@@ -291,6 +308,7 @@ async function submitCreate() {
                 size="sm"
                 variant="ghost"
                 class="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click="openDrawer(company)"
               >
                 <Settings class="size-3.5" />
               </Button>
@@ -302,4 +320,11 @@ async function submitCreate() {
     </div>
 
   </div>
+
+  <CompanySettingsDrawer
+    :open="drawerOpen"
+    :company="drawerCompany"
+    @close="drawerOpen = false"
+    @saved="onDrawerSaved"
+  />
 </template>

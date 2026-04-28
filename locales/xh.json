@@ -418,5 +418,18 @@
   "super.filters.on": "On",
   "super.filters.off": "Off",
   "super.filters.no_match": "No companies match '{query}'",
-  "super.list.never": "Never"
+  "super.list.never": "Never",
+  "super.drawer.tab_general": "General",
+  "super.drawer.tab_salaxy": "Salaxy",
+  "super.drawer.tab_admins": "Admins",
+  "super.drawer.tab_features": "Features",
+  "super.drawer.tab_danger": "Danger zone",
+  "super.drawer.name_label": "Company name",
+  "super.drawer.slug_label": "URL slug",
+  "super.drawer.slug_min": "Slug must be at least 2 characters",
+  "super.drawer.slug_max": "Slug must be at most 40 characters",
+  "super.drawer.slug_chars": "Lowercase letters, numbers and hyphens only",
+  "super.drawer.name_required": "Name is required",
+  "super.drawer.discard_confirm": "Discard unsaved changes?",
+  "super.drawer.save_button": "Save changes"
 }

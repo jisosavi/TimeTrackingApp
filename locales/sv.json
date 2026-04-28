@@ -418,5 +418,18 @@
   "super.filters.on": "On",
   "super.filters.off": "Off",
   "super.filters.no_match": "No companies match '{query}'",
-  "super.list.never": "Never"
+  "super.list.never": "Never",
+  "super.drawer.tab_general": "Allmänt",
+  "super.drawer.tab_salaxy": "Salaxy",
+  "super.drawer.tab_admins": "Administratörer",
+  "super.drawer.tab_features": "Funktioner",
+  "super.drawer.tab_danger": "Farozon",
+  "super.drawer.name_label": "Företagsnamn",
+  "super.drawer.slug_label": "URL-slug",
+  "super.drawer.slug_min": "Slug måste vara minst 2 tecken",
+  "super.drawer.slug_max": "Slug får vara högst 40 tecken",
+  "super.drawer.slug_chars": "Endast gemener, siffror och bindestreck",
+  "super.drawer.name_required": "Namn krävs",
+  "super.drawer.discard_confirm": "Ignorera osparade ändringar?",
+  "super.drawer.save_button": "Spara ändringar"
 }

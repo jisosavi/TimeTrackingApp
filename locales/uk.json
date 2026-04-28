@@ -418,5 +418,18 @@
   "super.filters.on": "On",
   "super.filters.off": "Off",
   "super.filters.no_match": "No companies match '{query}'",
-  "super.list.never": "Never"
+  "super.list.never": "Never",
+  "super.drawer.tab_general": "Загальне",
+  "super.drawer.tab_salaxy": "Salaxy",
+  "super.drawer.tab_admins": "Адміністратори",
+  "super.drawer.tab_features": "Функції",
+  "super.drawer.tab_danger": "Небезпечна зона",
+  "super.drawer.name_label": "Назва компанії",
+  "super.drawer.slug_label": "URL-ідентифікатор",
+  "super.drawer.slug_min": "Ідентифікатор має бути щонайменше 2 символи",
+  "super.drawer.slug_max": "Ідентифікатор не може перевищувати 40 символів",
+  "super.drawer.slug_chars": "Лише малі літери, цифри та дефіси",
+  "super.drawer.name_required": "Назва обовʼязкова",
+  "super.drawer.discard_confirm": "Відхилити незбережені зміни?",
+  "super.drawer.save_button": "Зберегти зміни"
 }
