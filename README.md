@@ -344,8 +344,7 @@ npm run lint         # ESLint + Oxlint
 │   ├── sync_employees_from_salaxy.php    # Sync employees from Salaxy
 │   ├── update_language.php               # Update UI language per user
 │   ├── health.php                        # Health check
-│   ├── logout.php
-│   └── debug_credentials.php             # Dev/testing only — remove before publishing
+│   └── logout.php
 │
 ├── locales/                              # Shared locale files (used by frontend)
 │   ├── en.json                           # English
