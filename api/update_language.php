@@ -46,6 +46,15 @@ if ($targetType === 'admin') {
     sendJson(['success' => true]);
 }
 
+// Super-admin updating their own language
+if ($targetType === 'superadmin') {
+    $admin = requireSuperAdmin();
+    getMasterDb()
+        ->prepare('UPDATE super_admins SET ui_language = :lang WHERE id = :id')
+        ->execute([':lang' => $langValue, ':id' => (int) $admin['id']]);
+    sendJson(['success' => true]);
+}
+
 // Company admin updating company default language
 if ($targetType === 'company') {
     $admin = requireAdmin();

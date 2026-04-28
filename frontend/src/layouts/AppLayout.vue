@@ -23,7 +23,8 @@ async function changeLanguage(lang: string) {
   const user = auth.user!
   const targetType =
     user.type === 'employee'   ? 'employee' :
-    user.type === 'supervisor' ? 'supervisor_self' : 'admin'
+    user.type === 'supervisor' ? 'supervisor_self' :
+    user.type === 'superadmin' ? 'superadmin' : 'admin'
 
   const body: Record<string, unknown> = { lang, target_type: targetType }
   if (targetType === 'employee' || targetType === 'admin') body.target_id = user.id
