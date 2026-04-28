@@ -128,8 +128,13 @@ healthcheckTimeout = 10
 
 ## Phases
 
+### Pre-work — Railway staging service
+- [x] Railway Volume mounted at `/app/data` on production service
+- [ ] Create second Railway service: same repo, branch = `deno-dev`
+- [ ] Attach the same Volume to it, mounted at `/app/data`
+- [ ] Note the new service URL (e.g. `timetrackingapp-deno.up.railway.app`) — used for testing
+
 ### Phase 0 — Foundation
-- [x] Railway Volume mounted at `/app/data`
 - [ ] `deno-backend/` skeleton: `deno.json`, `main.ts`, `bootstrap.ts`
 - [ ] `lib/config.ts`, `lib/db.ts`, `lib/jwt.ts`, `lib/auth.ts`
 - [ ] `routes/health.ts`
