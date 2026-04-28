@@ -64,6 +64,7 @@ async function handleOAuthCallback(code: string) {
       companySlug: '',
       name: data.user.name,
       email: data.user.email,
+      avatarUrl: data.user.avatarUrl ?? undefined,
       uiLanguage: data.user.uiLanguage ?? 'en',
     }
     auth.setAuth(data.token, user)
