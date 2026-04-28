@@ -142,7 +142,8 @@ if (!$authResult['granted']) {
 $admin = $authResult['admin'];
 
 $cur     = $session['currentAccount'] ?? $session['account'] ?? $session ?? [];
-$av      = $cur['avatar'] ?? [];
+$avRaw   = $cur['avatar'] ?? [];
+$av      = is_array($avRaw) ? $avRaw : [];
 $cred    = $session['currentCredential'] ?? [];
 $sesAvat = $session['avatar'] ?? [];
 $contact = $cur['contact'] ?? [];
@@ -165,10 +166,25 @@ $salaxyEmail = trim(
     ?? $cur['login']
     ?? ''
 );
+$salaxyAvatarUrl = trim(
+    $sesAvat['url']          // session-level avatar image URL
+    ?? $sesAvat['imageUrl']
+    ?? $sesAvat['pictureUrl']
+    ?? $sesAvat['thumbnailUrl']
+    ?? $sesAvat['smallUrl']
+    ?? $sesAvat['href']
+    ?? $av['url']
+    ?? $av['imageUrl']
+    ?? $av['pictureUrl']
+    ?? $av['thumbnailUrl']
+    ?? ''
+);
 error_log('Salaxy identity extraction: salaxyEmail=' . ($salaxyEmail ?: 'EMPTY')
+    . ' salaxyAvatarUrl=' . ($salaxyAvatarUrl ?: 'EMPTY')
     . ' cred_keys=' . implode(',', array_keys($cred))
     . ' contact_keys=' . implode(',', array_keys($contact))
-    . ' sesAvat_keys=' . implode(',', array_keys($sesAvat)));
+    . ' sesAvat_keys=' . implode(',', array_keys($sesAvat))
+    . ' av_keys=' . (is_array($av) ? implode(',', array_keys($av)) : gettype($av)));
 
 $masterDb->prepare(
     'UPDATE super_admins
@@ -197,6 +213,7 @@ sendJson([
         'companyId'  => 0,
         'name'       => $admin['name']  ?: ($salaxyName  ?: 'Super Admin'),
         'email'      => $salaxyEmail ?: $admin['email'],
+        'avatarUrl'  => $salaxyAvatarUrl ?: null,
         'uiLanguage' => $admin['ui_language'] ?? 'en',
     ],
 ]);

@@ -175,13 +175,28 @@ async function submitCreate() {
 
     <!-- Header -->
     <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-lg font-semibold">{{ t('super.title') }}</h2>
-        <p class="text-sm text-muted-foreground">
-          {{ companies.length }} {{ companies.length === 1 ? t('super.list.company_singular') : t('super.list.company_plural') }}
-          <span class="mx-1.5 text-muted-foreground/40">·</span>
-          {{ auth.user?.email || auth.user?.name }}
-        </p>
+      <div class="flex items-center gap-3">
+        <!-- Avatar -->
+        <img
+          v-if="auth.user?.avatarUrl"
+          :src="auth.user.avatarUrl"
+          :alt="auth.user.name"
+          class="size-9 rounded-full object-cover shrink-0"
+        />
+        <div
+          v-else
+          class="size-9 rounded-full bg-muted flex items-center justify-center text-[13px] font-semibold text-muted-foreground shrink-0"
+        >
+          {{ (auth.user?.name || auth.user?.email || '?').charAt(0).toUpperCase() }}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold">{{ t('super.title') }}</h2>
+          <p class="text-sm text-muted-foreground">
+            {{ companies.length }} {{ companies.length === 1 ? t('super.list.company_singular') : t('super.list.company_plural') }}
+            <span class="mx-1.5 text-muted-foreground/40">·</span>
+            {{ auth.user?.email || auth.user?.name }}
+          </p>
+        </div>
       </div>
       <Button variant="indigoSoft" size="default" @click="openCreateForm">
         <Plus class="size-[13px]" />{{ t('super.list.actions.newCompany') }}

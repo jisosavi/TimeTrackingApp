@@ -11,6 +11,7 @@ export interface AuthUser {
   companyName?: string
   name: string
   email?: string
+  avatarUrl?: string
   uiLanguage: string
 }
 
