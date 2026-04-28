@@ -102,8 +102,6 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 
 <img src="screenshots/01-pin-login.png" width="260" alt="Employee PIN login">
 
-<img src="screenshots/01-pin-login-2.png" width="260" alt="Employee PIN login">
-
 ---
 
 **Time entry** — employees describe their hours in plain language. The AI confirms details and shows a summary before the entry is sent to manager for approval.
@@ -111,8 +109,6 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 <img src="screenshots/02-time-entry.png" width="260" alt="Employee time entry chat UI">
 
 Employees can see the entries they have made and follow the approval process. They can also comment if managers have questions about the entries.
-
-<img src="screenshots/02-time-entry-2.png" width="260" alt="Employee time entry list">
 
 ---
 
