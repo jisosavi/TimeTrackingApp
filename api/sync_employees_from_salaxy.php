@@ -36,6 +36,7 @@ function getSalaxyAccessToken(int $companyId, string $tokenUrl, string $username
             'grant_type' => 'password',
             'username'   => $username,
             'password'   => $password,
+            'skin'       => 'salaxy.min',
         ]),
         CURLOPT_TIMEOUT        => 30,
         CURLOPT_SSL_VERIFYPEER => true,

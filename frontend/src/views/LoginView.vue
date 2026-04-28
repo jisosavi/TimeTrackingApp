@@ -41,6 +41,7 @@ function loginWithSalaxyOAuth() {
     client_id: 'time',
     response_type: 'code',
     redirect_uri: getSuperAdminRedirectUri(),
+    salaxy_authorize_mode: 'salaxy.min',
   })
   window.location.href = `${SALAXY_AUTHORIZE_URL}?${params.toString()}`
 }

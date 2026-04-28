@@ -510,7 +510,7 @@ function copyText(key: string, text: string) {
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.salaxy_id_label') }}</Label>
             <div class="flex gap-2">
-              <Input v-model="salaxyForm.business_id" class="font-mono flex-1" />
+              <Input v-model="salaxyForm.business_id" class="font-mono flex-1" autocomplete="off" />
               <Button
                 variant="outline" size="sm"
                 :disabled="fetchingId"
@@ -530,13 +530,13 @@ function copyText(key: string, text: string) {
           <!-- API URL -->
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.salaxy_api_url_label') }}</Label>
-            <Input v-model="salaxyForm.salaxy_api_url" class="font-mono text-sm" />
+            <Input v-model="salaxyForm.salaxy_api_url" class="font-mono text-sm" autocomplete="off" />
           </div>
 
           <!-- Username -->
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.salaxy_username_label') }}</Label>
-            <Input v-model="salaxyForm.salaxy_username" />
+            <Input v-model="salaxyForm.salaxy_username" autocomplete="username" />
           </div>
 
           <!-- Password -->

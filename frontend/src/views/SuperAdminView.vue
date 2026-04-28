@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Settings, Search } from 'lucide-vue-next'
+import { Search } from 'lucide-vue-next'
 import CompanySettingsDrawer from '@/components/super-admin/CompanySettingsDrawer.vue'
 import { refDebounced, useEventListener } from '@vueuse/core'
 import { formatDistanceToNowStrict } from 'date-fns'
@@ -160,7 +160,7 @@ async function submitCreate() {
         <p class="text-sm text-muted-foreground">
           {{ companies.length }} {{ companies.length === 1 ? t('super.list.company_singular') : t('super.list.company_plural') }}
           <span class="mx-1.5 text-muted-foreground/40">·</span>
-          {{ auth.user?.name || auth.user?.email }}
+          {{ auth.user?.email || auth.user?.name }}
         </p>
       </div>
       <Button size="sm" @click="openCreateForm">+ {{ t('super.list.new_company') }}</Button>
@@ -187,18 +187,18 @@ async function submitCreate() {
       <div class="flex items-center gap-1.5 rounded-full border bg-muted/30 pl-3 pr-1 h-8">
         <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.time_app_label') }}</span>
         <ToggleGroup v-model="timeAppFilter" type="single" variant="outline" size="sm">
-          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
-          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.off') }} ({{ timeAppCounts.off }})</ToggleGroupItem>
+          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
+          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.off') }} ({{ timeAppCounts.off }})</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
       <div class="flex items-center gap-1.5 rounded-full border bg-muted/30 pl-3 pr-1 h-8">
         <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.supervisor_label') }}</span>
         <ToggleGroup v-model="supervisorFilter" type="single" variant="outline" size="sm">
-          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
-          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
-          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs rounded-full">{{ t('super.filters.off') }} ({{ supervisorCounts.off }})</ToggleGroupItem>
+          <ToggleGroupItem value="all" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.all') }}</ToggleGroupItem>
+          <ToggleGroupItem value="on"  class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="off" class="h-6 px-2.5 text-xs !rounded-full">{{ t('super.filters.off') }} ({{ supervisorCounts.off }})</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
@@ -307,11 +307,9 @@ async function submitCreate() {
               <Button
                 size="sm"
                 variant="outline"
-                class="h-6 w-6 p-0 rounded-lg"
+                class="h-7 px-3 rounded-lg text-xs"
                 @click="openDrawer(company)"
-              >
-                <Settings class="size-3.5" />
-              </Button>
+              >Settings</Button>
             </TableCell>
           </TableRow>
 

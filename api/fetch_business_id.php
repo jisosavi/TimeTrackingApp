@@ -46,7 +46,7 @@ function fetchAccessToken(int $companyId, string $username, string $password): ?
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_POSTFIELDS     => json_encode(['grant_type' => 'password', 'username' => $username, 'password' => $password]),
+        CURLOPT_POSTFIELDS     => json_encode(['grant_type' => 'password', 'username' => $username, 'password' => $password, 'skin' => 'salaxy.min']),
         CURLOPT_TIMEOUT        => 30,
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
