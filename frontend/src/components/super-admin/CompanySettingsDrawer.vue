@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'vue-sonner'
 import { Switch } from '@/components/ui/switch'
+import OnOff from '@/components/ui/OnOff.vue'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -410,12 +411,39 @@ function copyText(key: string, text: string) {
           <TabsTrigger value="general"  class="text-xs">{{ t('super.drawer.tab_general') }}</TabsTrigger>
           <TabsTrigger value="salaxy"   class="text-xs">{{ t('super.drawer.tab_salaxy') }}</TabsTrigger>
           <TabsTrigger value="admins"   class="text-xs">{{ t('super.drawer.tab_admins') }}</TabsTrigger>
-          <TabsTrigger value="features" class="text-xs">{{ t('super.drawer.tab_features') }}</TabsTrigger>
-          <TabsTrigger value="danger"   class="text-xs" disabled>{{ t('super.drawer.tab_danger') }}</TabsTrigger>
+          <TabsTrigger value="danger" class="text-xs" disabled>{{ t('super.drawer.tab_danger') }}</TabsTrigger>
         </TabsList>
 
         <!-- General tab -->
         <TabsContent value="general" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <!-- Feature cards -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-lg border p-3 space-y-2">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{{ t('super.list.col_time_app') }}</p>
+              <div class="flex items-center justify-between">
+                <OnOff :value="features.time_app_enabled === 1" color="indigo" />
+                <Switch
+                  :checked="features.time_app_enabled === 1"
+                  :disabled="featureSaving !== null"
+                  @update:checked="(v: boolean) => onToggleFeature('time_app_enabled', v)"
+                />
+              </div>
+              <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_time_app_desc') }}</p>
+            </div>
+            <div class="rounded-lg border p-3 space-y-2">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{{ t('super.list.col_supervisor_ui') }}</p>
+              <div class="flex items-center justify-between">
+                <OnOff :value="features.supervisor_ui_enabled === 1" color="green" />
+                <Switch
+                  :checked="features.supervisor_ui_enabled === 1"
+                  :disabled="featureSaving !== null"
+                  @update:checked="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
+                />
+              </div>
+              <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_supervisor_desc') }}</p>
+            </div>
+          </div>
+
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.name_label') }}</Label>
             <Input v-model="generalForm.name" :class="nameErr && generalForm.name !== '' ? 'border-destructive' : ''" />
@@ -601,37 +629,6 @@ function copyText(key: string, text: string) {
               @click="showAddAdmin = true; adminsError = null"
             >{{ t('super.drawer.add_admin') }}</Button>
           </template>
-        </TabsContent>
-
-        <!-- Features tab -->
-        <TabsContent value="features" class="flex-1 overflow-y-auto px-6 py-4">
-          <div class="divide-y">
-            <!-- Time App -->
-            <div class="flex items-center justify-between py-4">
-              <div class="space-y-0.5 pr-4">
-                <p class="text-sm font-medium">{{ t('super.list.col_time_app') }}</p>
-                <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_time_app_desc') }}</p>
-              </div>
-              <Switch
-                :checked="features.time_app_enabled === 1"
-                :disabled="featureSaving !== null"
-                @update:checked="(v: boolean) => onToggleFeature('time_app_enabled', v)"
-              />
-            </div>
-
-            <!-- Supervisor UI -->
-            <div class="flex items-center justify-between py-4">
-              <div class="space-y-0.5 pr-4">
-                <p class="text-sm font-medium">{{ t('super.list.col_supervisor_ui') }}</p>
-                <p class="text-xs text-muted-foreground">{{ t('super.drawer.features_supervisor_desc') }}</p>
-              </div>
-              <Switch
-                :checked="features.supervisor_ui_enabled === 1"
-                :disabled="featureSaving !== null"
-                @update:checked="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
-              />
-            </div>
-          </div>
         </TabsContent>
 
         <!-- Danger tab -->
