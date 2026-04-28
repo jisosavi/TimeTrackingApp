@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Settings } from 'lucide-vue-next'
+import { Settings, Search } from 'lucide-vue-next'
+import { refDebounced, useEventListener } from '@vueuse/core'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +19,50 @@ const { refreshTick } = useRefresh()
 
 onMounted(fetchCompanies)
 watch(refreshTick, fetchCompanies)
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+const searchRaw       = ref('')
+const searchQuery     = refDebounced(searchRaw, 200)
+const timeAppFilter   = ref<string>('all')
+const supervisorFilter = ref<string>('all')
+
+// Counts for the ToggleGroup labels — over the full unfiltered list
+const timeAppCounts = computed(() => ({
+  on:  companies.value.filter(c => c.active).length,
+  off: companies.value.filter(c => !c.active).length,
+}))
+const supervisorCounts = computed(() => ({
+  on:  companies.value.filter(c => c.approvals_enabled).length,
+  off: companies.value.filter(c => !c.approvals_enabled).length,
+}))
+
+const filteredCompanies = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  const ta = timeAppFilter.value || 'all'
+  const sv = supervisorFilter.value || 'all'
+
+  return companies.value.filter(c => {
+    if (q) {
+      const haystack = `${c.name} ${c.slug} ${c.business_id ?? ''}`.toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    if (ta === 'on'  && !c.active) return false
+    if (ta === 'off' &&  c.active) return false
+    if (sv === 'on'  && !c.approvals_enabled) return false
+    if (sv === 'off' &&  c.approvals_enabled) return false
+    return true
+  })
+})
+
+// ⌘K / Ctrl+K → focus search
+const searchInputRef = ref<InstanceType<typeof Input> | null>(null)
+
+useEventListener('keydown', (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    ;(searchInputRef.value?.$el as HTMLInputElement | undefined)?.focus()
+  }
+})
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
@@ -83,6 +129,45 @@ async function submitCreate() {
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
+    <!-- Filter bar -->
+    <div class="flex items-center gap-3 flex-wrap">
+
+      <!-- Search -->
+      <div class="relative">
+        <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          ref="searchInputRef"
+          v-model="searchRaw"
+          class="pl-8 h-8 w-56 text-sm pr-10"
+          :placeholder="t('super.filters.search_placeholder')"
+        />
+        <kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden select-none items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:flex">
+          <span class="text-xs">⌘</span>K
+        </kbd>
+      </div>
+
+      <!-- Time App filter -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.time_app_label') }}</span>
+        <ToggleGroup v-model="timeAppFilter" type="single" variant="outline" size="sm">
+          <ToggleGroupItem value="all" class="h-7 px-2 text-xs">{{ t('super.filters.all') }}</ToggleGroupItem>
+          <ToggleGroupItem value="on" class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ timeAppCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="off" class="h-7 px-2 text-xs">{{ t('super.filters.off') }} ({{ timeAppCounts.off }})</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      <!-- Supervisor UI filter -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs text-muted-foreground shrink-0">{{ t('super.filters.supervisor_label') }}</span>
+        <ToggleGroup v-model="supervisorFilter" type="single" variant="outline" size="sm">
+          <ToggleGroupItem value="all" class="h-7 px-2 text-xs">{{ t('super.filters.all') }}</ToggleGroupItem>
+          <ToggleGroupItem value="on" class="h-7 px-2 text-xs">{{ t('super.filters.on') }} ({{ supervisorCounts.on }})</ToggleGroupItem>
+          <ToggleGroupItem value="off" class="h-7 px-2 text-xs">{{ t('super.filters.off') }} ({{ supervisorCounts.off }})</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+    </div>
+
     <!-- Create form -->
     <form v-if="showCreateForm" class="rounded-lg border p-4 space-y-4 bg-muted/40" @submit.prevent="submitCreate">
       <p class="text-sm font-semibold">{{ t('super.list.new_company') }}</p>
@@ -141,30 +226,32 @@ async function submitCreate() {
             </TableCell>
           </TableRow>
 
-          <TableRow v-else-if="companies.length === 0">
+          <TableRow v-else-if="filteredCompanies.length === 0">
             <TableCell colspan="7" class="py-6 text-center text-sm text-muted-foreground">
-              {{ t('super.list.no_companies') }}
+              <template v-if="searchQuery.trim()">
+                {{ t('super.filters.no_match', { query: searchQuery.trim() }) }}
+              </template>
+              <template v-else>
+                {{ t('super.list.no_companies') }}
+              </template>
             </TableCell>
           </TableRow>
 
           <TableRow
-            v-for="company in companies"
+            v-for="company in filteredCompanies"
             v-else
             :key="company.id"
             class="group"
           >
-            <!-- Company name + slug -->
             <TableCell class="px-3 py-1.5">
               <p class="text-sm font-medium leading-none">{{ company.name }}</p>
               <p class="text-[11px] font-mono text-indigo-500 mt-0.5">/{{ company.slug }}</p>
             </TableCell>
 
-            <!-- Salaxy ID -->
             <TableCell class="px-3 py-1.5 font-mono text-xs text-muted-foreground">
               {{ company.business_id || '—' }}
             </TableCell>
 
-            <!-- Emp count -->
             <TableCell class="px-3 py-1.5 text-right tabular-nums text-sm text-muted-foreground">
               {{ company.employee_count }}
             </TableCell>
@@ -187,12 +274,10 @@ async function submitCreate() {
               />
             </TableCell>
 
-            <!-- Last activity (placeholder) -->
             <TableCell class="px-3 py-1.5 text-xs text-muted-foreground">
               —
             </TableCell>
 
-            <!-- Settings — opens slide-over (task 4) -->
             <TableCell class="px-3 py-1.5">
               <Button
                 size="sm"
