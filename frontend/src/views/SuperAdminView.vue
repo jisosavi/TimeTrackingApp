@@ -98,8 +98,7 @@ function openDrawer(company: Company) {
 
 function onDrawerSaved(updated: Company) {
   const idx = companies.value.findIndex(c => c.id === updated.id)
-  if (idx >= 0) companies.value[idx] = updated
-  drawerOpen.value = false
+  if (idx >= 0) companies.value[idx] = { ...companies.value[idx]!, ...updated }
 }
 
 // ── Create form ───────────────────────────────────────────────────────────────
