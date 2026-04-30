@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Users, Search } from 'lucide-vue-next'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -610,12 +610,16 @@ async function submitAddForm() {
 
     <!-- Add person drawer -->
     <Sheet v-model:open="showAddDrawer">
-      <SheetContent side="right" class="overflow-y-auto">
-        <SheetHeader class="mb-4">
-          <SheetTitle>{{ t('admin.people.add_title') }}</SheetTitle>
+      <SheetContent
+        side="right"
+        :show-close-button="false"
+        class="!w-[520px] sm:!max-w-[520px] p-0 flex flex-col overflow-hidden"
+      >
+        <SheetHeader class="px-6 pt-5 pb-3 border-b shrink-0">
+          <SheetTitle class="text-base">{{ t('admin.people.add_title') }}</SheetTitle>
         </SheetHeader>
 
-        <div class="space-y-4">
+        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <!-- Role picker -->
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('admin.people.role_label') }}</Label>
@@ -634,33 +638,33 @@ async function submitAddForm() {
           <!-- Employee fields -->
           <template v-if="addRole === 'employee'">
             <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_name') }}</Label>
                 <Input v-model="empForm.name" :placeholder="t('admin.full_name_placeholder')" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.pin_digits_label') }}</Label>
                 <Input v-model="empForm.pin" placeholder="e.g. 1234" maxlength="6" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.language_label') }}</Label>
                 <select v-model="empForm.ui_language" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option v-for="(name, code) in LANG_NAMES" :key="code" :value="code">{{ name }}</option>
                 </select>
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                 <Input v-model="empForm.email" type="email" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                 <Input v-model="empForm.phone" type="tel" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_birth_year') }}</Label>
                 <Input v-model="empForm.birth_year" maxlength="4" placeholder="e.g. 1990" />
               </div>
-              <div class="space-y-1 col-span-2">
+              <div class="space-y-1.5 col-span-2">
                 <Label class="text-xs">{{ t('admin.col_employment_id') }}</Label>
                 <Input v-model="empForm.employmentId" placeholder="e.g. 4cae3d5c-29fb-47ba-b7af-e937123cfd4b" class="font-mono text-xs" />
               </div>
@@ -671,37 +675,38 @@ async function submitAddForm() {
           <!-- Supervisor fields -->
           <template v-else>
             <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.first_name_label') }}</Label>
                 <Input v-model="supForm.first_name" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.last_name_label') }}</Label>
                 <Input v-model="supForm.last_name" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_email') }}</Label>
                 <Input v-model="supForm.email" type="email" />
               </div>
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <Label class="text-xs">{{ t('admin.col_phone') }}</Label>
                 <Input v-model="supForm.phone" type="tel" />
               </div>
-              <div class="space-y-1 col-span-2 sm:col-span-1">
+              <div class="space-y-1.5 col-span-2 sm:col-span-1">
                 <Label class="text-xs">{{ t('admin.pin_digits_label') }}</Label>
                 <Input v-model="supForm.pin" :placeholder="t('admin.sup_pin_placeholder')" maxlength="6" />
               </div>
             </div>
             <p v-if="supFormError" class="text-xs text-destructive">{{ supFormError }}</p>
           </template>
-
-          <div class="flex gap-2 pt-1">
-            <Button size="sm" :disabled="empSaving || supSaving" @click="submitAddForm">
-              {{ (empSaving || supSaving) ? t('common.saving') : t('common.save') }}
-            </Button>
-            <Button size="sm" variant="ghost" @click="closeAddDrawer">{{ t('common.cancel') }}</Button>
-          </div>
         </div>
+
+        <SheetFooter class="px-6 py-4 border-t shrink-0 flex items-center gap-2">
+          <span class="flex-1" />
+          <Button variant="ghost" size="sm" @click="closeAddDrawer">{{ t('common.cancel') }}</Button>
+          <Button size="sm" :disabled="empSaving || supSaving" @click="submitAddForm">
+            {{ (empSaving || supSaving) ? t('common.saving') : t('common.save') }}
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   </div>

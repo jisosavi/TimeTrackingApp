@@ -38,9 +38,10 @@ const generalInitial = ref({ name: '', slug: '' })
 // ── Salaxy form ───────────────────────────────────────────────────────────────
 const salaxyForm    = reactive({ business_id: '', salaxy_account_id: '', salaxy_api_url: '', salaxy_username: '', salaxy_password: '' })
 const salaxyInitial = ref({ business_id: '', salaxy_account_id: '', salaxy_api_url: '', salaxy_username: '' })
-const fetchingId    = ref(false)
-const fetchedId     = ref<string | null>(null)
-const fetchIdError  = ref<string | null>(null)
+const fetchingId        = ref(false)
+const fetchedId         = ref<string | null>(null)
+const fetchedAccountId  = ref<string | null>(null)
+const fetchIdError      = ref<string | null>(null)
 
 // ── Admins ────────────────────────────────────────────────────────────────────
 interface Admin { id: number; email: string; name: string | null; role: string; active: number }
@@ -85,8 +86,9 @@ watch(
     adminsLoaded.value = false
     showAddAdmin.value = false
     editingPwFor.value = null
-    fetchedId.value    = null
-    fetchIdError.value = null
+    fetchedId.value        = null
+    fetchedAccountId.value = null
+    fetchIdError.value     = null
     deleteSlugInput.value = ''
     deleteError.value     = null
 
@@ -223,7 +225,10 @@ async function fetchSalaxyId() {
     )
     fetchedId.value = res.business_id
     salaxyForm.business_id = res.business_id
-    if (res.salaxy_account_id) salaxyForm.salaxy_account_id = res.salaxy_account_id
+    if (res.salaxy_account_id) {
+      salaxyForm.salaxy_account_id = res.salaxy_account_id
+      fetchedAccountId.value = res.salaxy_account_id
+    }
   } catch (e) {
     fetchIdError.value = e instanceof Error ? e.message : 'Fetch failed'
   } finally {
@@ -519,7 +524,21 @@ function copyText(key: string, text: string) {
           <!-- Salaxy Account ID -->
           <div class="space-y-1.5">
             <Label class="text-xs">{{ t('super.drawer.salaxy_account_id_label') }}</Label>
-            <Input v-model="salaxyForm.salaxy_account_id" class="font-mono text-sm" autocomplete="off" />
+            <div class="flex gap-2">
+              <Input v-model="salaxyForm.salaxy_account_id" class="font-mono text-sm flex-1" autocomplete="off" />
+              <Button
+                variant="outline" size="sm"
+                :disabled="fetchingId"
+                class="shrink-0"
+                @click="fetchSalaxyId"
+              >{{ fetchingId ? t('super.drawer.fetching') : t('super.drawer.fetch_button') }}</Button>
+            </div>
+            <div
+              v-if="fetchedAccountId"
+              class="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-1.5 rounded"
+            >
+              ✓ {{ t('super.drawer.fetch_found') }}: <span class="font-mono">{{ fetchedAccountId }}</span>
+            </div>
           </div>
 
           <!-- API URL -->
