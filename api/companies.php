@@ -33,7 +33,7 @@ function getLastActivity(?string $dbFile): ?string
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt      = $db->query(
         'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
-                ui_language, salaxy_company_id AS business_id, db_file,
+                ui_language, salaxy_company_id AS business_id, salaxy_account_id, db_file,
                 salaxy_api_url, salaxy_username
          FROM companies
          ORDER BY name ASC'

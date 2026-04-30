@@ -36,8 +36,8 @@ const generalForm    = reactive({ name: '', slug: '' })
 const generalInitial = ref({ name: '', slug: '' })
 
 // ── Salaxy form ───────────────────────────────────────────────────────────────
-const salaxyForm    = reactive({ business_id: '', salaxy_api_url: '', salaxy_username: '', salaxy_password: '' })
-const salaxyInitial = ref({ business_id: '', salaxy_api_url: '', salaxy_username: '' })
+const salaxyForm    = reactive({ business_id: '', salaxy_account_id: '', salaxy_api_url: '', salaxy_username: '', salaxy_password: '' })
+const salaxyInitial = ref({ business_id: '', salaxy_account_id: '', salaxy_api_url: '', salaxy_username: '' })
 const fetchingId    = ref(false)
 const fetchedId     = ref<string | null>(null)
 const fetchIdError  = ref<string | null>(null)
@@ -99,13 +99,15 @@ watch(
       features.supervisor_ui_enabled = (c.supervisor_ui_enabled ? 1 : 0) as 0|1
 
       salaxyForm.business_id     = c.business_id ?? ''
+      salaxyForm.salaxy_account_id = c.salaxy_account_id ?? ''
       salaxyForm.salaxy_api_url  = c.salaxy_api_url ?? ''
       salaxyForm.salaxy_username = c.salaxy_username ?? ''
       salaxyForm.salaxy_password = ''
       salaxyInitial.value = {
-        business_id:    c.business_id ?? '',
-        salaxy_api_url:  c.salaxy_api_url ?? '',
-        salaxy_username: c.salaxy_username ?? '',
+        business_id:      c.business_id ?? '',
+        salaxy_account_id: c.salaxy_account_id ?? '',
+        salaxy_api_url:   c.salaxy_api_url ?? '',
+        salaxy_username:  c.salaxy_username ?? '',
       }
     }
   },
@@ -132,10 +134,11 @@ const isGeneralDirty = computed(() => generalForm.name !== generalInitial.value.
 const isGeneralValid = computed(() => !nameErr.value && !slugErr.value)
 
 const isSalaxyDirty = computed(() =>
-  salaxyForm.business_id     !== salaxyInitial.value.business_id    ||
-  salaxyForm.salaxy_api_url  !== salaxyInitial.value.salaxy_api_url ||
-  salaxyForm.salaxy_username !== salaxyInitial.value.salaxy_username ||
-  salaxyForm.salaxy_password !== '',
+  salaxyForm.business_id      !== salaxyInitial.value.business_id      ||
+  salaxyForm.salaxy_account_id !== salaxyInitial.value.salaxy_account_id ||
+  salaxyForm.salaxy_api_url   !== salaxyInitial.value.salaxy_api_url   ||
+  salaxyForm.salaxy_username  !== salaxyInitial.value.salaxy_username  ||
+  salaxyForm.salaxy_password  !== '',
 )
 
 const isAnyDirty = computed(() => isGeneralDirty.value || isSalaxyDirty.value)
@@ -179,9 +182,10 @@ async function save() {
       body.name = generalForm.name.trim()
       body.slug = generalForm.slug.trim()
     } else {
-      body.business_id    = salaxyForm.business_id.trim()
-      body.salaxy_api_url = salaxyForm.salaxy_api_url.trim()
-      body.salaxy_username = salaxyForm.salaxy_username.trim()
+      body.business_id      = salaxyForm.business_id.trim()
+      body.salaxy_account_id = salaxyForm.salaxy_account_id.trim()
+      body.salaxy_api_url   = salaxyForm.salaxy_api_url.trim()
+      body.salaxy_username  = salaxyForm.salaxy_username.trim()
       if (salaxyForm.salaxy_password !== '') body.salaxy_password = salaxyForm.salaxy_password
     }
     const res = await apiFetch<{ success: boolean; company: Company }>(
@@ -192,9 +196,10 @@ async function save() {
       generalInitial.value = { name: generalForm.name.trim(), slug: generalForm.slug.trim() }
     } else {
       salaxyInitial.value = {
-        business_id:    salaxyForm.business_id.trim(),
-        salaxy_api_url:  salaxyForm.salaxy_api_url.trim(),
-        salaxy_username: salaxyForm.salaxy_username.trim(),
+        business_id:       salaxyForm.business_id.trim(),
+        salaxy_account_id:  salaxyForm.salaxy_account_id.trim(),
+        salaxy_api_url:    salaxyForm.salaxy_api_url.trim(),
+        salaxy_username:   salaxyForm.salaxy_username.trim(),
       }
       salaxyForm.salaxy_password = ''
     }
@@ -213,11 +218,12 @@ async function fetchSalaxyId() {
   fetchedId.value   = null
   fetchIdError.value = null
   try {
-    const res = await apiFetch<{ success: boolean; business_id: string }>(
+    const res = await apiFetch<{ success: boolean; business_id: string; salaxy_account_id?: string }>(
       `/api/fetch_business_id.php?company_id=${props.company.id}`,
     )
     fetchedId.value = res.business_id
     salaxyForm.business_id = res.business_id
+    if (res.salaxy_account_id) salaxyForm.salaxy_account_id = res.salaxy_account_id
   } catch (e) {
     fetchIdError.value = e instanceof Error ? e.message : 'Fetch failed'
   } finally {
@@ -508,6 +514,12 @@ function copyText(key: string, text: string) {
             >
               ✓ {{ t('super.drawer.fetch_found') }}: <span class="font-mono">{{ fetchedId }}</span>
             </div>
+          </div>
+
+          <!-- Salaxy Account ID -->
+          <div class="space-y-1.5">
+            <Label class="text-xs">{{ t('super.drawer.salaxy_account_id_label') }}</Label>
+            <Input v-model="salaxyForm.salaxy_account_id" class="font-mono text-sm" autocomplete="off" />
           </div>
 
           <!-- API URL -->

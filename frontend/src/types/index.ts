@@ -35,6 +35,7 @@ export interface Company {
   ui_language: string
   employee_count: number
   business_id: string | null
+  salaxy_account_id?: string | null
   db_file?: string | null
   salaxy_api_url?: string | null
   salaxy_username?: string | null

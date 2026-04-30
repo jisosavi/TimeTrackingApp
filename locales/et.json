@@ -442,6 +442,7 @@
   "super.drawer.discard_confirm": "Loobuda salvestamata muudatustest?",
   "super.drawer.save_button": "Salvesta muudatused",
   "super.drawer.salaxy_id_label": "Salaxy ettevõtte ID",
+  "super.drawer.salaxy_account_id_label": "🟡Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "API URL",
   "super.drawer.salaxy_username_label": "Kasutajanimi",
   "super.drawer.salaxy_password_label": "Parool",

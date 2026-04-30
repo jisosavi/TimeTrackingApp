@@ -442,6 +442,7 @@
   "super.drawer.discard_confirm": "Відхилити незбережені зміни?",
   "super.drawer.save_button": "Зберегти зміни",
   "super.drawer.salaxy_id_label": "ID компанії Salaxy",
+  "super.drawer.salaxy_account_id_label": "🟡Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "API URL",
   "super.drawer.salaxy_username_label": "Ім'я користувача",
   "super.drawer.salaxy_password_label": "Пароль",

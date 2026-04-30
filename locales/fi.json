@@ -442,6 +442,7 @@
   "super.drawer.discard_confirm": "Hylätäänkö tallentamattomat muutokset?",
   "super.drawer.save_button": "Tallenna muutokset",
   "super.drawer.salaxy_id_label": "Salaxy-yritystunnus",
+  "super.drawer.salaxy_account_id_label": "🟡Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "API-osoite",
   "super.drawer.salaxy_username_label": "Käyttäjänimi",
   "super.drawer.salaxy_password_label": "Salasana",

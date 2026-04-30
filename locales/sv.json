@@ -442,6 +442,7 @@
   "super.drawer.discard_confirm": "Ignorera osparade ändringar?",
   "super.drawer.save_button": "Spara ändringar",
   "super.drawer.salaxy_id_label": "Salaxy företags-ID",
+  "super.drawer.salaxy_account_id_label": "🟡Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "API-URL",
   "super.drawer.salaxy_username_label": "Användarnamn",
   "super.drawer.salaxy_password_label": "Lösenord",

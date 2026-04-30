@@ -442,6 +442,7 @@
   "super.drawer.discard_confirm": "Lahla iinguqu ezingagciniwe?",
   "super.drawer.save_button": "Gcina iinguqu",
   "super.drawer.salaxy_id_label": "ID yenkampani ye-Salaxy",
+  "super.drawer.salaxy_account_id_label": "🟡Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "URL ye-API",
   "super.drawer.salaxy_username_label": "Igama lomsebenzisi",
   "super.drawer.salaxy_password_label": "Igama lokugqitha",

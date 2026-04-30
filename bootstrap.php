@@ -116,6 +116,8 @@ function initializeMasterDb(PDO $db): void
         $db->exec("ALTER TABLE companies ADD COLUMN ui_language TEXT NOT NULL DEFAULT 'en'");
     if (!in_array('salaxy_company_id', $cols))
         $db->exec('ALTER TABLE companies ADD COLUMN salaxy_company_id TEXT');
+    if (!in_array('salaxy_account_id', $cols))
+        $db->exec('ALTER TABLE companies ADD COLUMN salaxy_account_id TEXT');
     if (!in_array('db_file', $cols))
         $db->exec('ALTER TABLE companies ADD COLUMN db_file TEXT');
     if (!in_array('super_admin_org_id', $cols))

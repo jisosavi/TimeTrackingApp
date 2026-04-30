@@ -119,7 +119,7 @@ if ($res['success'] && isset($res['data']['items']) && is_array($res['data']['it
         $officialId = $item['selfPartyInfo']['officialId'] ?? null;
         if ($officialId) {
             $ytunnus = parseYtunnus((string) $officialId);
-            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus]);
+            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus, 'salaxy_account_id' => (string) $officialId]);
         }
     }
 
@@ -128,7 +128,7 @@ if ($res['success'] && isset($res['data']['items']) && is_array($res['data']['it
         $selfId = $item['selfId'] ?? null;
         if ($selfId) {
             $ytunnus = parseYtunnus((string) $selfId);
-            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus]);
+            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus, 'salaxy_account_id' => (string) $selfId]);
         }
     }
 
@@ -137,7 +137,7 @@ if ($res['success'] && isset($res['data']['items']) && is_array($res['data']['it
         $owner = $item['owner'] ?? null;
         if ($owner) {
             $ytunnus = parseYtunnus((string) $owner);
-            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus]);
+            if ($ytunnus) sendJson(['success' => true, 'business_id' => $ytunnus, 'salaxy_account_id' => (string) $owner]);
         }
     }
 }
