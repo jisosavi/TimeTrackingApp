@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet'
+import { COUNTRY_NAMES } from '@/composables/useHolidays'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,8 +33,8 @@ const { apiFetch } = useApi()
 const activeTab = ref('general')
 
 // ── General form ──────────────────────────────────────────────────────────────
-const generalForm    = reactive({ name: '', slug: '' })
-const generalInitial = ref({ name: '', slug: '' })
+const generalForm    = reactive({ name: '', slug: '', country_code: 'FI' })
+const generalInitial = ref({ name: '', slug: '', country_code: 'FI' })
 
 // ── Salaxy form ───────────────────────────────────────────────────────────────
 const salaxyForm    = reactive({ business_id: '', salaxy_account_id: '', salaxy_api_url: '', salaxy_username: '', salaxy_password: '' })
@@ -93,9 +94,10 @@ watch(
     deleteError.value     = null
 
     if (c) {
-      generalForm.name  = c.name
-      generalForm.slug  = c.slug
-      generalInitial.value = { name: c.name, slug: c.slug }
+      generalForm.name         = c.name
+      generalForm.slug         = c.slug
+      generalForm.country_code = c.country_code ?? 'FI'
+      generalInitial.value = { name: c.name, slug: c.slug, country_code: c.country_code ?? 'FI' }
 
       features.time_app_enabled     = (c.time_app_enabled     ? 1 : 0) as 0|1
       features.supervisor_ui_enabled = (c.supervisor_ui_enabled ? 1 : 0) as 0|1
@@ -132,7 +134,11 @@ function slugError(s: string): string | null {
 
 const slugErr        = computed(() => slugError(generalForm.slug))
 const nameErr        = computed(() => generalForm.name.trim() === '' ? t('super.drawer.name_required') : null)
-const isGeneralDirty = computed(() => generalForm.name !== generalInitial.value.name || generalForm.slug !== generalInitial.value.slug)
+const isGeneralDirty = computed(() =>
+  generalForm.name         !== generalInitial.value.name         ||
+  generalForm.slug         !== generalInitial.value.slug         ||
+  generalForm.country_code !== generalInitial.value.country_code,
+)
 const isGeneralValid = computed(() => !nameErr.value && !slugErr.value)
 
 const isSalaxyDirty = computed(() =>
@@ -181,8 +187,9 @@ async function save() {
   try {
     const body: Record<string, unknown> = { id: props.company.id }
     if (activeTab.value === 'general') {
-      body.name = generalForm.name.trim()
-      body.slug = generalForm.slug.trim()
+      body.name         = generalForm.name.trim()
+      body.slug         = generalForm.slug.trim()
+      body.country_code = generalForm.country_code
     } else {
       body.business_id      = salaxyForm.business_id.trim()
       body.salaxy_account_id = salaxyForm.salaxy_account_id.trim()
@@ -195,7 +202,7 @@ async function save() {
       { method: 'PATCH', body: JSON.stringify(body) },
     )
     if (activeTab.value === 'general') {
-      generalInitial.value = { name: generalForm.name.trim(), slug: generalForm.slug.trim() }
+      generalInitial.value = { name: generalForm.name.trim(), slug: generalForm.slug.trim(), country_code: generalForm.country_code }
     } else {
       salaxyInitial.value = {
         business_id:       salaxyForm.business_id.trim(),
@@ -454,6 +461,16 @@ function copyText(key: string, text: string) {
             />
             <p v-if="slugErr" class="text-xs text-destructive">{{ slugErr }}</p>
             <p v-else class="text-xs text-muted-foreground font-mono">/{{ generalForm.slug || '…' }}</p>
+          </div>
+
+          <div class="space-y-1.5">
+            <Label class="text-xs">{{ t('super.drawer.country_label') }}</Label>
+            <select
+              v-model="generalForm.country_code"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option v-for="(name, code) in COUNTRY_NAMES" :key="code" :value="code">{{ name }}</option>
+            </select>
           </div>
 
           <!-- Debug & links -->

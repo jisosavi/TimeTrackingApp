@@ -50,6 +50,11 @@ if (array_key_exists('salaxy_account_id', $payload)) {
     $db->prepare('UPDATE companies SET salaxy_account_id = :v WHERE id = :id')
        ->execute([':v' => trim((string) $payload['salaxy_account_id']) ?: null, ':id' => $id]);
 }
+if (array_key_exists('country_code', $payload)) {
+    $cc = trim((string) $payload['country_code']);
+    if ($cc) $db->prepare('UPDATE companies SET country_code = :v WHERE id = :id')
+        ->execute([':v' => $cc, ':id' => $id]);
+}
 
 $salaxyCredsChanged = false;
 if (array_key_exists('salaxy_api_url', $payload)) {
@@ -73,7 +78,7 @@ if ($salaxyCredsChanged) {
 
 $stmt = $db->prepare(
     'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
-            ui_language, salaxy_company_id AS business_id, salaxy_account_id, db_file, salaxy_api_url, salaxy_username
+            ui_language, salaxy_company_id AS business_id, salaxy_account_id, db_file, salaxy_api_url, salaxy_username, country_code
      FROM companies WHERE id = :id'
 );
 $stmt->execute([':id' => $id]);

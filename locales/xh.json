@@ -480,5 +480,13 @@
   "super.features.timeApp.consequences": "🟡 Abasebenzi be-{company} abasayi kuba nako ukubhalisela amaxesha.",
   "super.features.deactivate.title": "🟡 Khubaza {feature} ku-{company}?",
   "super.features.deactivate.confirm": "Khubaza",
-  "super.features.deactivate.preserved": "🟡 Idatha ekhona igcinwa. Unokuphinda uyivule nangaliphi na ixesha."
+  "super.features.deactivate.preserved": "🟡 Idatha ekhona igcinwa. Unokuphinda uyivule nangaliphi na ixesha.",
+  "super.drawer.country_label": "🟡 Country",
+  "admin.holidays.section_title": "🟡 Holidays",
+  "admin.holidays.country_label": "🟡 Country",
+  "admin.holidays.mark_btn": "🟡 Mark holidays on entries",
+  "admin.holidays.marking": "🟡 Marking…",
+  "admin.holidays.marked": "🟡 {count} entries updated with holiday notes",
+  "admin.holidays.none_found": "🟡 No matching entries found for this year's holidays",
+  "admin.holidays.error": "🟡 Failed to mark holidays"
 }

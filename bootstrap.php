@@ -126,6 +126,8 @@ function initializeMasterDb(PDO $db): void
         $db->exec('ALTER TABLE companies ADD COLUMN time_app_enabled INTEGER NOT NULL DEFAULT 1');
     if (!in_array('supervisor_ui_enabled', $cols))
         $db->exec('ALTER TABLE companies ADD COLUMN supervisor_ui_enabled INTEGER NOT NULL DEFAULT 1');
+    if (!in_array('country_code', $cols))
+        $db->exec("ALTER TABLE companies ADD COLUMN country_code TEXT NOT NULL DEFAULT 'FI'");
 
     $saCols = array_column($db->query('PRAGMA table_info(super_admins)')->fetchAll(), 'name');
     if (!in_array('salaxy_account_id', $saCols))

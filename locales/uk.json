@@ -480,5 +480,13 @@
   "super.features.timeApp.consequences": "🟡 Співробітники {company} більше не зможуть реєструвати години.",
   "super.features.deactivate.title": "🟡 Вимкнути {feature} для {company}?",
   "super.features.deactivate.confirm": "Вимкнути",
-  "super.features.deactivate.preserved": "🟡 Існуючі дані зберігаються. Ви можете знову увімкнути це будь-коли."
+  "super.features.deactivate.preserved": "🟡 Існуючі дані зберігаються. Ви можете знову увімкнути це будь-коли.",
+  "super.drawer.country_label": "🟡 Country",
+  "admin.holidays.section_title": "🟡 Holidays",
+  "admin.holidays.country_label": "🟡 Country",
+  "admin.holidays.mark_btn": "🟡 Mark holidays on entries",
+  "admin.holidays.marking": "🟡 Marking…",
+  "admin.holidays.marked": "🟡 {count} entries updated with holiday notes",
+  "admin.holidays.none_found": "🟡 No matching entries found for this year's holidays",
+  "admin.holidays.error": "🟡 Failed to mark holidays"
 }

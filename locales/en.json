@@ -441,7 +441,7 @@
   "super.drawer.name_required": "Name is required",
   "super.drawer.discard_confirm": "Discard unsaved changes?",
   "super.drawer.save_button": "Save changes",
-  "super.drawer.salaxy_id_label": "Business ID (Y-tunnus)",
+  "super.drawer.salaxy_id_label": "Business ID",
   "super.drawer.salaxy_account_id_label": "Salaxy Account ID",
   "super.drawer.salaxy_api_url_label": "API URL",
   "super.drawer.salaxy_username_label": "Username",
@@ -480,5 +480,13 @@
   "super.features.timeApp.consequences": "Employees of {company} will no longer be able to log hours.",
   "super.features.deactivate.title": "Deactivate {feature} for {company}?",
   "super.features.deactivate.confirm": "Deactivate",
-  "super.features.deactivate.preserved": "Existing data is preserved. You can re-enable this at any time."
+  "super.features.deactivate.preserved": "Existing data is preserved. You can re-enable this at any time.",
+  "super.drawer.country_label": "Country",
+  "admin.holidays.section_title": "Holidays",
+  "admin.holidays.country_label": "Country",
+  "admin.holidays.mark_btn": "Mark holidays on entries",
+  "admin.holidays.marking": "Marking…",
+  "admin.holidays.marked": "{count} entries updated with holiday notes",
+  "admin.holidays.none_found": "No matching entries found for this year's holidays",
+  "admin.holidays.error": "Failed to mark holidays"
 }

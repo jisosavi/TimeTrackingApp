@@ -480,5 +480,13 @@
   "super.features.timeApp.consequences": "🟡 {company} töötajad ei saa enam tunde logida.",
   "super.features.deactivate.title": "🟡 Keelata {feature} ettevõtte {company} jaoks?",
   "super.features.deactivate.confirm": "Keela",
-  "super.features.deactivate.preserved": "🟡 Olemasolevad andmed säilivad. Saate selle igal ajal uuesti lubada."
+  "super.features.deactivate.preserved": "🟡 Olemasolevad andmed säilivad. Saate selle igal ajal uuesti lubada.",
+  "super.drawer.country_label": "🟡 Country",
+  "admin.holidays.section_title": "🟡 Holidays",
+  "admin.holidays.country_label": "🟡 Country",
+  "admin.holidays.mark_btn": "🟡 Mark holidays on entries",
+  "admin.holidays.marking": "🟡 Marking…",
+  "admin.holidays.marked": "🟡 {count} entries updated with holiday notes",
+  "admin.holidays.none_found": "🟡 No matching entries found for this year's holidays",
+  "admin.holidays.error": "🟡 Failed to mark holidays"
 }

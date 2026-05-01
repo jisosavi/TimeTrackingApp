@@ -480,5 +480,13 @@
   "super.features.timeApp.consequences": "Anställda på {company} kommer inte längre att kunna logga timmar.",
   "super.features.deactivate.title": "Inaktivera {feature} för {company}?",
   "super.features.deactivate.confirm": "Inaktivera",
-  "super.features.deactivate.preserved": "Befintliga data bevaras. Du kan återaktivera detta när som helst."
+  "super.features.deactivate.preserved": "Befintliga data bevaras. Du kan återaktivera detta när som helst.",
+  "super.drawer.country_label": "Land",
+  "admin.holidays.section_title": "🟡 Holidays",
+  "admin.holidays.country_label": "Land",
+  "admin.holidays.mark_btn": "🟡 Mark holidays on entries",
+  "admin.holidays.marking": "🟡 Marking…",
+  "admin.holidays.marked": "🟡 {count} entries updated with holiday notes",
+  "admin.holidays.none_found": "🟡 No matching entries found for this year's holidays",
+  "admin.holidays.error": "🟡 Failed to mark holidays"
 }

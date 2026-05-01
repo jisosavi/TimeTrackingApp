@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt      = $db->query(
         'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
                 ui_language, salaxy_company_id AS business_id, salaxy_account_id, db_file,
-                salaxy_api_url, salaxy_username
+                salaxy_api_url, salaxy_username, country_code
          FROM companies
          ORDER BY name ASC'
     );
@@ -121,11 +121,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($salaxyCredsChanged) {
             @unlink(DB_DIR . '/salaxy_token_' . $id . '.json');
         }
+        if (array_key_exists('country_code', $payload)) {
+            $cc = trim((string) $payload['country_code']);
+            if ($cc) $db->prepare('UPDATE companies SET country_code = :cc WHERE id = :id')
+                ->execute([':cc' => $cc, ':id' => $id]);
+        }
 
         $stmt = $db->prepare(
             'SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
                     ui_language, salaxy_company_id AS business_id, db_file,
-                    salaxy_api_url, salaxy_username
+                    salaxy_api_url, salaxy_username, country_code
              FROM companies WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
