@@ -13,7 +13,6 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
 import { useRefresh } from '@/composables/useRefresh'
-import { fetchHolidays, COUNTRY_NAMES } from '@/composables/useHolidays'
 import type { Employee, Supervisor, TeamMember } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -293,56 +292,6 @@ async function unlockPinAccount(id: number, kind: 'employee' | 'supervisor') {
   }
 }
 
-// ── Holidays ──────────────────────────────────────────────────────────────────
-const countryCode    = ref('FI')
-const holidayMarking = ref(false)
-const holidayResult  = ref<string | null>(null)
-const holidayError   = ref<string | null>(null)
-
-onMounted(async () => {
-  try {
-    const res = await fetch(`${apiBase}/api/admin/country_setting.php`, {
-      headers: { 'Authorization': `Bearer ${auth.token}` },
-    })
-    const data = await res.json()
-    if (data.success) countryCode.value = data.country_code ?? 'FI'
-  } catch {}
-})
-
-async function saveCountry(code: string) {
-  countryCode.value = code
-  holidayResult.value = null
-  await fetch(`${apiBase}/api/admin/country_setting.php`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` },
-    body: JSON.stringify({ country_code: code }),
-  })
-}
-
-async function doMarkHolidays() {
-  holidayMarking.value = true
-  holidayResult.value  = null
-  holidayError.value   = null
-  try {
-    const year     = new Date().getFullYear()
-    const holidays = await fetchHolidays(countryCode.value, year)
-    const res      = await fetch(`${apiBase}/api/admin/mark_holidays.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` },
-      body: JSON.stringify({ holidays: holidays.map(h => ({ date: h.date, name: h.localName })) }),
-    })
-    const data = await res.json()
-    if (!data.success) throw new Error(data.error ?? 'Failed')
-    holidayResult.value = data.updated > 0
-      ? t('admin.holidays.marked', { count: data.updated })
-      : t('admin.holidays.none_found')
-  } catch (e) {
-    holidayError.value = e instanceof Error ? e.message : t('admin.holidays.error')
-  } finally {
-    holidayMarking.value = false
-  }
-}
-
 // ── Add drawer ────────────────────────────────────────────────────────────────
 const showAddDrawer = ref(false)
 const addRole = ref<'employee' | 'supervisor'>('employee')
@@ -406,28 +355,6 @@ async function submitAddForm() {
           <Button size="sm" variant="ghost" class="text-xs" @click="showClearConfirm = false">Cancel</Button>
         </div>
       </div>
-    </div>
-
-    <!-- Holidays -->
-    <div class="rounded border px-4 py-3 bg-card space-y-3">
-      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('admin.holidays.section_title') }}</p>
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-2">
-          <Label class="text-xs shrink-0">{{ t('admin.holidays.country_label') }}</Label>
-          <select
-            :value="countryCode"
-            class="h-8 rounded-md border border-input bg-background px-2 text-sm"
-            @change="saveCountry(($event.target as HTMLSelectElement).value)"
-          >
-            <option v-for="(name, code) in COUNTRY_NAMES" :key="code" :value="code">{{ name }}</option>
-          </select>
-        </div>
-        <Button size="sm" :disabled="holidayMarking" @click="doMarkHolidays">
-          {{ holidayMarking ? t('admin.holidays.marking') : t('admin.holidays.mark_btn') }}
-        </Button>
-      </div>
-      <p v-if="holidayResult" class="text-xs text-green-700 dark:text-green-400">{{ holidayResult }}</p>
-      <p v-if="holidayError" class="text-xs text-destructive">{{ holidayError }}</p>
     </div>
 
     <!-- Filter + search bar -->

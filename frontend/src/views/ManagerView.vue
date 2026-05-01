@@ -8,12 +8,14 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { useApproval } from '@/composables/useApproval'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { useRefresh } from '@/composables/useRefresh'
+import { fetchHolidays, COUNTRY_NAMES } from '@/composables/useHolidays'
 import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -141,7 +143,49 @@ async function loadTeam() {
   }
 }
 
-onMounted(fetchEntries)
+// ── Holidays (admin only) ─────────────────────────────────────────────────────
+const countryCode    = ref('FI')
+const holidayMarking = ref(false)
+const holidayResult  = ref<string | null>(null)
+const holidayError   = ref<string | null>(null)
+
+async function saveCountry(code: string) {
+  countryCode.value   = code
+  holidayResult.value = null
+  await apiFetch('/api/admin/country_setting.php', {
+    method: 'PATCH',
+    body: JSON.stringify({ country_code: code }),
+  }).catch(() => {})
+}
+
+async function doMarkHolidays() {
+  holidayMarking.value = true
+  holidayResult.value  = null
+  holidayError.value   = null
+  try {
+    const year     = new Date().getFullYear()
+    const holidays = await fetchHolidays(countryCode.value, year)
+    const data     = await apiFetch<{ success: boolean; updated: number }>(
+      '/api/admin/mark_holidays.php',
+      { method: 'POST', body: JSON.stringify({ holidays: holidays.map(h => ({ date: h.date, name: h.localName })) }) },
+    )
+    holidayResult.value = data.updated > 0
+      ? t('admin.holidays.marked', { count: data.updated })
+      : t('admin.holidays.none_found')
+  } catch (e) {
+    holidayError.value = e instanceof Error ? e.message : t('admin.holidays.error')
+  } finally {
+    holidayMarking.value = false
+  }
+}
+
+onMounted(async () => {
+  fetchEntries()
+  if (!isSupervisor.value) {
+    const data = await apiFetch<{ success: boolean; country_code: string }>('/api/admin/country_setting.php').catch(() => null)
+    if (data?.success) countryCode.value = data.country_code ?? 'FI'
+  }
+})
 
 // ── VirtualCards ─────────────────────────────────────────────────────────────
 interface VirtualCard {
@@ -286,6 +330,28 @@ function getCfg(status: string) {
     <h2 class="text-lg font-semibold">{{ t('approval.title') }}</h2>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+
+    <!-- Holidays (admin only) -->
+    <div v-if="!isSupervisor" class="rounded border px-4 py-3 bg-card space-y-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ t('admin.holidays.section_title') }}</p>
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2">
+          <Label class="text-xs shrink-0">{{ t('admin.holidays.country_label') }}</Label>
+          <select
+            :value="countryCode"
+            class="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            @change="saveCountry(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="(name, code) in COUNTRY_NAMES" :key="code" :value="code">{{ name }}</option>
+          </select>
+        </div>
+        <Button size="sm" :disabled="holidayMarking" @click="doMarkHolidays">
+          {{ holidayMarking ? t('admin.holidays.marking') : t('admin.holidays.mark_btn') }}
+        </Button>
+      </div>
+      <p v-if="holidayResult" class="text-xs text-green-700 dark:text-green-400">{{ holidayResult }}</p>
+      <p v-if="holidayError" class="text-xs text-destructive">{{ holidayError }}</p>
+    </div>
 
     <div class="flex items-center gap-3 flex-wrap">
       <ToggleGroup v-model="typeFilter" type="single" variant="outline" :spacing="1">
