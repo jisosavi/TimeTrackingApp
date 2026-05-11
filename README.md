@@ -191,11 +191,18 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
    ```
    JWT_SECRET=a-long-random-secret
    GEMINI_API_KEY=your-gemini-api-key
+
+   # Salaxy API credentials — used for employee sync and payroll export (OAuth2 password grant)
    SALAXY_API_URL=https://api.salaxy.com/v03/api
    SALAXY_TOKEN_URL=https://api.salaxy.com/oauth2/token
    SALAXY_USERNAME=user@yourcompany.com
    SALAXY_PASSWORD=your-password
-   SA_EMAIL=superadmin@yourcompany.com   # seeded on first boot if no super-admin exists
+
+   # Super-admin seed — only used on first boot to create the initial super-admin account.
+   # After the first boot these are ignored; the super-admin record lives in the database.
+   # Super-admin login uses Salaxy OAuth ("Sign in with Salaxy"), so SA_EMAIL/SA_PASSWORD
+   # serve as a fallback only — e.g. if Salaxy OAuth is unavailable.
+   SA_EMAIL=superadmin@yourcompany.com
    SA_PASSWORD=your-superadmin-password
    ```
 

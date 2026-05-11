@@ -1,6 +1,3 @@
-# Local dev credentials — copy from config.local.php.example
-config.local.php
-
 # Frontend production env — contains Railway URL, fill in from .env.production.example
 frontend/.env.production
 frontend/.env.production.local
