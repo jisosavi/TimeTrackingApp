@@ -17,7 +17,7 @@ app.get("/api/supervisor_team.php", requireAdmin, (c) => {
   const employees = db.prepare(
     `SELECT e.id, e.name,
             CASE WHEN se.employee_id IS NOT NULL THEN 1 ELSE 0 END AS in_team,
-            (SELECT GROUP_CONCAT(s2.first_name || " " || s2.last_name, ", ")
+            (SELECT GROUP_CONCAT(s2.first_name || ' ' || s2.last_name, ', ')
              FROM supervisor_employees se2
              JOIN supervisors s2 ON s2.id = se2.supervisor_id
              WHERE se2.employee_id = e.id AND se2.supervisor_id != ?) AS other_supervisors
