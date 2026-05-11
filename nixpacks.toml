@@ -1,11 +1,5 @@
 [phases.setup]
-nixPkgs = [
-  "php83",
-  "php83Extensions.pdo_sqlite",
-  "php83Extensions.curl",
-  "php83Extensions.mbstring",
-  "php83Extensions.openssl",
-]
+nixPkgs = ["deno", "sqlite"]
 
 [start]
-cmd = "php -S 0.0.0.0:$PORT"
+cmd = "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts"

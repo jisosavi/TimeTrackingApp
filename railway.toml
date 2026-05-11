@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "php migrate.php && php -S 0.0.0.0:$PORT"
+startCommand = "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts"
 healthcheckPath = "/api/health.php"
 healthcheckTimeout = 10

@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts"
+  },
+  "imports": {
+    "@hono/hono": "jsr:@hono/hono",
+    "@hono/hono/cors": "jsr:@hono/hono/cors",
+    "@db/sqlite": "jsr:@db/sqlite"
+  }
+}
