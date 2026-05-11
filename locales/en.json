@@ -466,6 +466,8 @@
   "super.drawer.debug_copied": "Copied!",
   "super.drawer.features_time_app_desc": "Employees can log hours",
   "super.drawer.features_supervisor_desc": "Approvals are done by company supervisors or company admins.",
+  "super.drawer.features_approvals_title": "Supervisor Approvals",
+  "super.drawer.features_approvals_desc": "Supervisors can log in and approve employee time entries.",
   "super.drawer.features_confirm_title": "Disable {feature} for {name}?",
   "super.drawer.features_time_app_confirm_body": "Employees of {name} will no longer be able to log hours.",
   "super.drawer.features_approvals_confirm_body": "Supervisors and admins of {name} will no longer be able to process approvals.",

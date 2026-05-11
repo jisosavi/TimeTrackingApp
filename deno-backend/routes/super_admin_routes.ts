@@ -22,7 +22,7 @@ app.delete("/api/super_admin/delete_company.php", requireSuperAdmin, async (c) =
   return c.json({ success: true });
 });
 
-const ALLOWED_FEATURES = ["time_app_enabled", "supervisor_ui_enabled"] as const;
+const ALLOWED_FEATURES = ["time_app_enabled", "supervisor_ui_enabled", "approvals_enabled"] as const;
 
 app.post("/api/super_admin/set_feature.php", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));

@@ -466,6 +466,8 @@
   "super.drawer.debug_copied": "Kopioitu!",
   "super.drawer.features_time_app_desc": "Työntekijät voivat kirjata tunteja",
   "super.drawer.features_supervisor_desc": "Hyväksynnät tehdään yrityksen esimiehillä tai ylläpitäjillä.",
+  "super.drawer.features_approvals_title": "Esimieshyväksynnät",
+  "super.drawer.features_approvals_desc": "Esimiehet voivat kirjautua sisään ja hyväksyä työntekijöiden tuntikirjauksia.",
   "super.drawer.features_confirm_title": "Poistetaanko {feature} käytöstä yritykseltä {name}?",
   "super.drawer.features_time_app_confirm_body": "{name} työntekijät eivät enää voi kirjata tunteja.",
   "super.drawer.features_approvals_confirm_body": "{name} esimiehet ja ylläpitäjät eivät enää voi käsitellä hyväksyntöjä.",
