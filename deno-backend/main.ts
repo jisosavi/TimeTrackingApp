@@ -24,6 +24,7 @@ import superAdminRoutes from "./routes/super_admin_routes.ts";
 import syncEmployees from "./routes/sync_employees.ts";
 import exportPayroll from "./routes/export_payroll.ts";
 import fetchBusinessId from "./routes/fetch_business_id.ts";
+import llmProxy from "./routes/llm_proxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -61,6 +62,7 @@ app.route("/", superAdminRoutes);
 app.route("/", syncEmployees);
 app.route("/", exportPayroll);
 app.route("/", fetchBusinessId);
+app.route("/", llmProxy);
 
 const port = parseInt(Deno.env.get("PORT") ?? "8080");
 console.log(`Starting on port ${port}`);
