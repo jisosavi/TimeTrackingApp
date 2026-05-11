@@ -3,6 +3,7 @@ config.local.php
 
 # Frontend production env — contains Railway URL, fill in from .env.production.example
 frontend/.env.production
+frontend/.env.production.local
 
 # Data directory (user data)
 data/
