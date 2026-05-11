@@ -128,14 +128,14 @@ function onDrawerDeleted(companyId: number) {
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
-const createForm = ref({ name: '', slug: '', email: '', password: '' })
+const createForm = ref({ name: '', slug: '', email: '', password: '', salaxy_account_id: '' })
 const createError = ref<string | null>(null)
 const creating = ref(false)
 
 const createSlugError = computed(() => validateSlug(createForm.value.slug))
 
 function openCreateForm() {
-  createForm.value = { name: '', slug: '', email: '', password: '' }
+  createForm.value = { name: '', slug: '', email: '', password: '', salaxy_account_id: '' }
   createError.value = null
   showCreateForm.value = true
 }
@@ -165,6 +165,7 @@ async function submitCreate() {
       slug: createForm.value.slug.trim(),
       email: createForm.value.email.trim(),
       password: createForm.value.password,
+      salaxy_account_id: createForm.value.salaxy_account_id.trim() || undefined,
     })
     showCreateForm.value = false
   } catch (e) {
@@ -328,6 +329,10 @@ async function submitCreate() {
         <div class="space-y-1">
           <Label class="text-xs">Admin Password</Label>
           <Input v-model="createForm.password" type="password" placeholder="Min 6 characters" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs">Salaxy Account ID</Label>
+          <Input v-model="createForm.salaxy_account_id" placeholder="Optional" />
         </div>
       </div>
       <p v-if="createError" class="text-xs text-destructive">{{ createError }}</p>

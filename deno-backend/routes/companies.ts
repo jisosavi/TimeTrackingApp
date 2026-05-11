@@ -106,9 +106,10 @@ app.post("/api/companies.php", requireSuperAdmin, async (c) => {
   if (password.length < 6) return c.json({ success: false, error: "Password must be at least 6 characters" }, 400);
   if (db.prepare("SELECT id FROM companies WHERE slug = ?").get(slug)) return c.json({ success: false, error: "Slug already taken" }, 409);
 
+  const salaxyAccountId = String(body.salaxy_account_id ?? "").trim() || null;
   const result = db.prepare(
-    "INSERT INTO companies (name, slug, salaxy_api_url, salaxy_username, salaxy_password) VALUES (?,?,?,?,?)"
-  ).run(name, slug, SALAXY_API_URL, SALAXY_USERNAME, SALAXY_PASSWORD);
+    "INSERT INTO companies (name, slug, salaxy_account_id, salaxy_api_url, salaxy_username, salaxy_password) VALUES (?,?,?,?,?,?)"
+  ).run(name, slug, salaxyAccountId, SALAXY_API_URL, SALAXY_USERNAME, SALAXY_PASSWORD);
   const companyId = Number(result.lastInsertRowid);
   db.prepare("UPDATE companies SET db_file = ? WHERE id = ?").run(`companies/${companyId}.sqlite`, companyId);
 

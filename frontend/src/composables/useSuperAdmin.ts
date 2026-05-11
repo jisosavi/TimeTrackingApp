@@ -42,6 +42,7 @@ export function useSuperAdmin() {
     slug: string
     email: string
     password: string
+    salaxy_account_id?: string
   }): Promise<Company> {
     const data = await apiFetch<{ company: Company }>('/api/companies.php', {
       method: 'POST',
