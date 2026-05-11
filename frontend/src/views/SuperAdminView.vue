@@ -324,11 +324,11 @@ async function submitCreate() {
         </div>
         <div class="space-y-1">
           <Label class="text-xs">Admin Email</Label>
-          <Input v-model="createForm.email" type="email" placeholder="admin@company.fi" />
+          <Input v-model="createForm.email" type="email" placeholder="admin@company.fi" autocomplete="off" />
         </div>
         <div class="space-y-1">
           <Label class="text-xs">Admin Password</Label>
-          <Input v-model="createForm.password" type="password" placeholder="Min 6 characters" />
+          <Input v-model="createForm.password" type="password" placeholder="Min 6 characters" autocomplete="new-password" />
         </div>
         <div class="space-y-1">
           <Label class="text-xs">Salaxy Account ID</Label>
