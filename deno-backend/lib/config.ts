@@ -5,3 +5,4 @@ export const DB_DIR = Deno.env.get("DB_DIR") ?? "./data";
 export const SALAXY_API_URL = Deno.env.get("SALAXY_API_URL") ?? "";
 export const SALAXY_USERNAME = Deno.env.get("SALAXY_USERNAME") ?? "";
 export const SALAXY_PASSWORD = Deno.env.get("SALAXY_PASSWORD") ?? "";
+export const SALAXY_TOKEN_URL = Deno.env.get("SALAXY_TOKEN_URL") ?? "https://test-api.salaxy.com/oauth2/token";
