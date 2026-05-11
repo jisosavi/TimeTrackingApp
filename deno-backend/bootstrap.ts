@@ -222,6 +222,8 @@ export function initCompanyDb(db: Database): void {
     db.exec("ALTER TABLE supervisors ADD COLUMN ui_language TEXT");
   if (!supCols.includes("pin_locked"))
     db.exec("ALTER TABLE supervisors ADD COLUMN pin_locked INTEGER NOT NULL DEFAULT 0");
+  if (!supCols.includes("salaxy_id"))
+    db.exec("ALTER TABLE supervisors ADD COLUMN salaxy_id TEXT");
 
   const teCols = cols(db, "time_entries");
   if (!teCols.includes("km_status")) {
