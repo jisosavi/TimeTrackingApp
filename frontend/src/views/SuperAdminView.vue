@@ -47,8 +47,8 @@ const timeAppCounts = computed(() => ({
   off: companies.value.filter(c => !c.time_app_enabled).length,
 }))
 const supervisorCounts = computed(() => ({
-  on:  companies.value.filter(c => c.supervisor_ui_enabled).length,
-  off: companies.value.filter(c => !c.supervisor_ui_enabled).length,
+  on:  companies.value.filter(c => c.approvals_enabled).length,
+  off: companies.value.filter(c => !c.approvals_enabled).length,
 }))
 
 const filteredCompanies = computed(() => {
@@ -64,8 +64,8 @@ const filteredCompanies = computed(() => {
       }
       if (ta === 'on'  && !c.time_app_enabled)    return false
       if (ta === 'off' &&  c.time_app_enabled)    return false
-      if (sv === 'on'  && !c.supervisor_ui_enabled) return false
-      if (sv === 'off' &&  c.supervisor_ui_enabled) return false
+      if (sv === 'on'  && !c.approvals_enabled) return false
+      if (sv === 'off' &&  c.approvals_enabled) return false
       return true
     })
     .sort((a, b) => {
@@ -348,7 +348,7 @@ async function submitCreate() {
             <TableHead class="h-8 px-3 text-xs">{{ t('super.list.col_salaxy_id') }}</TableHead>
             <TableHead class="h-8 px-3 text-xs text-right">{{ t('super.list.col_emp') }}</TableHead>
             <TableHead class="h-8 px-3 text-xs">{{ t('super.list.col_time_app') }}</TableHead>
-            <TableHead class="h-8 px-3 text-xs">{{ t('super.list.col_supervisor_ui') }}</TableHead>
+            <TableHead class="h-8 px-3 text-xs">{{ t('super.list.col_approvals') }}</TableHead>
             <TableHead class="h-8 px-3 text-xs">{{ t('super.list.col_last_activity') }}</TableHead>
             <TableHead class="h-8 px-3 w-10"></TableHead>
           </TableRow>
@@ -395,7 +395,7 @@ async function submitCreate() {
             </TableCell>
 
             <TableCell class="px-3 py-1.5">
-              <OnOff :value="!!company.supervisor_ui_enabled" color="green" />
+              <OnOff :value="!!company.approvals_enabled" color="green" />
             </TableCell>
 
             <TableCell class="px-3 py-1.5 text-xs text-muted-foreground">

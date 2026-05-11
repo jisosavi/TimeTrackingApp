@@ -409,6 +409,7 @@
   "super.list.col_emp": "Hlö",
   "super.list.col_time_app": "Time App",
   "super.list.col_supervisor_ui": "Hyväksynnät",
+  "super.list.col_approvals": "Hyväksynnät",
   "super.list.col_last_activity": "Viimeisin toiminta",
   "super.list.no_companies": "Ei yrityksiä",
   "super.list.actions.newCompany": "Uusi yritys",

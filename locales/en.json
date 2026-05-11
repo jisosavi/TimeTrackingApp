@@ -409,6 +409,7 @@
   "super.list.col_emp": "Emp",
   "super.list.col_time_app": "Time App",
   "super.list.col_supervisor_ui": "Approvals",
+  "super.list.col_approvals": "Approvals",
   "super.list.col_last_activity": "Last activity",
   "super.list.no_companies": "No companies",
   "super.list.actions.newCompany": "New Company",
