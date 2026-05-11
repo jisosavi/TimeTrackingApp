@@ -2,3 +2,6 @@ export const JWT_SECRET = Deno.env.get("JWT_SECRET") ?? "";
 export const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 // On Railway the volume is mounted at /app/data; locally set DB_DIR=./data
 export const DB_DIR = Deno.env.get("DB_DIR") ?? "./data";
+export const SALAXY_API_URL = Deno.env.get("SALAXY_API_URL") ?? "";
+export const SALAXY_USERNAME = Deno.env.get("SALAXY_USERNAME") ?? "";
+export const SALAXY_PASSWORD = Deno.env.get("SALAXY_PASSWORD") ?? "";
