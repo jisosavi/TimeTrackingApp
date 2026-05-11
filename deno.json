@@ -6,6 +6,7 @@
   "imports": {
     "@hono/hono": "jsr:@hono/hono",
     "@hono/hono/cors": "jsr:@hono/hono/cors",
-    "@db/sqlite": "jsr:@db/sqlite"
+    "@db/sqlite": "jsr:@db/sqlite",
+    "bcryptjs": "npm:bcryptjs"
   }
 }
