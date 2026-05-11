@@ -1,7 +1,6 @@
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts"
 healthcheckPath = "/api/health.php"
 healthcheckTimeout = 10
