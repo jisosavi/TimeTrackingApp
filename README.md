@@ -4,11 +4,9 @@ An easy to use, AI-powered time tracking solution seamlessly integrated with **[
 
 Focus is on usability: easy for employees to log hours and easy for managers to approve!
 
-> **Branches** — Branches are used for development, stability and reliability varies.
-
 ## Overview
 
-TimeTrackingApp extends Salaxy's automated payroll capabilities by providing an intuitive time and expense tracking interface for small and medium enterprises. 
+TimeTrackingApp extends Salaxy's automated payroll capabilities by providing an intuitive time and expense tracking interface for small and medium enterprises.
 Built on Salaxy's powerful Open API, it demonstrates how developers can create value-added solutions that integrate directly with real-time payroll processing.
 Support for multiple UI languages, easy to add more locales when needed.
 
@@ -37,23 +35,13 @@ Support for multiple UI languages, easy to add more locales when needed.
 
 ### Multi-Company Management
 - **Super Admin Dashboard**: Manage multiple companies from a centralized interface
-- **Automatic Employee Sync**: Employees are synchronized in real-time from Salaxy's payroll system
+- **Automatic Employee Sync**: Employees are synchronized from Salaxy's payroll system with one click
 - **Company-Level Administration**: Each company admin has full control over their workforce
 
 ### Multi-Language Support
 - UI languages can be added easily — one JSON file per locale, no code changes required
 - This package has ENG, FIN, SWE, EST, UKR, isiXhosa locales
 - Language is set independently per company, per employee, and per supervisor
-
-## Why Build on Salaxy?
-
-This project showcases the power of Salaxy's modern payroll infrastructure:
-
-- **Open API First**: RESTful, OpenAPI-compliant endpoints make integration straightforward
-- **Real-Time Processing**: No batch delays - see changes instantly
-- **AI Integrated**: AI helps payroll users and platform is built for the future with Salaxy AI architecture
-- **Developer-Friendly**: Comprehensive documentation, test environments, and consistent APIs
-- **Break Free from Legacy**: Unlike closed-box solutions, Salaxy empowers developers to innovate
 
 ---
 
@@ -83,12 +71,11 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 - Sync employees from Salaxy with one click — new employees are imported, existing ones updated
 - Payroll dashboard: period summary cards (current month + collapsible previous months), export approved entries to Salaxy with one click
 - Configurable payroll period (monthly or fortnightly) with flexible payday settings
-- Company Salaxy ID visible in Settings (read-only; editable by super-admins only)
 - **Mark holidays on entries**: Approvals tab has a country selector (default Finland) and a **Mark holidays on entries** button — fetches public holidays for the current year from Nager.Date and appends the holiday name to the comment field of all `pending` and `approved` entries on matching dates
 
 **Super-admin** (`/admin/`)
-- Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins whitelist and a JWT is issued. First login auto-links the Salaxy account if only one unlinked super-admin exists. The header shows the logged-in user's Salaxy avatar, name, and email.
-- Create and manage companies with a slug-based URL and admin account
+- Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins table and a JWT is issued
+- Create and manage companies with a slug-based URL, admin account, and Salaxy Account ID
 - Enable or disable **Time App** and **Approvals** per company via toggle cards; disabling requires a confirmation dialog and preserves all existing data
 - Manage admins of each company
 - Navigate directly to each company's admin panel
@@ -127,35 +114,9 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 
 ---
 
-**Super-admin** — all companies in one table. The first column toggles time tracking on/off per company without leaving the page.
+**Super-admin** — all companies in one table. Toggle time tracking and approvals on/off per company without leaving the page.
 
 <img src="screenshots/04-super-admin.png" width="260" alt="Super-admin company list">
-
----
-
-## Recent Changes
-
-### 2026-05-01
-- **Holiday marking**: Company admins can select a country (default Finland) in the Approvals tab and click **Mark holidays on entries** to batch-annotate entries. Public holidays are fetched directly from [Nager.Date](https://date.nager.at) in the browser (no backend proxy); the backend receives only the results and appends the holiday `localName` to the `comment` field of all `pending` and `approved` entries on matching dates.
-- **Country setting per company**: `country_code` added to the `companies` table (default `FI`). Super-admins can set it in the General tab of the company settings drawer; company admins can set it in the Approvals tab holiday section. Supported countries: FI, SE, NO, EE, LT, LV, UA, PL, DE, GB.
-- **Salaxy Account ID fetch button**: The Salaxy Account ID field in the super-admin company drawer now has its own **Fetch from Salaxy** button matching the Business ID field, with a green success banner on fetch.
-
-### 2026-04-28
-- **Super-admin avatar**: The super-admin header now shows the logged-in user's Salaxy profile photo (from `session.avatar.url`), name, and email. Falls back to an initials circle when no photo is available.
-- **Feature toggle cards**: The per-company feature toggles (Time App, Approvals) are now `FeatureToggleCard` components with a custom animated switch, on/off status dot, and a confirmation dialog when disabling a feature (preserves data, can be re-enabled at any time).
-
-### 2026-04-27
-- **Salaxy OAuth2 super-admin login**: Super-admin login now uses the Salaxy Authorization Code flow instead of a local password. The callback lands at the SPA root (no `.htaccess` rewrite required); the router forwards `?code=` to `/admin` client-side. The PHP callback (`api/salaxy_oauth_callback.php`) exchanges the code, fetches `session/current`, matches `currentAccount.id` against the `super_admins` whitelist, and issues a JWT. First login auto-links the account when exactly one unlinked super-admin exists. Set `VITE_SUPERADMIN_PASSWORD_LOGIN=true` in `.env.local` to keep the password form visible for local development. The authorization URL now passes `salaxy_skin=salaxy.min` (was incorrectly named `salaxy_authorize_mode`).
-- **Apache `.htaccess` fix**: Added `Options -MultiViews` to the generated `.htaccess`. Without it, Apache's content negotiation returns 404 for SPA routes before mod_rewrite can handle them.
-- **Per-company SQLite databases**: Each company now has its own isolated database file at `data/companies/{id}.sqlite`. A separate `data/master.sqlite` holds the company registry and super-admin accounts. Super-admins are now stored in dedicated `super_admin_orgs` / `super_admins` tables (previously a role variant in `company_admins`). Run `php migrate.php` once to split a legacy `data/app.sqlite` into the new layout — the script is idempotent.
-
-### 2026-04-25
-- **PIN security hardening**: Employee and supervisor PINs are now stored as HMAC-SHA256 hashes instead of plain text. The server-side `JWT_SECRET` is used as the HMAC key, so an attacker needs both a database dump *and* the secret to crack any PIN. The migration runs automatically on the next request — no manual steps needed. API endpoints no longer return PIN values; the admin edit form no longer pre-fills the PIN field (leave it blank to keep the existing PIN unchanged).
-
-### 2026-04-24
-- **Vue-only deployment at domain root**: Removed all legacy PHP/HTML frontend files (`index.html`, `approval.html`, `router.php`, `admin/`, `company/` directories). The app is now served entirely from the Vue SPA at the domain root. `router.php` is gone — the PHP built-in server no longer needs it for local development.
-- **Configurable deploy path via `VITE_APP_BASE`**: `vite.config.ts` reads `VITE_APP_BASE` from `.env.production` to set the Vite base path and auto-generates `dist/.htaccess` with a matching `RewriteBase` at build time. `deploy-frontend.sh` derives the remote `rsync` destination from `VITE_APP_BASE` automatically. See `.env.production.example` for the format.
-- **Production domains added to CORS**: `time.salaxy.com` and `test-time.salaxy.com` added to the allowed origins list in `api/cors.php`.
 
 ---
 
@@ -168,12 +129,13 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | State management | Pinia |
 | Routing | Vue Router 5 (history mode, JWT-guarded navigation guards) |
 | i18n | vue-i18n v11 (`legacy: false`), flat JSON locale files in `locales/` |
-| Backend | PHP 8+, SQLite via PDO |
-| Auth | JWT (HS256), issued per role by PHP, verified on every API call |
+| Backend | Deno 2 + Hono framework |
+| Database | SQLite via `@db/sqlite` — one master DB + one DB per company |
+| Auth | JWT (HS256), HMAC-SHA256 PIN hashing |
 | AI | Google Gemini API (natural language → structured time entry) |
 | Payroll | Salaxy REST API — OAuth2 token auth, employee sync, payroll export |
-| Dev server | Vite dev server (frontend) + PHP built-in server (backend/API) |
-| Production | Apache with `.htaccess` rewrites; frontend built to `frontend/dist/` |
+| Dev server | Vite (frontend) + Deno with `--watch` (backend) |
+| Production | Railway (Deno via Dockerfile) + Apache with `.htaccess` rewrites (frontend) |
 | Testing | Vitest (unit), Playwright (e2e), vue-tsc (type-check) |
 
 ### Supported languages
@@ -187,7 +149,7 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | `uk` | Українська |
 | `xh` | isiXhosa |
 
-Adding a new locale requires only a new JSON file in `locales/` — no code changes needed. The `expand()` helper in `frontend/src/i18n.ts` converts flat dot-notation keys to the nested structure vue-i18n expects at runtime.
+Adding a new locale requires only a new JSON file in `locales/` — no code changes needed.
 
 ---
 
@@ -199,27 +161,12 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/{slug}/home` | Employee time entry (authenticated) |
 | `/{slug}/approval` | Supervisor/manager PIN login |
 | `/{slug}/approval/home` | Supervisor approval portal (authenticated) |
-| `/{slug}/admin` | Company admin PIN login |
+| `/{slug}/admin` | Company admin login |
 | `/{slug}/admin/dashboard` | Personnel management (authenticated) |
-| `/{slug}/admin/payroll-summary` | Export Payrolls to Salaxy — default admin landing (authenticated) |
-| `/{slug}/admin/payroll` | Redirects to `/payroll-summary` |
-| `/{slug}/admin/payroll-settings` | Payroll period settings (authenticated) |
+| `/{slug}/admin/payroll-summary` | Export Payrolls to Salaxy — default admin landing |
+| `/{slug}/admin/payroll-settings` | Payroll period settings |
 | `/admin` | Super-admin login (Salaxy OAuth2) |
-| `/admin/dashboard` | Super-admin company list (authenticated) |
-| `/api/employees.php` | Employee CRUD |
-| `/api/supervisors.php` | Supervisor CRUD |
-| `/api/time_entries.php` | Time entry read/write/delete |
-| `/api/review_entries.php` | Approve / reject / clarify (supports `field` param for per-type approval) |
-| `/api/export_payroll.php` | Export approved entries to Salaxy |
-| `/api/payroll_settings.php` | Payroll period configuration |
-| `/api/fetch_business_id.php` | Fetch business ID from Salaxy |
-| `/api/sync_employees_from_salaxy.php` | Sync employees from Salaxy |
-| `/api/admin/country_setting.php` | Get / set country code for holiday detection (company admin) |
-| `/api/admin/mark_holidays.php` | Batch-annotate entries with holiday names (company admin) |
-| `/api/update_language.php` | Update UI language per user |
-| `/api/company_lang.php` | Get company default language |
-| `/api/salaxy_oauth_callback.php` | Exchange Salaxy OAuth2 code for app JWT (super-admin only) |
-| `/api/health.php` | Health check endpoint |
+| `/admin/dashboard` | Super-admin company list |
 
 ---
 
@@ -227,70 +174,57 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 
 ### Prerequisites
 
-- PHP 8.0+
+- [Deno 2.x](https://deno.com)
 - Node.js 20+ and npm
 - A [Google Gemini API key](https://aistudio.google.com/app/apikey)
 - Salaxy API credentials (URL, username, password) — contact [Salaxy](https://salaxy.com) for API access
 
 ### Installation
 
-1. Clone the repository and check out this branch:
+1. Clone the repository:
    ```bash
    git clone https://github.com/jisosavi/TimeTrackingApp.git
    cd TimeTrackingApp
-   git checkout main
    ```
 
-2. Set credentials via environment variables or a local override file:
-
-   **Option A — environment variables** (recommended for production / Railway):
+2. Set environment variables (Railway dashboard for production, `.env` file or shell for local dev):
    ```
-   GEMINI_API_KEY=your-gemini-api-key
    JWT_SECRET=a-long-random-secret
+   GEMINI_API_KEY=your-gemini-api-key
    SALAXY_API_URL=https://api.salaxy.com/v03/api
    SALAXY_TOKEN_URL=https://api.salaxy.com/oauth2/token
    SALAXY_USERNAME=user@yourcompany.com
    SALAXY_PASSWORD=your-password
+   SA_EMAIL=superadmin@yourcompany.com   # seeded on first boot if no super-admin exists
+   SA_PASSWORD=your-superadmin-password
    ```
 
-   **Option B — local override file** (for local dev):
-   Copy `config.local.php.example` to `config.local.php` and fill in your values. This file is gitignored and loaded automatically by `config.php`.
-
-3. Make sure the `data/` directory is writable. Databases are created automatically on first run: `data/master.sqlite` (company registry and super-admins) and `data/companies/{id}.sqlite` (one file per company). If you have a legacy `data/app.sqlite` from a previous install, run `php migrate.php` once to split it into the new layout.
-
-4. Install frontend dependencies and build:
+3. Install frontend dependencies:
    ```bash
-   cd frontend
-   npm install
-   npm run build
+   cd frontend && npm install
    ```
-   The production build is output to `frontend/dist/`. The `deploy-frontend.sh` script copies the built assets to the correct location for the Apache setup.
 
 ### Running locally
 
-Start the PHP backend:
+Start the Deno backend:
 ```bash
-php -S localhost:8000
+deno task dev
 ```
 
-Start the Vite dev server (with API proxy to PHP):
+Start the Vite dev server (with API proxy to Deno):
 ```bash
 cd frontend
 npm run dev
 ```
 
-The Vite dev server proxies `/api/` requests to `localhost:8000`, so both servers run together without CORS issues.
-
 | URL | What it opens |
 |---|---|
-| `http://localhost:5173/{slug}` | Employee login (replace `{slug}` with your company slug) |
+| `http://localhost:5173/{slug}` | Employee login |
 | `http://localhost:5173/{slug}/admin` | Company admin login |
 | `http://localhost:5173/{slug}/approval` | Supervisor/manager login |
 | `http://localhost:5173/admin` | Super-admin login |
 
-Default accounts are created on first run: super-admin `superadmin@timeapp.local` in `master.sqlite` and company admin `admin@timeapp.local` in the test company DB. Default passwords are defined in `bootstrap.php` — change before deploying to any shared environment.
-
-In production, super-admin login uses Salaxy OAuth2. For local development, add `VITE_SUPERADMIN_PASSWORD_LOGIN=true` to `frontend/.env.local` to show the email/password form alongside the OAuth button.
+On first boot, if `SA_EMAIL` and `SA_PASSWORD` are set and no super-admin exists, one is seeded automatically.
 
 ### Frontend development commands
 
@@ -302,10 +236,19 @@ npm run test:e2e     # Playwright end-to-end tests
 npm run lint         # ESLint + Oxlint
 ```
 
+### Deploying
+
+**Backend** — push to a Railway service configured with the `Dockerfile`. Mount a persistent volume at `/app/data` for the SQLite databases. Set all environment variables in the Railway dashboard.
+
+**Frontend** — build with `VITE_API_BASE` pointing to the Railway service URL and `VITE_APP_BASE` set to the sub-path on your Apache server, then rsync `frontend/dist/` to the server:
+```bash
+./deploy-frontend.sh
+```
+
 ### Adding a company
 
-1. Log in to `/admin`
-2. Click **+ New company** and fill in company name, slug, and admin credentials
+1. Log in to `/admin` as super-admin
+2. Click **+ New Company** and fill in company name, slug, admin credentials, and Salaxy Account ID
 3. Log in to `/{slug}/admin` and click **Sync employees from Salaxy** to import employees
 4. Employees are created with a randomly generated PIN — reset individual PINs from the employee list as needed
 
@@ -314,103 +257,78 @@ npm run lint         # ESLint + Oxlint
 ## Project Structure
 
 ```
-├── bootstrap.php                         # DB accessors (getMasterDb/getCompanyDb), schema migrations, PIN hashing
-├── config.php                            # Reads credentials from env vars; loads config.local.php if present
-├── config.local.php.example             # Config template
-├── deploy-frontend.sh                    # rsync dist/ to remote; derives path from VITE_APP_BASE automatically
-├── migrate.php                           # One-time migration: splits legacy app.sqlite into master + per-company DBs
-├── nixpacks.toml / railway.toml         # Deployment configuration (Railway)
-├── .env.production.example              # Template for VITE_API_BASE and VITE_APP_BASE
+├── Dockerfile                            # Deno production container
+├── deno.json                             # Deno tasks and import map
+├── railway.toml                          # Railway deployment config
+├── deploy-frontend.sh                    # rsync dist/ to remote Apache server
+├── deploy-deno-demo.sh                   # Deploy frontend pointed at a specific Deno URL/path
 │
-├── api/
-│   ├── common.php                        # Shared JWT auth helpers and utilities
-│   ├── cors.php                          # CORS headers for cross-origin dev setup
-│   ├── jwt.php                           # JWT sign / verify
-│   ├── admin_login.php                   # Company admin login → JWT
-│   ├── salaxy_oauth_callback.php         # Salaxy OAuth2 callback — exchange code, match super-admin, issue JWT
-│   ├── companies.php                     # List companies / toggle active
-│   ├── company_admins.php                # CRUD for company admin users
-│   ├── company_lang.php                  # Get company default UI language
-│   ├── create_company.php                # Create company + admin account
-│   ├── employees.php                     # CRUD for employees
-│   ├── supervisors.php                   # CRUD for supervisors
-│   ├── pin_rate_limit.php                # PIN brute-force protection helpers (rate limit, cooldown, lock/unlock)
-│   ├── supervisor_login.php              # Supervisor PIN login → JWT
-│   ├── supervisor_team.php               # Supervisor ↔ employee assignments
-│   ├── time_entries.php                  # Time entry read/write/delete
-│   ├── review_entries.php                # Approve / reject / clarify (per-field support)
-│   ├── clarify_entry.php                 # Employee clarification response (hours and km, independent)
-│   ├── export_payroll.php                # Export approved entries to Salaxy payroll
-│   ├── payroll_settings.php              # Payroll period settings per company
-│   ├── fetch_business_id.php             # Fetch business ID from Salaxy
-│   ├── sync_employees_from_salaxy.php    # Sync employees from Salaxy
-│   ├── update_language.php               # Update UI language per user
-│   ├── health.php                        # Health check
-│   ├── logout.php
-│   └── admin/
-│       ├── country_setting.php           # GET / PATCH country_code for holiday detection (company admin)
-│       └── mark_holidays.php             # POST: batch-annotate entries with holiday names (company admin)
+├── deno-backend/
+│   ├── main.ts                           # Hono app entry point; CORS, route registration, super-admin seed
+│   ├── bootstrap.ts                      # SQLite schema init and inline migrations
+│   ├── lib/
+│   │   ├── auth.ts                       # requireEmployee / requireSupervisor / requireAdmin / requireSuperAdmin middleware
+│   │   ├── config.ts                     # All config read from env vars
+│   │   ├── db.ts                         # getMasterDb / getCompanyDb / getCompanyDbBySlug
+│   │   ├── jwt.ts                        # JWT sign/verify (HS256), hashPin (HMAC-SHA256)
+│   │   ├── pin_rate_limit.ts             # PIN brute-force protection helpers
+│   │   └── salaxy.ts                     # Salaxy API: token cache, employee sync, payroll export
+│   ├── routes/                           # One file per endpoint group
+│   │   ├── health.ts                     # GET /health
+│   │   ├── validate_pin.ts               # POST /validate_pin.php
+│   │   ├── supervisor_login.ts           # POST /api/supervisor_login.php
+│   │   ├── admin_login.ts                # POST /api/admin_login.php (company admin + super-admin)
+│   │   ├── salaxy_oauth_callback.ts      # GET /api/salaxy_oauth_callback.php
+│   │   ├── employees.ts                  # GET/POST/PATCH /api/employees.php
+│   │   ├── supervisors.ts                # GET/POST/PATCH /api/supervisors.php
+│   │   ├── company_admins.ts             # GET/POST/PATCH /api/company_admins.php
+│   │   ├── time_entries.ts               # GET/POST/DELETE /api/time_entries.php
+│   │   ├── review_entries.ts             # POST /api/review_entries.php
+│   │   ├── clarify_entry.ts              # POST /api/clarify_entry.php
+│   │   ├── companies.ts                  # GET/POST /api/companies.php
+│   │   ├── payroll_settings.ts           # GET/POST /api/payroll_settings.php
+│   │   ├── export_payroll.ts             # GET/POST /api/export_payroll.php
+│   │   ├── sync_employees.ts             # POST /api/sync_employees_from_salaxy.php
+│   │   ├── fetch_business_id.ts          # GET /api/fetch_business_id.php
+│   │   ├── admin_routes.ts               # GET/PATCH country_setting, POST mark_holidays
+│   │   ├── super_admin_routes.ts         # DELETE/POST/PATCH /api/super_admin/*
+│   │   ├── my_team.ts                    # GET /api/my_team.php
+│   │   ├── supervisor_team.ts            # GET/POST /api/supervisor_team.php
+│   │   ├── company_lang.ts               # GET /api/company_lang.php
+│   │   ├── update_language.ts            # POST /api/update_language.php
+│   │   ├── logout.ts                     # ALL /api/logout.php
+│   │   └── llm_proxy.ts                  # POST /llm_proxy.php (Gemini API proxy)
+│   └── scripts/
+│       └── seed_superadmin.ts            # One-time seed script (alternative to env-var auto-seed)
 │
 ├── locales/                              # Shared locale files (used by frontend)
-│   ├── en.json                           # English
-│   ├── fi.json                           # Finnish
-│   ├── sv.json                           # Swedish
-│   ├── et.json                           # Estonian
-│   ├── uk.json                           # Ukrainian
-│   └── xh.json                           # isiXhosa
+│   ├── en.json, fi.json, sv.json, et.json, uk.json, xh.json
 │
 ├── frontend/                             # Vue 3 + TypeScript SPA
-│   ├── index.html                        # Vite entry point
-│   ├── vite.config.ts                    # Vite config (proxy, path aliases, Tailwind plugin)
-│   ├── components.json                   # shadcn-vue component config
+│   ├── vite.config.ts                    # Vite config: proxy, base path, .htaccess generation
 │   ├── src/
-│   │   ├── main.ts                       # App bootstrap (Vue, Pinia, Router, i18n)
-│   │   ├── App.vue                       # Root component; mounts useLocale()
-│   │   ├── i18n.ts                       # createI18n — expands flat JSON keys at startup
-│   │   ├── router/
-│   │   │   └── index.ts                  # All routes + JWT auth navigation guards
-│   │   ├── stores/
-│   │   │   └── auth.ts                   # Pinia auth store (JWT payload, user, role)
-│   │   ├── types/
-│   │   │   └── index.ts                  # Shared TypeScript interfaces
-│   │   ├── layouts/
-│   │   │   └── AppLayout.vue             # Shell: header, nav tabs, language switcher
+│   │   ├── router/index.ts               # All routes + JWT navigation guards
+│   │   ├── stores/auth.ts                # Pinia auth store
 │   │   ├── views/
-│   │   │   ├── LoginView.vue             # PIN login — kiosk keypad for employee/supervisor, email+password for admin
-│   │   │   ├── EmployeeView.vue          # Employee: Log hours / My entries / Rejected tabs
-│   │   │   ├── ManagerView.vue           # Supervisor/admin: Review / Approved / Rejected / Team tabs, bulk actions
-│   │   │   ├── AdminView.vue             # Company admin: employees + supervisors management
-│   │   │   ├── PayrollView.vue           # Export Payrolls to Salaxy: export section + payroll period overview
-│   │   │   ├── PayrollSettingsView.vue   # Payroll period and payday configuration
-│   │   │   └── SuperAdminView.vue        # Super-admin: company creation and management
+│   │   │   ├── LoginView.vue             # PIN keypad (employee/supervisor) + email/password (admin)
+│   │   │   ├── EmployeeView.vue          # Log / Entries / Rejected tabs
+│   │   │   ├── ManagerView.vue           # Review / Approved / Rejected / Team tabs
+│   │   │   ├── AdminView.vue             # Personnel + Approvals management
+│   │   │   ├── PayrollView.vue           # Payroll export
+│   │   │   ├── PayrollSettingsView.vue   # Payroll period config
+│   │   │   └── SuperAdminView.vue        # Company management
 │   │   ├── components/
-│   │   │   ├── employee/
-│   │   │   │   ├── ChatPanel.vue         # AI chat: message history, editable preview card before saving
-│   │   │   │   ├── EntryList.vue         # Entry list (all entries or rejected-only mode via prop)
-│   │   │   │   └── EntryCard.vue         # Single entry: status badge, type pills, rejection notes, clarify/delete
-│   │   │   ├── super-admin/
-│   │   │   │   ├── CompanySettingsDrawer.vue  # Per-company settings drawer (feature toggles, Salaxy ID, admins)
-│   │   │   │   └── FeatureToggleCard.vue      # Feature on/off card with animated switch + deactivation confirm dialog
-│   │   │   └── ui/
-│   │   │       ├── EmptyState.vue        # Reusable empty state (icon slot, title, body, action link/callback)
-│   │   │       └── …                     # shadcn-vue primitives (Badge, Button, Input, …)
+│   │   │   ├── employee/                 # ChatPanel, EntryList, EntryCard
+│   │   │   ├── super-admin/              # CompanySettingsDrawer, FeatureToggleCard
+│   │   │   └── ui/                       # shadcn-vue primitives
 │   │   └── composables/
-│   │       ├── useApi.ts                 # Authenticated fetch wrapper (injects JWT header)
-│   │       ├── useApproval.ts            # Approval state + reviewEntries (supports per-field)
-│   │       ├── useAdminData.ts           # Employee/supervisor CRUD, sync, payroll export
-│   │       ├── useChat.ts                # Gemini AI chat — send, preview state, confirm/cancel
-│   │       ├── useTimeEntries.ts         # Employee entry list, rejected count, clarify (hours + km)
-│   │       ├── useLocale.ts              # Watches auth.user.uiLanguage → sets global i18n locale
-│   │       ├── useRefresh.ts             # Singleton refresh tick — cross-component data refresh signal
-│   │       ├── useSuperAdmin.ts          # Super-admin company management
-│   │       └── useHolidays.ts            # Fetch public holidays from Nager.Date (cached); COUNTRY_NAMES map
-│   └── dist/                             # Production build output (not in git)
+│   │       ├── useApi.ts, useApproval.ts, useAdminData.ts
+│   │       ├── useChat.ts, useTimeEntries.ts, useSuperAdmin.ts
+│   │       ├── useLocale.ts, useRefresh.ts, useHolidays.ts
 │
-├── screenshots/
-└── data/
-    ├── master.sqlite                     # Company registry + super-admin accounts (auto-created, not in git)
-    └── companies/
-        └── {id}.sqlite                   # One SQLite file per company (auto-created, not in git)
+└── data/                                 # SQLite databases (auto-created, not in git)
+    ├── master.sqlite                     # Company registry + super-admin accounts
+    └── companies/{id}.sqlite             # One file per company
 ```
 
 ---
