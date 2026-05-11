@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 All frontend commands run from `frontend/`:
 
 ```bash
-npm run dev          # Vite dev server with HMR (proxies /api/ to PHP)
+npm run dev          # Vite dev server with HMR (proxies /api/ to Deno)
 npm run build        # vue-tsc type-check + Vite production build
 npm run type-check   # Type-check only (vue-tsc)
 npm run lint         # oxlint + eslint (both with --fix)
@@ -18,13 +18,13 @@ npm run test:unit    # Vitest
 npm run test:e2e     # Playwright
 ```
 
-Backend (PHP, from repo root):
+Backend (Deno, from repo root):
 
 ```bash
-php -S localhost:8000   # Local API server (port must match VITE_PHP_SERVER or default 8000)
+deno task dev   # Deno dev server with --watch on :8080
 ```
 
-Local dev uses two servers simultaneously: Vite on `:5173`, PHP on `:8000`. The Vite proxy config in `frontend/vite.config.ts` forwards `/api/`, `/validate_pin.php`, and `/llm_proxy.php` to the PHP server.
+Local dev uses two servers simultaneously: Vite on `:5173`, Deno on `:8080`. The Vite proxy config in `frontend/vite.config.ts` forwards `/api/`, `/validate_pin.php`, and `/llm_proxy.php` to the Deno server.
 
 ---
 
@@ -34,13 +34,13 @@ Local dev uses two servers simultaneously: Vite on `:5173`, PHP on `:8000`. The 
 
 **Frontend** — Vue 3 SPA (`frontend/src/`) built with Vite. Single `index.html` entry point; history-mode routing; deployed to `frontend/dist/`. Apache `.htaccess` is auto-generated at build time by a Vite plugin in `vite.config.ts` — it sets `RewriteBase` from `VITE_APP_BASE` and routes all non-file requests to `index.html`.
 
-**Backend** — Flat PHP 8 files under `api/`. No framework. Every endpoint is a standalone `.php` file that requires `api/common.php` (which in turn loads `bootstrap.php` → `config.php`). SQLite databases are initialized and migrated automatically by `bootstrap.php` on first access via the DB accessor functions.
+**Backend** — Deno 2 + Hono under `deno-backend/`. Entry point is `deno-backend/main.ts`; each route file lives in `deno-backend/routes/`. SQLite databases are initialized and migrated automatically by `deno-backend/bootstrap.ts` on first access via the DB accessor functions in `deno-backend/lib/db.ts`.
 
 ### Authentication flow
 
-All roles share the same JWT mechanism. `api/jwt.php` signs/verifies HS256 tokens using `JWT_SECRET`. Tokens carry `user_id`, `user_type` (`employee | supervisor | admin | superadmin`), and `company_id` (0 for superadmin). Tokens expire after 7 days.
+All roles share the same JWT mechanism. `deno-backend/lib/jwt.ts` signs/verifies HS256 tokens using `JWT_SECRET`. Tokens carry `user_id`, `user_type` (`employee | supervisor | admin | superadmin`), and `company_id` (0 for superadmin). Tokens expire after 7 days.
 
-Every protected PHP endpoint calls one of the `require*()` guards in `api/common.php` at the top of the file. These verify the Bearer token AND confirm the record still exists and is active in the DB.
+Every protected endpoint calls one of the `require*()` middleware guards in `deno-backend/lib/auth.ts`. These verify the Bearer token AND confirm the record still exists and is active in the DB.
 
 On the frontend, `stores/auth.ts` persists token + user object in `localStorage`. `composables/useApi.ts` injects the `Authorization: Bearer` header on every request. The router guard in `router/index.ts` enforces role-based access — `/admin` must be defined before `/:slug` in the route list so the static path wins over the dynamic one.
 
@@ -53,7 +53,7 @@ On the frontend, `stores/auth.ts` persists token + user object in `localStorage`
 | `/:slug/admin` | company admin | email + password via `api/admin_login.php` |
 | `/admin` | superadmin | email + password via `api/admin_login.php` |
 
-PIN hashing: employee and supervisor PINs are stored as `HMAC-SHA256(pin, JWT_SECRET)` — see `hashPin()` in `bootstrap.php`. They are never returned by any API endpoint.
+PIN hashing: employee and supervisor PINs are stored as `HMAC-SHA256(pin, JWT_SECRET)` — see `hashPin()` in `deno-backend/lib/jwt.ts`. They are never returned by any API endpoint.
 
 ### i18n
 
@@ -61,15 +61,15 @@ Locale files live in `locales/` at the repo root as flat dot-notation JSON (e.g.
 
 ### Salaxy API integration
 
-Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in `data/salaxy_token_{companyId}.json` for 23 hours. This cached token is used for employee sync and payroll export calls.
+Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in `data/salaxy_token_{companyId}.json` for 23 hours. This cached token is used for employee sync and payroll export calls. See `deno-backend/lib/salaxy.ts`.
 
 ### Config and secrets
 
-`config.php` reads from environment variables first; falls back to constants defined in `config.local.php` (gitignored). For local dev, copy `config.local.php.example` to `config.local.php`. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB, not global config (except `SALAXY_*` env vars which are legacy defaults).
+`deno-backend/lib/config.ts` reads all configuration from environment variables. For local dev, set them in a `.env` file or shell. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB; `SALAXY_*` env vars are fallback defaults applied when creating a new company. On first boot, set `SA_EMAIL` and `SA_PASSWORD` to auto-seed the super-admin account.
 
 ### Database layout
 
-Two SQLite files, both under `data/`. Accessors in `bootstrap.php`: `getMasterDb()`, `getCompanyDb(int $id)`, `getCompanyDbBySlug(string $slug)` — all static-cached per request.
+Two SQLite files, both under `data/` (path configurable via `DB_DIR` env var). Accessors in `deno-backend/lib/db.ts`: `getMasterDb()`, `getCompanyDb(id)`, `getCompanyDbBySlug(slug)` — module-level cached.
 
 **`data/master.sqlite`** — company registry and super-admin accounts:
 - `companies` — slug, active flag, per-company Salaxy credentials, payroll settings, `db_file` path
@@ -83,11 +83,11 @@ Two SQLite files, both under `data/`. Accessors in `bootstrap.php`: `getMasterDb
 - `payroll_exports` — deduplication guard for Salaxy payroll creation
 - `pin_rate_limit` — per-device brute-force protection
 
-Schema migrations run inline in `bootstrap.php` via `ALTER TABLE` checks on every request — check there before adding columns. To split a legacy single-file `data/app.sqlite` into the new layout, run `php migrate.php` (idempotent).
+Schema migrations run inline in `deno-backend/bootstrap.ts` via `ALTER TABLE` checks — check there before adding columns.
 
 ### Production deployment
 
-Railway (PHP built-in server via `nixpacks.toml`) serves the backend. The frontend is separately built and deployed to an Apache server via `deploy-frontend.sh`, which rsyncs `frontend/dist/` to a remote path derived from `VITE_APP_BASE` in `frontend/.env.production`. CORS allowed origins are hardcoded in `api/cors.php`.
+Railway (Deno via `Dockerfile`) serves the backend. The frontend is separately built and deployed to an Apache server via `deploy-frontend.sh`, which rsyncs `frontend/dist/` to a remote path derived from `VITE_APP_BASE` in `frontend/.env.production`. Set `VITE_API_BASE` to the Deno Railway service URL.
 
 ---
 

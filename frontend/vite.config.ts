@@ -32,7 +32,7 @@ Options -MultiViews
   RewriteCond %{REQUEST_FILENAME} !-d
 
   # Route all other requests to Vue's index.html
-  RewriteRule ^ index.html [L]
+  RewriteRule ^ ${appBase}index.html [L]
 </IfModule>
 `
         writeFileSync(resolve(__dirname, 'dist/.htaccess'), content)

@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["deno", "sqlite"]
-
-[phases.install]
-cmds = ["deno cache deno-backend/main.ts"]
-
-[start]
-cmd = "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts"

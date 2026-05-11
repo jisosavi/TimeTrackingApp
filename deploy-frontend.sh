@@ -2,8 +2,8 @@
 # Build the Vue frontend and upload dist/ to the cPanel public_html directory.
 #
 # Prerequisites:
-#   1. Copy frontend/.env.production.example → frontend/.env.production
-#      and set VITE_API_BASE (Railway URL) and VITE_APP_BASE (sub-path on server).
+#   1. Set VITE_API_BASE to the Deno Railway service URL and VITE_APP_BASE to
+#      the sub-path on the Apache server in frontend/.env.production.
 #   2. Set CPANEL_HOST and CPANEL_USER below
 #      (or export them as environment variables before running this script).
 #

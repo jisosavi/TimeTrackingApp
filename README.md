@@ -84,6 +84,7 @@ This project showcases the power of Salaxy's modern payroll infrastructure:
 - Payroll dashboard: period summary cards (current month + collapsible previous months), export approved entries to Salaxy with one click
 - Configurable payroll period (monthly or fortnightly) with flexible payday settings
 - Company Salaxy ID visible in Settings (read-only; editable by super-admins only)
+- **Mark holidays on entries**: Approvals tab has a country selector (default Finland) and a **Mark holidays on entries** button — fetches public holidays for the current year from Nager.Date and appends the holiday name to the comment field of all `pending` and `approved` entries on matching dates
 
 **Super-admin** (`/admin/`)
 - Login via **Salaxy OAuth2** — clicking "Sign in with Salaxy" redirects to Salaxy's authorization page; on return the account is matched against the super-admins whitelist and a JWT is issued. First login auto-links the Salaxy account if only one unlinked super-admin exists. The header shows the logged-in user's Salaxy avatar, name, and email.
@@ -134,14 +135,17 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 
 ## Recent Changes
 
+### 2026-05-01
+- **Holiday marking**: Company admins can select a country (default Finland) in the Approvals tab and click **Mark holidays on entries** to batch-annotate entries. Public holidays are fetched directly from [Nager.Date](https://date.nager.at) in the browser (no backend proxy); the backend receives only the results and appends the holiday `localName` to the `comment` field of all `pending` and `approved` entries on matching dates.
+- **Country setting per company**: `country_code` added to the `companies` table (default `FI`). Super-admins can set it in the General tab of the company settings drawer; company admins can set it in the Approvals tab holiday section. Supported countries: FI, SE, NO, EE, LT, LV, UA, PL, DE, GB.
+- **Salaxy Account ID fetch button**: The Salaxy Account ID field in the super-admin company drawer now has its own **Fetch from Salaxy** button matching the Business ID field, with a green success banner on fetch.
+
 ### 2026-04-28
 - **Super-admin avatar**: The super-admin header now shows the logged-in user's Salaxy profile photo (from `session.avatar.url`), name, and email. Falls back to an initials circle when no photo is available.
 - **Feature toggle cards**: The per-company feature toggles (Time App, Approvals) are now `FeatureToggleCard` components with a custom animated switch, on/off status dot, and a confirmation dialog when disabling a feature (preserves data, can be re-enabled at any time).
-- **"Supervisor UI" renamed to "Approvals"**: All UI labels, filter buttons, locale keys, and DB column references for the supervisor-facing feature are now consistently "Approvals".
-- **Salaxy OAuth `salaxy_skin` parameter**: The authorization URL now passes `salaxy_skin=salaxy.min` (was incorrectly named `salaxy_authorize_mode`).
 
 ### 2026-04-27
-- **Salaxy OAuth2 super-admin login**: Super-admin login now uses the Salaxy Authorization Code flow instead of a local password. The callback lands at the SPA root (no `.htaccess` rewrite required); the router forwards `?code=` to `/admin` client-side. The PHP callback (`api/salaxy_oauth_callback.php`) exchanges the code, fetches `session/current`, matches `currentAccount.id` against the `super_admins` whitelist, and issues a JWT. First login auto-links the account when exactly one unlinked super-admin exists. Set `VITE_SUPERADMIN_PASSWORD_LOGIN=true` in `.env.local` to keep the password form visible for local development.
+- **Salaxy OAuth2 super-admin login**: Super-admin login now uses the Salaxy Authorization Code flow instead of a local password. The callback lands at the SPA root (no `.htaccess` rewrite required); the router forwards `?code=` to `/admin` client-side. The PHP callback (`api/salaxy_oauth_callback.php`) exchanges the code, fetches `session/current`, matches `currentAccount.id` against the `super_admins` whitelist, and issues a JWT. First login auto-links the account when exactly one unlinked super-admin exists. Set `VITE_SUPERADMIN_PASSWORD_LOGIN=true` in `.env.local` to keep the password form visible for local development. The authorization URL now passes `salaxy_skin=salaxy.min` (was incorrectly named `salaxy_authorize_mode`).
 - **Apache `.htaccess` fix**: Added `Options -MultiViews` to the generated `.htaccess`. Without it, Apache's content negotiation returns 404 for SPA routes before mod_rewrite can handle them.
 - **Per-company SQLite databases**: Each company now has its own isolated database file at `data/companies/{id}.sqlite`. A separate `data/master.sqlite` holds the company registry and super-admin accounts. Super-admins are now stored in dedicated `super_admin_orgs` / `super_admins` tables (previously a role variant in `company_admins`). Run `php migrate.php` once to split a legacy `data/app.sqlite` into the new layout — the script is idempotent.
 
@@ -210,6 +214,8 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/api/payroll_settings.php` | Payroll period configuration |
 | `/api/fetch_business_id.php` | Fetch business ID from Salaxy |
 | `/api/sync_employees_from_salaxy.php` | Sync employees from Salaxy |
+| `/api/admin/country_setting.php` | Get / set country code for holiday detection (company admin) |
+| `/api/admin/mark_holidays.php` | Batch-annotate entries with holiday names (company admin) |
 | `/api/update_language.php` | Update UI language per user |
 | `/api/company_lang.php` | Get company default language |
 | `/api/salaxy_oauth_callback.php` | Exchange Salaxy OAuth2 code for app JWT (super-admin only) |
@@ -340,7 +346,10 @@ npm run lint         # ESLint + Oxlint
 │   ├── sync_employees_from_salaxy.php    # Sync employees from Salaxy
 │   ├── update_language.php               # Update UI language per user
 │   ├── health.php                        # Health check
-│   └── logout.php
+│   ├── logout.php
+│   └── admin/
+│       ├── country_setting.php           # GET / PATCH country_code for holiday detection (company admin)
+│       └── mark_holidays.php             # POST: batch-annotate entries with holiday names (company admin)
 │
 ├── locales/                              # Shared locale files (used by frontend)
 │   ├── en.json                           # English
@@ -393,7 +402,8 @@ npm run lint         # ESLint + Oxlint
 │   │       ├── useTimeEntries.ts         # Employee entry list, rejected count, clarify (hours + km)
 │   │       ├── useLocale.ts              # Watches auth.user.uiLanguage → sets global i18n locale
 │   │       ├── useRefresh.ts             # Singleton refresh tick — cross-component data refresh signal
-│   │       └── useSuperAdmin.ts          # Super-admin company management
+│   │       ├── useSuperAdmin.ts          # Super-admin company management
+│   │       └── useHolidays.ts            # Fetch public holidays from Nager.Date (cached); COUNTRY_NAMES map
 │   └── dist/                             # Production build output (not in git)
 │
 ├── screenshots/
