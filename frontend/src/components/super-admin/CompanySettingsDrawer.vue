@@ -60,10 +60,10 @@ const editPwError   = ref<string | null>(null)
 const editPwSaving  = ref(false)
 
 // ── Features ──────────────────────────────────────────────────────────────────
-const features = reactive<{ time_app_enabled: 0|1; supervisor_ui_enabled: 0|1; approvals_enabled: 0|1 }>({
-  time_app_enabled: 1, supervisor_ui_enabled: 1, approvals_enabled: 0,
+const features = reactive<{ time_app_enabled: 0|1; approvals_enabled: 0|1 }>({
+  time_app_enabled: 1, approvals_enabled: 0,
 })
-const featureSaving = ref<'time_app_enabled' | 'supervisor_ui_enabled' | 'approvals_enabled' | null>(null)
+const featureSaving = ref<'time_app_enabled' | 'approvals_enabled' | null>(null)
 
 // ── Danger zone ───────────────────────────────────────────────────────────────
 const deleteSlugInput = ref('')
@@ -99,9 +99,8 @@ watch(
       generalForm.country_code = c.country_code ?? 'FI'
       generalInitial.value = { name: c.name, slug: c.slug, country_code: c.country_code ?? 'FI' }
 
-      features.time_app_enabled     = (c.time_app_enabled     ? 1 : 0) as 0|1
-      features.supervisor_ui_enabled = (c.supervisor_ui_enabled ? 1 : 0) as 0|1
-      features.approvals_enabled     = (c.approvals_enabled     ? 1 : 0) as 0|1
+      features.time_app_enabled  = (c.time_app_enabled  ? 1 : 0) as 0|1
+      features.approvals_enabled = (c.approvals_enabled ? 1 : 0) as 0|1
 
       salaxyForm.business_id     = c.business_id ?? ''
       salaxyForm.salaxy_account_id = c.salaxy_account_id ?? ''
@@ -344,12 +343,12 @@ async function removeAdmin(admin: Admin) {
 }
 
 // ── Feature toggles ───────────────────────────────────────────────────────────
-function onToggleFeature(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newValue: boolean) {
+function onToggleFeature(feature: 'time_app_enabled' | 'approvals_enabled', newValue: boolean) {
   if (!props.company || featureSaving.value !== null) return
   void applyFeatureToggle(feature, newValue)
 }
 
-async function applyFeatureToggle(feature: 'time_app_enabled' | 'supervisor_ui_enabled', newEnabled: boolean) {
+async function applyFeatureToggle(feature: 'time_app_enabled' | 'approvals_enabled', newEnabled: boolean) {
   if (!props.company) return
   const prev = features[feature]
   const enabled = newEnabled ? 1 as const : 0 as const
@@ -433,16 +432,6 @@ function copyText(key: string, text: string) {
               :consequences-copy="t('super.features.timeApp.consequences', { company: company?.name ?? '' })"
               :disabled="featureSaving !== null"
               @update:model-value="(v: boolean) => onToggleFeature('time_app_enabled', v)"
-            />
-            <FeatureToggleCard
-              :title="t('super.list.col_supervisor_ui')"
-              :description="t('super.drawer.features_supervisor_desc')"
-              :model-value="features.supervisor_ui_enabled === 1"
-              :company-name="company?.name ?? ''"
-              feature-key="supervisor_ui"
-              :consequences-copy="t('super.features.approvals.consequences', { company: company?.name ?? '' })"
-              :disabled="featureSaving !== null"
-              @update:model-value="(v: boolean) => onToggleFeature('supervisor_ui_enabled', v)"
             />
             <FeatureToggleCard
               :title="t('super.drawer.features_approvals_title')"

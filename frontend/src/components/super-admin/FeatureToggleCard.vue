@@ -14,7 +14,7 @@ const props = defineProps<{
   description: string
   modelValue: boolean
   companyName: string
-  featureKey: 'time_app' | 'supervisor_ui'
+  featureKey: 'time_app' | 'supervisor_ui' | 'approvals'
   consequencesCopy: string
   disabled?: boolean
 }>()
