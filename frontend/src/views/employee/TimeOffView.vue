@@ -8,13 +8,16 @@ import type { TimeOffOverview } from '@/composables/useTimeOff'
 import { useAbsences } from '@/composables/useAbsences'
 import type { AbsenceRecord } from '@/composables/useAbsences'
 import { Clock, List, Umbrella, TriangleAlert } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import BottomTabs from '@/components/ui/bottom-tabs/BottomTabs.vue'
 import type { BottomTabItem } from '@/components/ui/bottom-tabs/BottomTabs.vue'
+import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import Overview from './time-off/Overview.vue'
 import Calendar from './time-off/Calendar.vue'
 import Proposals from './time-off/Proposals.vue'
 
 const { t } = useI18n({ useScope: 'global' })
+const router = useRouter()
 const auth = useAuthStore()
 const { isMobile } = useMobileShell()
 const { loading, error, fetchOverview } = useTimeOff()
@@ -55,24 +58,25 @@ const bottomTabItems = computed<BottomTabItem[]>(() => [
   { id: 'rejected', label: t('nav.rejected_tab'), icon: TriangleAlert, to: homeRoute('rejected') },
 ])
 
-const DESKTOP_TAB_BASE = 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors focus-visible:outline-none'
-const DESKTOP_TAB_INACTIVE = `${DESKTOP_TAB_BASE} border-transparent text-muted-foreground hover:text-foreground`
-const DESKTOP_TAB_ACTIVE = `${DESKTOP_TAB_BASE} border-primary text-primary`
+const desktopTabs = computed(() => [
+  { id: 'chat', label: t('nav.log_hours') },
+  { id: 'entries', label: t('nav.my_entries') },
+  { id: 'timeoff', label: t('timeOff.nav_label') },
+  { id: 'rejected', label: t('nav.rejected_tab') },
+])
+
+function setMainTab(id: string) {
+  if (id === 'timeoff') return
+  if (id === 'chat') router.push(homeRoute())
+  else if (id === 'entries') router.push(homeRoute('entries'))
+  else if (id === 'rejected') router.push(homeRoute('rejected'))
+}
 </script>
 
 <template>
   <!-- Desktop tab nav -->
-  <div v-if="!isMobile" class="-mx-4 px-4 border-b mb-6 flex">
-    <RouterLink :to="homeRoute()" :class="DESKTOP_TAB_INACTIVE">
-      {{ t('nav.log_hours') }}
-    </RouterLink>
-    <RouterLink :to="homeRoute('entries')" :class="DESKTOP_TAB_INACTIVE">
-      {{ t('nav.my_entries') }}
-    </RouterLink>
-    <span :class="DESKTOP_TAB_ACTIVE">{{ t('timeOff.nav_label') }}</span>
-    <RouterLink :to="homeRoute('rejected')" :class="DESKTOP_TAB_INACTIVE">
-      {{ t('nav.rejected_tab') }}
-    </RouterLink>
+  <div v-if="!isMobile" class="mb-6">
+    <SegTabs :tabs="desktopTabs" active="timeoff" @change="setMainTab" />
   </div>
 
   <!-- Tab content -->

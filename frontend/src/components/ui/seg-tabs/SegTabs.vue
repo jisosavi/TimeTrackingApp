@@ -27,7 +27,7 @@ const emit = defineEmits<{
       :aria-selected="tab.id === active"
       :data-active="tab.id === active ? '' : undefined"
       :class="[
-        'rounded-[6px] px-3 py-[5px] text-sm font-medium leading-5 whitespace-nowrap transition-all duration-150',
+        'rounded-[6px] px-4 py-2.5 text-sm font-medium leading-5 whitespace-nowrap transition-all duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         tab.id === active
           ? 'bg-background text-foreground shadow-sm'
