@@ -75,6 +75,12 @@ const router = createRouter({
           meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
         },
         {
+          path: ':slug/admin/time-off',
+          name: 'admin-time-off',
+          component: () => import('@/views/admin/TimeOffView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['admin'] },
+        },
+        {
           path: ':slug/admin/payroll-summary',
           name: 'admin-payroll-summary',
           component: () => import('@/views/PayrollView.vue'),
@@ -115,7 +121,7 @@ function loginRouteForPath(to: { name: unknown; params: Record<string, unknown> 
   const slug = to.params.slug as string | undefined
   if (!slug) return { name: 'superadmin-login' }
   const name = to.name as string
-  if (['admin-dashboard', 'admin-payroll', 'admin-payroll-summary', 'admin-payroll-settings'].includes(name)) return { name: 'admin-login', params: { slug } }
+  if (['admin-dashboard', 'admin-payroll', 'admin-payroll-summary', 'admin-payroll-settings', 'admin-time-off'].includes(name)) return { name: 'admin-login', params: { slug } }
   if (name === 'supervisor-home') return { name: 'supervisor-login', params: { slug } }
   return { name: 'employee-login', params: { slug } }
 }

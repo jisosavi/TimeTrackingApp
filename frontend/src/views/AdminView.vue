@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import HolidayRulesPanel from '@/components/admin/HolidayRulesPanel.vue'
+import RecordAbsenceOnBehalf from '@/components/admin/RecordAbsenceOnBehalf.vue'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
 import { useRefresh } from '@/composables/useRefresh'
@@ -266,6 +268,13 @@ async function submitTeam() {
   }
 }
 
+// ── Record absence on behalf ─────────────────────────────────────────────────
+const recordAbsenceForId = ref<number | null>(null)
+
+function openRecordAbsence(employeeId: number) {
+  recordAbsenceForId.value = employeeId
+}
+
 // ── PIN unlock ───────────────────────────────────────────────────────────────
 const unlocking = ref<number | null>(null)
 
@@ -420,6 +429,9 @@ async function submitAddForm() {
             >
               {{ t('admin.pin_unlock') }}
             </Button>
+            <Button variant="outline" size="sm" class="h-7 px-2 text-xs" @click="openRecordAbsence(r.data.id)">
+              {{ t('admin.absence_on_behalf.record_btn') }}
+            </Button>
             <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEditEmp(r.data.id)">
               {{ t('common.edit') }}
             </Button>
@@ -471,6 +483,7 @@ async function submitAddForm() {
             </Button>
             <Button size="sm" variant="ghost" @click="cancelEmpForm">{{ t('common.cancel') }}</Button>
           </div>
+          <HolidayRulesPanel :employee-id="editingEmpId" />
         </div>
       </template>
 
@@ -710,4 +723,12 @@ async function submitAddForm() {
       </SheetContent>
     </Sheet>
   </div>
+
+  <RecordAbsenceOnBehalf
+    v-if="recordAbsenceForId !== null"
+    :employees="employees"
+    :preselected-employee-id="recordAbsenceForId"
+    @close="recordAbsenceForId = null"
+    @saved="recordAbsenceForId = null"
+  />
 </template>
