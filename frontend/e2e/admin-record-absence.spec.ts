@@ -62,7 +62,7 @@ test.describe('Admin – record absence on behalf', () => {
     await saveBtn.click()
 
     // Dialog should close
-    await expect(page.getByText('New absence')).not.toBeVisible()
+    await expect(page.getByText('New absence')).toBeHidden()
   })
 
   test('admin time-off team calendar shows ribbons', async ({ page }) => {

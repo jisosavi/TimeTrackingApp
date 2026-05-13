@@ -155,6 +155,27 @@ export interface LlmEntry {
 }
 
 export interface LlmParsedResponse {
+  type?: 'time_entry'
   action: 'new' | 'update'
   entries: LlmEntry[]
 }
+
+export interface LlmHolidayProposal {
+  type: 'holiday_proposal'
+  startDate: string
+  endDate: string
+  label?: string
+  note?: string
+}
+
+export interface LlmAbsence {
+  type: 'absence'
+  startDate: string
+  endDate: string
+  isPaid: boolean
+  affectsAccrual: boolean
+  reason: 'Kertausharjoitus'
+  note?: string
+}
+
+export type LlmParsedBlock = LlmParsedResponse | LlmHolidayProposal | LlmAbsence

@@ -45,6 +45,36 @@ KILOMETRIKORVAUKSET:
 - Laita kilometrit mileage-kenttään (numero, ei tekstiä)
 - Jos ei km-korvausta, jätä mileage-kenttä pois tai arvoksi 0
 
+LOMAT JA POISSAOLOT:
+Tunnistat myös kaksi uutta tyyppiä tuntikirjauksien lisäksi:
+
+1. LOMA (holiday_proposal): käyttäjä haluaa ilmoittaa lomaa tai vapaata
+   Avainsanat (fi): 'loma', 'lomaa', 'vapaata', 'vuosiloma', 'kesäloma', 'talviloma', 'lomaviikko'
+   Avainsanat (en): 'vacation', 'holiday', 'time off', 'leave', 'annual leave'
+   Poimi: alkupäivä ja loppupäivä (YYYY-MM-DD), mahdollinen nimi (label) ja lisätieto (note)
+   Jos 'viikolla' tai 'next week': ma–pe kyseisellä viikolla
+   Jos vain 'lomaa' ilman päiviä: kysy päivämäärät
+
+2. POISSAOLO (absence): virallinen poissaolo, erityisesti kertausharjoitus
+   Avainsanat (fi): 'kertausharjoitus', 'kertausharjoitukset', 'harjoitus', 'reservin harjoitus'
+   Avainsanat (en): 'reservist training', 'military training', 'reserve training', 'refresher training'
+   Syy on AINA 'Kertausharjoitus' (ainoa tuettu syy v1)
+   isPaid ja affectsAccrual ovat oletuksena true
+   Jos ei päiviä: kysy päivämäärät
+
+ESIMERKKEJÄ (intent-tunnistus, tänään on ${today}):
+- "lomaa 23.6.-4.7." → type:'holiday_proposal', startDate:'2026-06-23', endDate:'2026-07-04'
+- "vacation 23 June to 4 July" → type:'holiday_proposal', startDate:'2026-06-23', endDate:'2026-07-04'
+- "kertausharjoitus 5.-7.5." → type:'absence', startDate:'2026-05-05', endDate:'2026-05-07'
+- "reservist training next Mon-Wed" → type:'absence', startDate:<ensi ma>, endDate:<ensi ke>
+- "vuosilomaa ensi viikolla" → type:'holiday_proposal', startDate:<ensi ma>, endDate:<ensi pe>
+- "take a week off starting 14 July" → type:'holiday_proposal', startDate:'2026-07-14', endDate:'2026-07-18'
+- "kesälomani on 1.-31.7." → type:'holiday_proposal', startDate:'2026-07-01', endDate:'2026-07-31'
+- "kertausharjoitukset 15.-19.9." → type:'absence', startDate:'2026-09-15', endDate:'2026-09-19'
+- "haluaisin lomaa" (ei päiviä) → needs_clarification, kysy milloin
+- "military training" (ei päiviä) → needs_clarification, kysy milloin
+- "lomaa kolme päivää" (ei päiviä) → needs_clarification, kysy milloin
+
 MILLOIN KIRJAUS ON VALMIS:
 Kirjaus on valmis kun:
 - Tuntikirjaus: päivämäärä JA kellonajat (alku+loppu) tiedossa
@@ -81,9 +111,19 @@ TÄRKEÄÄ - action-kenttä:
 - action: 'new' = ensimmäinen kirjaus tai uusi kirjaus
 - action: 'update' = käyttäjä KORJAA tai TÄYDENTÄÄ juuri käsiteltyä kirjausta
 
-JSON-muoto (käytä TARKALLEEN kolme backtick-merkkiä):
+JSON-muoto tuntikirjaukselle (käytä TARKALLEEN kolme backtick-merkkiä):
 \`\`\`json
-{"action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"}]}
+{"type":"time_entry","action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"}]}
+\`\`\`
+
+JSON-muoto loma-ehdotukselle:
+\`\`\`json
+{"type":"holiday_proposal","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","label":"","note":""}
+\`\`\`
+
+JSON-muoto poissaololle:
+\`\`\`json
+{"type":"absence","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","isPaid":true,"affectsAccrual":true,"reason":"Kertausharjoitus","note":""}
 \`\`\`
 `;
 

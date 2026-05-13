@@ -4,11 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useChat } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import type { LlmEntry } from '@/types'
+import PreviewCard from '@/components/employee/PreviewCard.vue'
+import type { LlmParsedBlock } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
 
@@ -20,49 +18,8 @@ const inputText = ref('')
 const chatEl = ref<HTMLElement | null>(null)
 const isListening = ref(false)
 
-// ── Preview state ─────────────────────────────────────────────────────────────
-interface PreviewRow { date: string; hours: string; km: string; project: string; notes: string }
-const previewRows = ref<PreviewRow[]>([])
-
-function toInputDate(raw: string): string {
-  if (!raw) return ''
-  // YYYY-MM-DD already fine for <input type="date">
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  // DD-MM-YYYY or DD.MM.YYYY → YYYY-MM-DD
-  const parts = raw.split(/[-.]/)
-  if (parts.length === 3 && parts[0]!.length === 2) return `${parts[2]}-${parts[1]}-${parts[0]}`
-  return raw
-}
-
-watch(
-  () => pendingPreview.value,
-  (preview) => {
-    previewRows.value = preview
-      ? preview.parsed.entries.map((e) => ({
-          date: toInputDate(e.date ?? ''),
-          hours: e.hours > 0 ? String(e.hours) : '',
-          km: e.mileage > 0 ? String(e.mileage) : '',
-          project: e.project ?? '',
-          notes: e.notes ?? '',
-        }))
-      : []
-  },
-)
-
-async function handleConfirm() {
-  if (!pendingPreview.value) return
-  const merged: LlmEntry[] = pendingPreview.value.parsed.entries.map((orig, i) => {
-    const row = previewRows.value[i]!
-    return {
-      ...orig,
-      date: row.date || orig.date,
-      hours: parseFloat(row.hours) || orig.hours,
-      mileage: row.km !== '' ? parseFloat(row.km) : orig.mileage,
-      project: row.project,
-      notes: row.notes,
-    }
-  })
-  await confirmPreview(merged)
+async function handleConfirm(block: LlmParsedBlock) {
+  await confirmPreview(block)
   emit('entriesSaved')
 }
 
@@ -148,6 +105,9 @@ function formatMessage(text: string) {
           <p v-if="msg.savedCount" class="mt-1.5 text-xs opacity-70 font-medium">
             ✓ {{ t('chat.entries_saved', { count: msg.savedCount }) }}
           </p>
+          <p v-else-if="msg.savedMessage" class="mt-1.5 text-xs opacity-70 font-medium">
+            {{ msg.savedMessage }}
+          </p>
         </div>
         <button
           v-if="pendingPreview && i === pendingPreview.messageIndex && msg.role === 'assistant'"
@@ -165,50 +125,14 @@ function formatMessage(text: string) {
         </div>
       </div>
 
-      <!-- Entry preview card -->
-      <Card v-if="pendingPreview" class="mt-2">
-        <CardHeader class="pb-2">
-          <CardTitle class="text-sm">{{ t('employee.preview_title') }}</CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-4">
-          <div
-            v-for="(row, i) in previewRows"
-            :key="i"
-            class="space-y-2 border-b pb-3 last:border-0 last:pb-0"
-          >
-            <div class="grid grid-cols-2 gap-2">
-              <div class="space-y-1">
-                <Label class="text-xs">{{ t('entries.col_date') }}</Label>
-                <Input v-model="row.date" type="date" class="h-8 text-sm" />
-              </div>
-              <div class="space-y-1">
-                <Label class="text-xs">{{ t('employee.preview_hours_label') }}</Label>
-                <Input v-model="row.hours" type="number" min="0" step="0.5" class="h-8 text-sm" />
-              </div>
-            </div>
-            <div v-if="row.km !== ''" class="space-y-1">
-              <Label class="text-xs">{{ t('employee.preview_km_label') }}</Label>
-              <Input v-model="row.km" type="number" min="0" step="1" class="h-8 text-sm" />
-            </div>
-            <div class="space-y-1">
-              <Label class="text-xs">{{ t('entries.col_project') }}</Label>
-              <Input v-model="row.project" class="h-8 text-sm" />
-            </div>
-            <div class="space-y-1">
-              <Label class="text-xs">{{ t('employee.preview_notes_label') }}</Label>
-              <Input v-model="row.notes" class="h-8 text-sm" />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter class="flex gap-2 border-t-0 bg-transparent pt-2">
-          <Button size="sm" :disabled="loading" @click="handleConfirm">
-            {{ t('employee.preview_confirm') }}
-          </Button>
-          <Button size="sm" variant="ghost" @click="handleReset">
-            {{ t('common.cancel') }}
-          </Button>
-        </CardFooter>
-      </Card>
+      <!-- Entry / holiday / absence preview card -->
+      <PreviewCard
+        v-if="pendingPreview"
+        :parsed="pendingPreview.parsed"
+        :loading="loading"
+        @confirm="handleConfirm"
+        @cancel="handleReset"
+      />
 
     </div>
 

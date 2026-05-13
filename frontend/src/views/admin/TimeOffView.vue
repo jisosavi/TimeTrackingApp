@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
@@ -15,7 +14,6 @@ import type { Employee } from '@/types/index'
 defineOptions({ name: 'AdminTimeOffView' })
 
 const { t } = useI18n({ useScope: 'global' })
-const auth = useAuthStore()
 const { apiFetch } = useApi()
 
 const activeTab = ref('calendar')
