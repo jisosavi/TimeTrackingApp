@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ListChecks, CheckCircle2, XCircle, Users, Search } from 'lucide-vue-next'
+import { ListChecks, CheckCircle2, XCircle, Users, Search, Umbrella, User } from 'lucide-vue-next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Badge } from '@/components/ui/badge'
@@ -11,10 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import BottomTabs from '@/components/ui/bottom-tabs/BottomTabs.vue'
+import type { BottomTabItem } from '@/components/ui/bottom-tabs/BottomTabs.vue'
 import { useApproval } from '@/composables/useApproval'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { useRefresh } from '@/composables/useRefresh'
+import { useMobileShell } from '@/composables/useMobileShell'
 import { fetchHolidays, COUNTRY_NAMES } from '@/composables/useHolidays'
 import type { ReviewEntry, TeamMemberDetail } from '@/types'
 
@@ -23,10 +26,28 @@ const { entries, loading, error, fetchEntries, reviewEntries, deleteEntry } = us
 const auth = useAuthStore()
 const { apiFetch } = useApi()
 const route = useRoute()
+const router = useRouter()
 const { refreshTick } = useRefresh()
+const { isMobile } = useMobileShell()
 watch(refreshTick, fetchEntries)
 
 const isSupervisor = computed(() => auth.user?.type === 'supervisor')
+
+// Mobile tab state
+const MOBILE_TABS = ['approvals', 'team', 'me'] as const
+type MobileTab = (typeof MOBILE_TABS)[number]
+const mobRaw = route.query.mob as string | undefined
+const mobileActiveTab = ref<MobileTab>(
+  MOBILE_TABS.includes(mobRaw as MobileTab) ? (mobRaw as MobileTab) : 'approvals',
+)
+watch(() => route.query.mob, (val) => {
+  const v = val as string
+  if (MOBILE_TABS.includes(v as MobileTab)) mobileActiveTab.value = v as MobileTab
+})
+
+watch(mobileActiveTab, (tab) => {
+  if (tab === 'team') loadTeam()
+})
 const filterEmployeeId = computed(() => route.query.employee ? Number(route.query.employee) : null)
 
 // ── Type filter ──────────────────────────────────────────────────────────────
@@ -317,10 +338,117 @@ function getCfg(status: string) {
   const base = statusConfig[status] ?? { label: status, variant: 'outline' as const }
   return { ...base, label: statusKey[status] ? t(statusKey[status]!) : base.label }
 }
+
+const slug = computed(() => auth.user?.companySlug ?? '')
+
+const timeOffRoute = computed(() => ({
+  name: 'supervisor-time-off' as const,
+  params: { slug: slug.value },
+}))
+
+const bottomTabItems = computed<BottomTabItem[]>(() => [
+  { id: 'team', label: t('nav.team'), icon: Users },
+  { id: 'approvals', label: t('nav.approvals'), icon: ListChecks, badge: needsReviewCards.value.length },
+  { id: 'timeoff', label: t('timeOff.nav_label'), icon: Umbrella, to: timeOffRoute.value },
+  { id: 'me', label: t('nav.me'), icon: User },
+])
+
+function setMobileTab(id: string) {
+  if (id === 'timeoff') return
+  if (MOBILE_TABS.includes(id as MobileTab)) {
+    mobileActiveTab.value = id as MobileTab
+    router.replace({ query: { mob: id } })
+  }
+}
 </script>
 
 <template>
-  <div class="space-y-4">
+  <!-- ── Mobile layout ──────────────────────────────────────────────────────── -->
+  <template v-if="isMobile">
+    <!-- Approvals tab -->
+    <div v-if="mobileActiveTab === 'approvals'" class="space-y-3 pb-28">
+      <div class="space-y-0.5">
+        <p class="text-lg font-bold text-foreground">{{ t('nav.approvals') }}</p>
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+      </div>
+      <div v-if="loading" class="py-8 text-center text-sm text-muted-foreground">{{ t('common.loading') }}</div>
+      <EmptyState
+        v-else-if="visibleNeedsReviewCards.length === 0"
+        :title="t('empty.needs_review')"
+        :body="t('empty.needs_review_body')"
+      >
+        <ListChecks class="size-10" />
+      </EmptyState>
+      <div v-else class="space-y-3">
+        <div
+          v-for="card in visibleNeedsReviewCards"
+          :key="card.key"
+          class="rounded-xl border bg-card p-4 space-y-3"
+        >
+          <div class="flex items-start gap-2">
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-sm text-foreground">{{ teamLastName(card.entry.employee_name) }}<template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template></p>
+              <p class="text-sm text-foreground">{{ formatDate(card.entry.entry_date) }}</p>
+              <p class="text-xs text-muted-foreground">
+                <template v-if="!card.isDual">
+                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ card.entry.hours }}h</span>
+                  <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
+                  <span v-if="card.entry.km > 0"> · {{ card.entry.km }} km</span>
+                </template>
+                <template v-else-if="card.field === 'status'">
+                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ card.entry.hours }}h</span>
+                  <span v-else>{{ card.entry.hours }}h</span>
+                </template>
+                <template v-else>{{ card.entry.km }} km</template>
+              </p>
+              <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic mt-0.5">{{ card.entry.comment }}</p>
+            </div>
+          </div>
+          <div v-if="rejectingId !== card.key" class="flex gap-2">
+            <button type="button" class="flex-1 rounded-xl border border-input py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors" @click="startReject(card.key)">{{ t('approval.reject') }}</button>
+            <button type="button" class="flex-1 rounded-xl bg-indigo-600 text-white py-2.5 text-sm font-semibold hover:bg-indigo-700 transition-colors" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</button>
+          </div>
+          <div v-else class="space-y-2">
+            <textarea v-model="rejectNote" :placeholder="t('approval.rejection_placeholder')" rows="2" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <div class="flex gap-2">
+              <button type="button" :disabled="!rejectNote.trim()" class="flex-1 rounded-xl bg-red-600 text-white py-2.5 text-sm font-semibold disabled:opacity-50 hover:bg-red-700 transition-colors" @click="submitReject(card.key)">{{ t('approval.reject') }}</button>
+              <button type="button" class="rounded-xl border border-input px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors" @click="cancelReject">{{ t('common.cancel') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team tab -->
+    <div v-else-if="mobileActiveTab === 'team'" class="space-y-3 pb-28">
+      <p class="text-lg font-bold text-foreground">{{ t('approval.tab_team') }}</p>
+      <div v-if="teamLoading" class="py-8 text-center text-sm text-muted-foreground">{{ t('common.loading') }}</div>
+      <div v-else class="space-y-2">
+        <Input v-model="teamSearch" :placeholder="t('approval.search_placeholder')" class="h-11 text-sm" />
+        <div v-for="member in sortedFilteredTeamMembers" :key="member.id" class="rounded-xl border px-3 py-3 bg-card">
+          <p class="font-bold text-sm"><span>{{ teamLastName(member.name) }}</span><template v-if="teamFirstNames(member.name)">, {{ teamFirstNames(member.name) }}</template></p>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ [member.email, member.phone].filter(Boolean).join(' · ') || t('approval.no_contact_details') }}</p>
+        </div>
+        <EmptyState v-if="sortedFilteredTeamMembers.length === 0 && teamSearch" :title="t('empty.search')" :body="t('empty.search_body')"><Search class="size-10" /></EmptyState>
+        <EmptyState v-else-if="teamMembers.length === 0" :title="t('empty.team_members')" :body="t('empty.team_members_body')"><Users class="size-10" /></EmptyState>
+      </div>
+    </div>
+
+    <!-- Me tab -->
+    <div v-else class="space-y-3 pb-28">
+      <p class="text-lg font-bold text-foreground">{{ t('nav.me') }}</p>
+      <div class="rounded-xl border bg-card p-4 space-y-1">
+        <p class="font-semibold text-sm text-foreground">{{ auth.user?.name }}</p>
+        <p v-if="auth.user?.companyName" class="text-xs text-muted-foreground">{{ auth.user.companyName }}</p>
+      </div>
+    </div>
+
+    <!-- BottomTabs -->
+    <BottomTabs :items="bottomTabItems" :active="mobileActiveTab" @change="setMobileTab" />
+  </template>
+
+  <!-- ── Desktop layout ─────────────────────────────────────────────────────── -->
+  <div v-else class="space-y-4">
     <div class="space-y-0.5">
       <p v-if="auth.user?.companyName" class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         {{ auth.user.companyName }}
@@ -699,9 +827,9 @@ function getCfg(status: string) {
     </Tabs>
   </div>
 
-  <!-- Sticky bulk action footer -->
+  <!-- Sticky bulk action footer (desktop only) -->
   <div
-    v-if="selectedKeys.size > 0 && activeTab === 'review'"
+    v-if="!isMobile && selectedKeys.size > 0 && activeTab === 'review'"
     class="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm z-20"
   >
     <div class="max-w-4xl mx-auto px-4 py-3">

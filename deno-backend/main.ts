@@ -26,6 +26,11 @@ import syncEmployees from "./routes/sync_employees.ts";
 import exportPayroll from "./routes/export_payroll.ts";
 import fetchBusinessId from "./routes/fetch_business_id.ts";
 import llmProxy from "./routes/llm_proxy.ts";
+import holidayYear from "./routes/holiday_year.ts";
+import holidayProposals from "./routes/holiday_proposals.ts";
+import absences from "./routes/absences.ts";
+import supervisorTimeOff from "./routes/supervisor_time_off.ts";
+import teamCalendar from "./routes/team_calendar.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -80,6 +85,11 @@ app.route("/", syncEmployees);
 app.route("/", exportPayroll);
 app.route("/", fetchBusinessId);
 app.route("/", llmProxy);
+app.route("/", holidayYear);
+app.route("/", holidayProposals);
+app.route("/", absences);
+app.route("/", supervisorTimeOff);
+app.route("/", teamCalendar);
 
 const port = parseInt(Deno.env.get("PORT") ?? "8080");
 console.log(`Starting on port ${port}`);

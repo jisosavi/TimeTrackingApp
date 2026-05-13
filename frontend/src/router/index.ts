@@ -51,6 +51,12 @@ const router = createRouter({
           meta: { requiresAuth: true, allowedTypes: ['employee'] },
         },
         {
+          path: ':slug/home/time-off',
+          name: 'employee-time-off',
+          component: () => import('@/views/employee/TimeOffView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['employee'] },
+        },
+        {
           path: ':slug/admin/dashboard',
           name: 'admin-dashboard',
           component: () => import('@/views/AdminView.vue'),
@@ -60,6 +66,12 @@ const router = createRouter({
           path: ':slug/approval/home',
           name: 'supervisor-home',
           component: () => import('@/views/ManagerView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
+        },
+        {
+          path: ':slug/approval/time-off',
+          name: 'supervisor-time-off',
+          component: () => import('@/views/supervisor/TimeOffView.vue'),
           meta: { requiresAuth: true, allowedTypes: ['supervisor', 'admin'] },
         },
         {

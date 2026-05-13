@@ -236,3 +236,129 @@ export async function exportEmployeeEntries(
 
   return result;
 }
+
+// ─── Holiday & Absence types ───────────────────────────────────────────────
+
+export interface HolidaySeason {
+  start: string;
+  end: string;
+}
+
+export interface HolidayYear {
+  id: string;
+  year: number;
+  startDate: string;
+  endDate: string;
+  accruedDays: number;
+  plannedDays: number;
+  paidDays: number;
+  summerSeason: HolidaySeason;
+  winterSeason: HolidaySeason;
+  accrualRule: string;
+  monthlyAccrual: number;
+}
+
+export interface Absence {
+  id: string;
+  reason: string;  // full Salaxy enum; UI gates to 'Kertausharjoitus' for v1 creation
+  startDate: string;
+  endDate: string;
+  days: number;
+  isPaid: boolean;
+  affectsAccrual: boolean;
+  note?: string | null;
+}
+
+export interface Holiday {
+  id: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  season: "summer" | "winter";
+  note?: string | null;
+}
+
+export interface AbsencePayload {
+  reason: string;
+  startDate: string;
+  endDate: string;
+  days?: number;
+  isPaid?: boolean;
+  affectsAccrual?: boolean;
+  note?: string | null;
+}
+
+export interface HolidayPayload {
+  startDate: string;
+  endDate: string;
+  season: "summer" | "winter";
+  note?: string | null;
+}
+
+// ─── In-memory cache (30 s TTL, keyed by employeeSalaxyId or employeeSalaxyId:year) ───
+
+const CACHE_TTL_MS = 30_000;
+type CacheEntry<T> = { data: T; ts: number };
+const _holidayYearsCache = new Map<string, CacheEntry<HolidayYear[]>>();
+const _absencesCache = new Map<string, CacheEntry<Absence[]>>();
+
+function _invalidateEmployeeCache(employeeSalaxyId: string): void {
+  _holidayYearsCache.delete(employeeSalaxyId);
+  for (const key of _absencesCache.keys()) {
+    if (key.startsWith(`${employeeSalaxyId}:`)) _absencesCache.delete(key);
+  }
+}
+
+// ─── API functions ─────────────────────────────────────────────────────────
+
+export async function getHolidayYears(employeeSalaxyId: string, creds: SalaxyCreds): Promise<HolidayYear[]> {
+  const cached = _holidayYearsCache.get(employeeSalaxyId);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
+
+  const r = await salaxyRequest("GET", `/employees/${employeeSalaxyId}/holidayYears`, null, creds);
+  if (!r.success) throw new Error(`Salaxy getHolidayYears ${r.httpCode}: ${JSON.stringify(r.data)}`);
+
+  const data = (Array.isArray(r.data) ? r.data : []) as HolidayYear[];
+  _holidayYearsCache.set(employeeSalaxyId, { data, ts: Date.now() });
+  return data;
+}
+
+export async function getAbsences(employeeSalaxyId: string, year: number, creds: SalaxyCreds): Promise<Absence[]> {
+  const cacheKey = `${employeeSalaxyId}:${year}`;
+  const cached = _absencesCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
+
+  const r = await salaxyRequest("GET", `/employees/${employeeSalaxyId}/absences?year=${year}`, null, creds);
+  if (!r.success) throw new Error(`Salaxy getAbsences ${r.httpCode}: ${JSON.stringify(r.data)}`);
+
+  const data = (Array.isArray(r.data) ? r.data : []) as Absence[];
+  _absencesCache.set(cacheKey, { data, ts: Date.now() });
+  return data;
+}
+
+export async function createAbsence(employeeSalaxyId: string, payload: AbsencePayload, creds: SalaxyCreds): Promise<Absence> {
+  const r = await salaxyRequest("POST", `/employees/${employeeSalaxyId}/absences`, payload, creds);
+  if (!r.success) throw new Error(`Salaxy createAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  _invalidateEmployeeCache(employeeSalaxyId);
+  return r.data as Absence;
+}
+
+export async function updateAbsence(employeeSalaxyId: string, absenceId: string, payload: Partial<AbsencePayload>, creds: SalaxyCreds): Promise<Absence> {
+  const r = await salaxyRequest("PATCH", `/employees/${employeeSalaxyId}/absences/${absenceId}`, payload, creds);
+  if (!r.success) throw new Error(`Salaxy updateAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  _invalidateEmployeeCache(employeeSalaxyId);
+  return r.data as Absence;
+}
+
+export async function deleteAbsence(employeeSalaxyId: string, absenceId: string, creds: SalaxyCreds): Promise<void> {
+  const r = await salaxyRequest("DELETE", `/employees/${employeeSalaxyId}/absences/${absenceId}`, null, creds);
+  if (!r.success) throw new Error(`Salaxy deleteAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  _invalidateEmployeeCache(employeeSalaxyId);
+}
+
+export async function createHoliday(employeeSalaxyId: string, holidayYearId: string, payload: HolidayPayload, creds: SalaxyCreds): Promise<Holiday> {
+  const r = await salaxyRequest("POST", `/employees/${employeeSalaxyId}/holidayYears/${holidayYearId}/holidays`, payload, creds);
+  if (!r.success) throw new Error(`Salaxy createHoliday ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  _invalidateEmployeeCache(employeeSalaxyId);
+  return r.data as Holiday;
+}
