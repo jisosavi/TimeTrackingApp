@@ -404,7 +404,7 @@ Audit records follow the same two-database split as the rest of the application 
 └─────────────────────┘
 ```
 
-### Failure handling — Option D
+### Failure handling
 
 Audit writes are not allowed to block business operations. If a write to the target database fails, the system degrades gracefully:
 
