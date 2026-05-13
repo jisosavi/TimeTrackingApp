@@ -2,6 +2,7 @@ import { Hono } from "@hono/hono";
 import { requireAdmin } from "../lib/auth.ts";
 import { getCompanyDb, getMasterDb } from "../lib/db.ts";
 import { getCompanyCreds, exportEmployeeEntries, salaxyRequest, type EntryForExport } from "../lib/salaxy.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -271,6 +272,16 @@ app.post("/api/export_payroll.php", requireAdmin, async (c) => {
     const now = new Date().toISOString();
     db.prepare(`UPDATE time_entries SET exported_to_salaxy = 1, exported_at = ? WHERE id IN (${ph})`).run(now, ...exportedIds);
   }
+
+  writeAudit(companyId, {
+    event: "payroll.exported",
+    actorType: "admin",
+    actorId: (admin as Record<string, unknown>).id as number,
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "payroll_export",
+    outcome: errors.length > 0 && totalSent === 0 ? "error" : "ok",
+    after: { date_from: dateFrom, date_to: dateTo, total_sent: totalSent, total_added: totalAdded, errors: errors.length, entry_ids: exportedIds },
+  });
 
   return c.json({
     success: true, total_sent: totalSent, total_added: totalAdded, total_already: totalAlready,

@@ -1,6 +1,7 @@
 import { Hono } from "@hono/hono";
 import { requireEmployee } from "../lib/auth.ts";
 import { getCompanyDb } from "../lib/db.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -27,6 +28,7 @@ app.post("/api/clarify_entry.php", requireEmployee, async (c) => {
 
     db.prepare("UPDATE time_entries SET km_status = 'pending', km_employee_clarification = ? WHERE id = ?")
       .run(clarification, id);
+    writeAudit(emp.company_id as number, { event: "time_entry.km_clarified", actorType: "employee", actorId: emp.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", resourceId: String(id) });
     return c.json({ success: true, action: "km_clarified" });
   }
 
@@ -37,6 +39,7 @@ app.post("/api/clarify_entry.php", requireEmployee, async (c) => {
 
   if (action === "delete") {
     db.prepare("UPDATE time_entries SET status = 'deleted' WHERE id = ?").run(id);
+    writeAudit(emp.company_id as number, { event: "time_entry.deleted", actorType: "employee", actorId: emp.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", resourceId: String(id) });
     return c.json({ success: true, action: "deleted" });
   }
 
@@ -46,6 +49,7 @@ app.post("/api/clarify_entry.php", requireEmployee, async (c) => {
   db.prepare(
     "UPDATE time_entries SET status = 'clarified', employee_clarification = ?, clarification_at = ? WHERE id = ?"
   ).run(clarification, new Date().toISOString(), id);
+  writeAudit(emp.company_id as number, { event: "time_entry.clarified", actorType: "employee", actorId: emp.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", resourceId: String(id) });
   return c.json({ success: true, action: "clarified" });
 });
 

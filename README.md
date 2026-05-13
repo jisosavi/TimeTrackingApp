@@ -340,6 +340,111 @@ npm run lint         # ESLint + Oxlint
 
 ---
 
+## Audit Trail
+
+Every meaningful action in the system — authentication, time entry changes, personnel management, and payroll exports — is recorded in an append-only `audit_log` table. Records are never updated or deleted.
+
+### What is recorded
+
+| Category | Events |
+|---|---|
+| Authentication | `auth.pin.success`, `auth.pin.failure`, `auth.login.success`, `auth.login.failure` |
+| Time entries | `time_entry.created`, `time_entry.approved`, `time_entry.rejected`, `time_entry.deleted`, `time_entry.clarified`, `time_entry.km_clarified` |
+| Personnel | `employee.created`, `employee.updated`, `employee.pin_unlocked`, `supervisor.created`, `supervisor.updated`, `supervisor.deleted`, `supervisor.pin_unlocked` |
+| Payroll | `payroll.exported` |
+| System | `system.audit_failure` (see failure handling below) |
+
+Each record carries: timestamp (UTC), event name, actor type and ID, client IP (from `x-forwarded-for`), resource type and ID, before/after state snapshots for mutations, outcome (`ok` / `error`), and a free-form metadata field.
+
+### Storage layout
+
+Audit records follow the same two-database split as the rest of the application data:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Incoming Request                       │
+│                                                             │
+│  Employee  ──── validate_pin.ts         ───┐                │
+│  Supervisor ─── supervisor_login.ts     ───┤                │
+│  Admin ──────── admin_login.ts          ───┤                │
+│              ── employees.ts            ───┤  Hono route    │
+│              ── supervisors.ts          ───┤  handler       │
+│              ── time_entries.ts         ───┤                │
+│              ── review_entries.ts       ───┤                │
+│              ── clarify_entry.ts        ───┤                │
+│              ── export_payroll.ts       ───┤                │
+│  Super-admin ── admin_login.ts (no slug)───┘                │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          │  1. Business logic + DB write
+                          │  2. writeAudit() called
+                          ▼
+               ┌──────────────────────┐
+               │   lib/audit.ts       │
+               │   writeAudit(        │
+               │     companyId,       │
+               │     event            │
+               │   )                  │
+               └──────────┬───────────┘
+                          │
+           ┌──────────────┴────────────────┐
+           │ companyId > 0                 │ companyId = 0
+           ▼                               ▼
+┌─────────────────────┐       ┌────────────────────────────┐
+│ data/companies/     │       │ data/master.sqlite         │
+│ {id}.sqlite         │       │                            │
+│ ┌─────────────────┐ │       │ ┌────────────────────────┐ │
+│ │   audit_log     │ │       │ │       audit_log        │ │
+│ │                 │ │       │ │                        │ │
+│ │ time entries    │ │       │ │ superadmin login       │ │
+│ │ auth events     │ │       │ │ company management     │ │
+│ │ employee CRUD   │ │       │ │ system.audit_failure   │ │
+│ │ payroll exports │ │       │ └────────────────────────┘ │
+│ └─────────────────┘ │       └────────────────────────────┘
+└─────────────────────┘
+```
+
+### Failure handling — Option D
+
+Audit writes are not allowed to block business operations. If a write to the target database fails, the system degrades gracefully:
+
+```
+  writeAudit() called
+        │
+        ▼
+  try: INSERT into target DB ──── ok ──► done
+        │
+        │ fail
+        ▼
+  console.error (captured by Railway log drain)
+        │
+        ▼
+  try: INSERT system.audit_failure → master.sqlite
+       { originalEvent, companyId, error message }
+        │
+        │  ◄── gap is now detectable even if primary write failed
+        ▼
+  business operation completes normally (HTTP response sent)
+```
+
+This means:
+- A broken audit table never prevents employees from logging hours or admins from exporting payroll.
+- Any failure produces a `system.audit_failure` row in the master DB, creating a detectable gap — you know *that* a record was missed and approximately when.
+- If even the master DB is unavailable, the `console.error` remains in Railway's log drain as a last resort.
+
+### Compliance alignment
+
+| Standard | Requirement | How it is met |
+|---|---|---|
+| NIST SP 800-53 AU-3 | Who, what, when, where, outcome | All five fields on every record |
+| NIST AU-9 | Logs protected from modification | No route exposes UPDATE/DELETE on `audit_log` |
+| NIST AU-11 | Retention policy | Records kept indefinitely (append-only) |
+| ISO 27001 A.12.4.1 | Log user activities and exceptions | Auth, mutation, and export events all captured |
+| ISO 27001 A.12.4.4 | Clock synchronisation | Deno uses system NTP; timestamps stored as UTC ISO 8601 |
+| ITIL Change Management | Before/after state for changes | `before_json` / `after_json` on all mutation events |
+
+---
+
 ## License
 
 Creative Commons Attribution-NonCommercial-NoDerivs (CC-BY-NC-ND)

@@ -6,6 +6,7 @@ import {
   recordPinFailure,
   recordPinSuccess,
 } from "../lib/pin_rate_limit.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
@@ -56,6 +57,7 @@ app.post("/validate_pin.php", async (c) => {
 
     if (employee) {
       if (employee.pin_locked === 1) {
+        writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorId: employee.id, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id), outcome: "error", meta: { reason: "pin_locked" } });
         return c.json({ valid: false, lockout: "locked" }, 403);
       }
 
@@ -73,6 +75,7 @@ app.post("/validate_pin.php", async (c) => {
       const compLang = compData?.ui_language ?? "en";
       const effectiveLang = empData?.ui_language ?? compLang;
       const token = await generateToken(employee.id, "employee", companyId);
+      writeAudit(companyId, { event: "auth.pin.success", actorType: "employee", actorId: employee.id, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id) });
 
       return c.json({
         valid: true,
@@ -88,10 +91,12 @@ app.post("/validate_pin.php", async (c) => {
       if (deviceId) {
         const rl = recordPinFailure(companyDb, deviceId, companyId);
         if ("error" in rl) {
+          writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { reason: "rate_limited" } });
           return c.json({ valid: false, lockout: rl.error, ...rl }, 429);
         }
         result["attempts_remaining"] = rl.attempts_remaining;
       }
+      writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { reason: "wrong_pin" } });
       return c.json(result, 401);
     }
   } catch (e) {

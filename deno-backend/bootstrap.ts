@@ -84,6 +84,23 @@ export function initMasterDb(db: Database): void {
   const saCols = cols(db, "super_admins");
   if (!saCols.includes("salaxy_account_id"))
     db.exec("ALTER TABLE super_admins ADD COLUMN salaxy_account_id TEXT");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts          TEXT    NOT NULL,
+      event       TEXT    NOT NULL,
+      actor_type  TEXT    NOT NULL,
+      actor_id    INTEGER,
+      actor_ip    TEXT,
+      resource    TEXT,
+      resource_id TEXT,
+      before_json TEXT,
+      after_json  TEXT,
+      outcome     TEXT    NOT NULL DEFAULT 'ok',
+      meta_json   TEXT
+    )
+  `);
 }
 
 export function initCompanyDb(db: Database): void {
@@ -234,4 +251,21 @@ export function initCompanyDb(db: Database): void {
     db.exec("ALTER TABLE time_entries ADD COLUMN km_rejection_note TEXT");
   if (!teCols.includes("km_employee_clarification"))
     db.exec("ALTER TABLE time_entries ADD COLUMN km_employee_clarification TEXT");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts          TEXT    NOT NULL,
+      event       TEXT    NOT NULL,
+      actor_type  TEXT    NOT NULL,
+      actor_id    INTEGER,
+      actor_ip    TEXT,
+      resource    TEXT,
+      resource_id TEXT,
+      before_json TEXT,
+      after_json  TEXT,
+      outcome     TEXT    NOT NULL DEFAULT 'ok',
+      meta_json   TEXT
+    )
+  `);
 }

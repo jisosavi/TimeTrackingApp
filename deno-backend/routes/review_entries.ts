@@ -1,6 +1,7 @@
 import { Hono } from "@hono/hono";
 import { requireAdminOrSupervisor } from "../lib/auth.ts";
 import { getCompanyDb } from "../lib/db.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -41,6 +42,7 @@ app.post("/api/review_entries.php", requireAdminOrSupervisor, async (c) => {
 
   if (action === "delete") {
     db.prepare(`UPDATE time_entries SET status = 'deleted' WHERE id IN (${placeholders})`).run(...ids);
+    writeAudit(companyId, { event: "time_entry.deleted", actorType: userType as "admin" | "supervisor", actorId: reviewerId, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length } });
     return c.json({ success: true, updated: ids.length, status: "deleted" });
   }
 
@@ -55,6 +57,9 @@ app.post("/api/review_entries.php", requireAdminOrSupervisor, async (c) => {
       `UPDATE time_entries SET status = ?, reviewed_by_type = ?, reviewed_by_id = ?, reviewed_at = ?, rejection_note = ? WHERE id IN (${placeholders})`
     ).run(newStatus, userType, reviewerId, now, action === "reject" ? rejectionNote : null, ...ids);
   }
+
+  const event = action === "approve" ? "time_entry.approved" : "time_entry.rejected";
+  writeAudit(companyId, { event, actorType: userType as "admin" | "supervisor", actorId: reviewerId, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length, field, status: newStatus, rejection_note: action === "reject" ? rejectionNote : undefined } });
 
   return c.json({ success: true, updated: ids.length, status: newStatus });
 });

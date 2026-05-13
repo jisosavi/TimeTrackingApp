@@ -3,6 +3,7 @@ import { requireAdmin } from "../lib/auth.ts";
 import { getCompanyDb } from "../lib/db.ts";
 import { hashPin } from "../lib/jwt.ts";
 import { clearPinRateLimitForUser } from "../lib/pin_rate_limit.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -39,6 +40,7 @@ app.post("/api/supervisors.php", requireAdmin, async (c) => {
     if (!id) return c.json({ success: false, error: "id required" }, 400);
     db.prepare("UPDATE supervisors SET pin_locked = 0 WHERE id = ? AND company_id = ?").run(id, admin.company_id as number);
     clearPinRateLimitForUser(db, admin.company_id as number, id, "supervisor");
+    writeAudit(admin.company_id as number, { event: "supervisor.pin_unlocked", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(id) });
     return c.json({ success: true });
   }
 
@@ -76,6 +78,7 @@ app.post("/api/supervisors.php", requireAdmin, async (c) => {
 
   let savedId = id;
   if (id) {
+    const before = db.prepare("SELECT first_name, last_name, email, phone, active, salaxy_id, ui_language FROM supervisors WHERE id = ? AND company_id = ?").get(id, admin.company_id as number);
     if (!pinHash) {
       const cur = db.prepare("SELECT pin FROM supervisors WHERE id = ? AND company_id = ?")
         .get(id, admin.company_id as number) as { pin: string } | undefined;
@@ -85,11 +88,14 @@ app.post("/api/supervisors.php", requireAdmin, async (c) => {
     db.prepare(
       `UPDATE supervisors SET first_name=?, last_name=?, email=?, phone=?, pin=?, ssn=?, salaxy_id=?, active=?, ui_language=${uiLangExpr} WHERE id=? AND company_id=?`
     ).run(firstName, lastName, email, phone, pinHash, ssn, salaxyId, active, uiLanguage, id, admin.company_id as number);
+    const after = db.prepare("SELECT first_name, last_name, email, phone, active, salaxy_id, ui_language FROM supervisors WHERE id = ? AND company_id = ?").get(id, admin.company_id as number);
+    writeAudit(admin.company_id as number, { event: "supervisor.updated", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(id), before, after });
   } else {
     const result = db.prepare(
       "INSERT INTO supervisors (company_id, first_name, last_name, email, phone, pin, ssn, salaxy_id, active, ui_language) VALUES (?,?,?,?,?,?,?,?,?,?)"
     ).run(admin.company_id as number, firstName, lastName, email, phone, pinHash!, ssn, salaxyId, active, uiLanguage);
     savedId = Number(result.lastInsertRowid);
+    writeAudit(admin.company_id as number, { event: "supervisor.created", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(savedId), after: { first_name: firstName, last_name: lastName, email, active } });
   }
 
   const supervisor = db.prepare(
@@ -104,8 +110,10 @@ app.delete("/api/supervisors.php", requireAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const id = body.id ? Number(body.id) : null;
   if (!id) return c.json({ success: false, error: "id vaaditaan" }, 400);
+  const before = db.prepare("SELECT first_name, last_name, email FROM supervisors WHERE id = ? AND company_id = ?").get(id, admin.company_id as number);
   db.prepare("DELETE FROM supervisor_employees WHERE supervisor_id = ?").run(id);
   db.prepare("DELETE FROM supervisors WHERE id = ? AND company_id = ?").run(id, admin.company_id as number);
+  writeAudit(admin.company_id as number, { event: "supervisor.deleted", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(id), before });
   return c.json({ success: true });
 });
 

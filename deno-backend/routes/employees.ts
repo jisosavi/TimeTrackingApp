@@ -3,6 +3,7 @@ import { requireAdmin } from "../lib/auth.ts";
 import { getCompanyDb } from "../lib/db.ts";
 import { hashPin } from "../lib/jwt.ts";
 import { clearPinRateLimitForUser } from "../lib/pin_rate_limit.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -46,6 +47,7 @@ app.post("/api/employees.php", requireAdmin, async (c) => {
     if (!id) return c.json({ success: false, error: "id required" }, 400);
     db.prepare("UPDATE employees SET pin_locked = 0 WHERE id = ? AND company_id = ?").run(id, admin.company_id as number);
     clearPinRateLimitForUser(db, admin.company_id as number, id, "employee");
+    writeAudit(admin.company_id as number, { event: "employee.pin_unlocked", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(id) });
     return c.json({ success: true });
   }
 
@@ -85,15 +87,19 @@ app.post("/api/employees.php", requireAdmin, async (c) => {
 
   let savedId = id;
   if (id) {
+    const before = db.prepare("SELECT name, active, salaxy_employment_id, email, phone, birth_year, ui_language FROM employees WHERE id = ? AND company_id = ?").get(id, admin.company_id as number);
     const uiLangExpr = langProvided ? "?" : "COALESCE(?, ui_language)";
     db.prepare(
       `UPDATE employees SET name=?, pin=?, ssn=?, salaxy_employment_id=?, active=?, ui_language=${uiLangExpr}, email=?, phone=?, birth_year=? WHERE id=? AND company_id=?`
     ).run(name, pinHash, ssn, employmentId, active, uiLanguage, email, phone, birthYear, id, admin.company_id as number);
+    const after = db.prepare("SELECT name, active, salaxy_employment_id, email, phone, birth_year, ui_language FROM employees WHERE id = ? AND company_id = ?").get(id, admin.company_id as number);
+    writeAudit(admin.company_id as number, { event: "employee.updated", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(id), before, after });
   } else {
     const result = db.prepare(
       "INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active, ui_language, email, phone, birth_year) VALUES (?,?,?,?,?,'employee',?,?,?,?,?)"
     ).run(admin.company_id as number, pinHash, name, ssn, employmentId, active, uiLanguage, email, phone, birthYear);
     savedId = Number(result.lastInsertRowid);
+    writeAudit(admin.company_id as number, { event: "employee.created", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(savedId), after: { name, active, salaxy_employment_id: employmentId } });
   }
 
   const employee = db.prepare(

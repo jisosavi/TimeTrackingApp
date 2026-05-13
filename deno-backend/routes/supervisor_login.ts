@@ -6,6 +6,7 @@ import {
   recordPinFailure,
   recordPinSuccess,
 } from "../lib/pin_rate_limit.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
@@ -60,14 +61,17 @@ app.post("/api/supervisor_login.php", async (c) => {
     if (deviceId) {
       const rl = recordPinFailure(companyDb, deviceId, companyId);
       if ("error" in rl) {
+        writeAudit(companyId, { event: "auth.pin.failure", actorType: "supervisor", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { reason: "rate_limited" } });
         return c.json({ success: false, lockout: rl.error, ...rl }, 429);
       }
       result["attempts_remaining"] = rl.attempts_remaining;
     }
+    writeAudit(companyId, { event: "auth.pin.failure", actorType: "supervisor", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { reason: "wrong_pin" } });
     return c.json(result, 401);
   }
 
   if (supervisor.pin_locked === 1) {
+    writeAudit(companyId, { event: "auth.pin.failure", actorType: "supervisor", actorId: supervisor.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(supervisor.id), outcome: "error", meta: { reason: "pin_locked" } });
     return c.json({ success: false, lockout: "locked" }, 403);
   }
 
@@ -79,6 +83,7 @@ app.post("/api/supervisor_login.php", async (c) => {
   const supLang = (supervisor.ui_language as string | null) ?? null;
   const effectiveLang = supLang ?? compLang;
   const token = await generateToken(supervisor.id as number, "supervisor", companyId);
+  writeAudit(companyId, { event: "auth.pin.success", actorType: "supervisor", actorId: supervisor.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "supervisor", resourceId: String(supervisor.id) });
 
   return c.json({
     success: true,

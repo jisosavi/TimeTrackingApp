@@ -2,6 +2,7 @@ import { Hono } from "@hono/hono";
 import bcrypt from "bcryptjs";
 import { getCompanyDb, getMasterDb } from "../lib/db.ts";
 import { generateToken } from "../lib/jwt.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
@@ -24,10 +25,12 @@ app.post("/api/admin_login.php", async (c) => {
         .get(email) as Record<string, unknown> | undefined;
 
       if (!admin || !(await bcrypt.compare(password, admin.password_hash as string))) {
+        writeAudit(0, { event: "auth.login.failure", actorType: "superadmin", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { email } });
         return c.json({ success: false, error: "Invalid credentials" }, 401);
       }
 
       const token = await generateToken(admin.id as number, "superadmin", 0);
+      writeAudit(0, { event: "auth.login.success", actorType: "superadmin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "super_admin", resourceId: String(admin.id) });
       return c.json({
         success: true,
         token,
@@ -62,6 +65,7 @@ app.post("/api/admin_login.php", async (c) => {
         .get(email) as Record<string, unknown> | undefined;
 
       if (!admin || !(await bcrypt.compare(password, admin.password_hash as string))) {
+        writeAudit(companyId, { event: "auth.login.failure", actorType: "admin", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { email } });
         return c.json({ success: false, error: "Invalid credentials" }, 401);
       }
 
@@ -69,6 +73,7 @@ app.post("/api/admin_login.php", async (c) => {
       const adminLang = (admin.ui_language as string | null) ?? null;
       const effectiveLang = adminLang ?? compLang ?? "en";
       const token = await generateToken(admin.id as number, "admin", companyId);
+      writeAudit(companyId, { event: "auth.login.success", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "company_admin", resourceId: String(admin.id) });
 
       return c.json({
         success: true,

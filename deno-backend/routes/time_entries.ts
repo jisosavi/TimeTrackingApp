@@ -1,6 +1,7 @@
 import { Hono } from "@hono/hono";
 import { getCompanyDb } from "../lib/db.ts";
 import { verifyToken } from "../lib/jwt.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
@@ -38,6 +39,7 @@ app.post("/api/time_entries.php", async (c) => {
     );
     ids.push(Number(result.lastInsertRowid));
   }
+  writeAudit(emp.company_id as number, { event: "time_entry.created", actorType: "employee", actorId: emp.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length } });
   return c.json({ success: true, saved: ids.length, ids });
 });
 
@@ -130,6 +132,7 @@ app.delete("/api/time_entries.php", async (c) => {
   if (!entry) return c.json({ success: false, error: "Kirjausta ei löydy" }, 404);
 
   db.prepare("UPDATE time_entries SET status = 'deleted' WHERE id = ?").run(id);
+  writeAudit(claims["company_id"] as number, { event: "time_entry.deleted", actorType: "employee", actorId: claims["user_id"] as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", resourceId: String(id) });
   return c.json({ success: true });
 });
 
