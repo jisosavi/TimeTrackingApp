@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useApi } from '@/composables/useApi'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 defineOptions({ name: 'SupervisorDay' })
 
@@ -250,9 +251,10 @@ function shortDate(iso: string): string {
       </div>
 
       <!-- Empty state -->
-      <div v-if="data.offToday.length === 0 && data.inToday.length === 0" class="py-8 text-center text-sm text-muted-foreground">
-        {{ t('supervisor.day.no_data') }}
-      </div>
+      <EmptyState
+        v-if="data.offToday.length === 0 && data.inToday.length === 0"
+        :title="t('supervisor.day.everyone_in')"
+      />
     </template>
   </div>
 </template>

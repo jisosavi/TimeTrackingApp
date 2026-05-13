@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
 import AbsenceSheet from '@/components/time-off/AbsenceSheet.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { Proposal } from '@/composables/useTimeOff'
 import type { AbsenceRecord } from '@/composables/useAbsences'
 
@@ -159,6 +160,11 @@ function daysLabel(row: Row): string {
   return t('proposals.work_days', { count: row.days })
 }
 
+function statusPillLabel(row: Row): string {
+  const status = row.status === 'approved' ? t('timeOff.status.approved') : t('timeOff.status.pending')
+  return `${status}: ${row.label}, ${fmtRange(row.startDate, row.endDate)}`
+}
+
 function navigateBack() {
   router.push({ name: 'employee-home', params: { slug: auth.user?.companySlug } })
 }
@@ -246,9 +252,12 @@ function navigateBack() {
   </div>
 
   <!-- Empty state -->
-  <div v-else-if="filteredRows.length === 0" class="py-12 text-center text-sm text-muted-foreground">
-    {{ t('proposals.empty') }}
-  </div>
+  <EmptyState
+    v-else-if="filteredRows.length === 0"
+    :title="filter !== 'all' ? t('proposals.empty_filter') : t('proposals.empty')"
+    :action-label="filter !== 'all' ? t('proposals.empty_filter_action') : undefined"
+    :on-action="filter !== 'all' ? () => { filter = 'all' } : undefined"
+  />
 
   <!-- List -->
   <div v-else class="divide-y pb-20">
@@ -264,6 +273,7 @@ function navigateBack() {
           <p class="text-xs text-muted-foreground mt-0.5">{{ subLine(row) }}</p>
         </div>
         <span
+          :aria-label="statusPillLabel(row)"
           :class="[
             'flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border mt-0.5',
             row.status === 'approved'

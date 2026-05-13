@@ -9,6 +9,7 @@ import { useMobileShell } from '@/composables/useMobileShell'
 import type { TimeOffOverview } from '@/composables/useTimeOff'
 import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const props = defineProps<{
   overview: TimeOffOverview | null
@@ -94,6 +95,16 @@ function decidedLabel(item: NonNullable<TimeOffOverview['upcoming']>[number]) {
   return t('timeOff.approved_on', {
     date: fmtDate(item.decidedAt, { day: 'numeric', month: 'short' }),
   })
+}
+
+function statusPillLabel(item: NonNullable<TimeOffOverview['upcoming']>[number]): string {
+  const status =
+    item.status === 'approved'
+      ? t('timeOff.status.approved')
+      : item.status === 'rejected'
+      ? t('timeOff.status.rejected')
+      : t('timeOff.status.pending')
+  return `${status}: ${item.label}, ${dateRange(item.startDate, item.endDate)}`
 }
 
 function navigateBack() {
@@ -187,9 +198,12 @@ function navigateBack() {
           {{ t('timeOff.upcoming') }}
         </p>
 
-        <div v-if="!overview?.upcoming.length" class="py-6 text-center text-sm text-muted-foreground">
-          {{ t('timeOff.no_upcoming') }}
-        </div>
+        <EmptyState
+          v-if="!overview?.upcoming.length"
+          :title="t('timeOff.empty_upcoming_title')"
+          :action-label="t('timeOff.empty_upcoming_cta')"
+          :on-action="() => emit('update:activeSegTab', 'calendar')"
+        />
 
         <div v-else class="space-y-2 mb-4">
           <div
@@ -226,6 +240,7 @@ function navigateBack() {
 
             <!-- Status pill -->
             <span
+              :aria-label="statusPillLabel(item)"
               :class="[
                 'flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border',
                 item.status === 'approved'

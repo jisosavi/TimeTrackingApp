@@ -156,6 +156,7 @@ function onAbsenceSaved() {
       v-else-if="activeTab === 'pending'"
       :proposals="proposals"
       :loading="loadingProposals"
+      :show-as-table="true"
       @reviewed="fetchProposals"
     />
     <div v-else class="py-16 text-center text-sm text-muted-foreground">

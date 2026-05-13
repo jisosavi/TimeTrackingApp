@@ -26,12 +26,15 @@ const emit = defineEmits<{
     class="fixed bottom-0 inset-x-0 z-40 flex w-full border-t bg-background"
     style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     aria-label="Main navigation"
+    role="tablist"
   >
     <component
       :is="item.to ? RouterLink : 'button'"
       v-for="item in items"
       :key="item.id"
       v-bind="item.to ? { to: item.to } : { type: 'button' }"
+      role="tab"
+      :aria-selected="item.id === active"
       :aria-current="item.id === active ? 'page' : undefined"
       :data-active="item.id === active ? '' : undefined"
       class="flex flex-1 flex-col items-center justify-center min-h-[44px] gap-[3px] py-1 text-inherit no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"

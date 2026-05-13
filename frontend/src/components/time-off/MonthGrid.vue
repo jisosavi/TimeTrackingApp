@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 
 export type DayState = 'h-app' | 'p' | 'a-paid' | 'a-unpaid'
 
@@ -34,6 +34,29 @@ const cells = computed((): GridCell[] => {
   return out
 })
 
+const gridEl = ref<HTMLElement | null>(null)
+const focusedDay = ref(1)
+
+function focusDay(day: number) {
+  focusedDay.value = day
+  nextTick(() => {
+    gridEl.value?.querySelector<HTMLButtonElement>(`[data-day="${day}"]`)?.focus()
+  })
+}
+
+function onKeydown(e: KeyboardEvent, day: number) {
+  const n = daysInMonth.value
+  const delta: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 7, ArrowUp: -7 }
+  if (delta[e.key] !== undefined) {
+    e.preventDefault()
+    const next = Math.min(n, Math.max(1, day + delta[e.key]!))
+    focusDay(next)
+  } else if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault()
+    emit('tap', day)
+  }
+}
+
 function cellClass(cell: GridCell): string {
   const d = cell.day!
   const state = props.data[d]
@@ -62,14 +85,18 @@ function cellClass(cell: GridCell): string {
       </div>
     </div>
     <!-- Day grid -->
-    <div class="grid grid-cols-7 gap-[6px]">
+    <div ref="gridEl" class="grid grid-cols-7 gap-[6px]">
       <template v-for="cell in cells" :key="cell.day ?? `b${cell.idx}`">
         <div v-if="cell.day === null" class="w-11 h-11" />
         <button
           v-else
           type="button"
+          :data-day="cell.day"
+          :tabindex="cell.day === focusedDay ? 0 : -1"
           :class="cellClass(cell)"
           @click="emit('tap', cell.day)"
+          @keydown="onKeydown($event, cell.day)"
+          @focus="focusedDay = cell.day"
         >
           {{ cell.day }}
         </button>
