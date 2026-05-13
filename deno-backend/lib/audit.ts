@@ -3,8 +3,30 @@ import { getCompanyDb, getMasterDb } from "./db.ts";
 
 export type ActorType = "employee" | "supervisor" | "admin" | "superadmin" | "system";
 
+export type AuditEventName =
+  // auth
+  | "auth.pin.success" | "auth.pin.failure"
+  | "auth.login.success" | "auth.login.failure"
+  // time entries
+  | "time_entry.created" | "time_entry.approved" | "time_entry.rejected"
+  | "time_entry.deleted" | "time_entry.clarified" | "time_entry.km_clarified"
+  // personnel
+  | "employee.created" | "employee.updated" | "employee.pin_unlocked"
+  | "supervisor.created" | "supervisor.updated" | "supervisor.deleted" | "supervisor.pin_unlocked"
+  // payroll
+  | "payroll.exported"
+  // holiday proposals
+  | "holiday_proposal.created" | "holiday_proposal.approved" | "holiday_proposal.rejected"
+  | "holiday_proposal.clarified" | "holiday_proposal.withdrawn"
+  // absences
+  | "absence.created" | "absence.approved" | "absence.rejected" | "absence.deleted"
+  // salaxy sync
+  | "salaxy.holiday.synced" | "salaxy.absence.synced"
+  // system
+  | "system.audit_failure";
+
 export interface AuditEvent {
-  event: string;
+  event: AuditEventName;
   actorType: ActorType;
   actorId?: number | null;
   actorIp?: string | null;

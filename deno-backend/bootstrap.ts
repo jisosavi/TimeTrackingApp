@@ -268,4 +268,48 @@ export function initCompanyDb(db: Database): void {
       meta_json   TEXT
     )
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS holiday_proposals (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id       INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+      start_date        TEXT    NOT NULL,
+      end_date          TEXT    NOT NULL,
+      work_days         INTEGER NOT NULL,
+      label             TEXT,
+      note              TEXT,
+      source            TEXT    NOT NULL,
+      status            TEXT    NOT NULL DEFAULT 'pending',
+      decided_by        INTEGER REFERENCES supervisors(id),
+      decided_at        TEXT,
+      decision_note     TEXT,
+      salaxy_holiday_id TEXT,
+      created_at        TEXT    NOT NULL,
+      updated_at        TEXT    NOT NULL
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_proposals_status_emp ON holiday_proposals(status, employee_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_proposals_dates ON holiday_proposals(start_date, end_date)`);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS absence_records (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id       INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+      salaxy_absence_id TEXT,
+      reason            TEXT    NOT NULL,
+      start_date        TEXT    NOT NULL,
+      end_date          TEXT    NOT NULL,
+      days              INTEGER NOT NULL,
+      is_paid           INTEGER NOT NULL DEFAULT 1,
+      affects_accrual   INTEGER NOT NULL DEFAULT 1,
+      status            TEXT    NOT NULL DEFAULT 'pending',
+      note              TEXT,
+      decided_by        INTEGER REFERENCES supervisors(id),
+      decided_at        TEXT,
+      decision_note     TEXT,
+      created_at        TEXT    NOT NULL,
+      updated_at        TEXT    NOT NULL
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_absences_status_emp ON absence_records(status, employee_id)`);
 }
