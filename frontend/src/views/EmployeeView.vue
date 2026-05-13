@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Clock, List, Umbrella, TriangleAlert } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/badge'
 import { useTimeEntries } from '@/composables/useTimeEntries'
 import { useRefresh } from '@/composables/useRefresh'
 import { useMobileShell } from '@/composables/useMobileShell'
@@ -11,12 +10,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import BottomTabs from '@/components/ui/bottom-tabs/BottomTabs.vue'
 import type { BottomTabItem } from '@/components/ui/bottom-tabs/BottomTabs.vue'
+import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import ChatPanel from '@/components/employee/ChatPanel.vue'
 import EntryList from '@/components/employee/EntryList.vue'
 import RejectedList from '@/components/employee/RejectedList.vue'
 
 const { t } = useI18n({ useScope: 'global' })
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const { rejectedCount, fetchEntries } = useTimeEntries()
 const { refreshTick } = useRefresh()
@@ -56,7 +57,7 @@ onMounted(() => { fetchEntries(); fetchRejectedOtherCounts() })
 watch(refreshTick, () => { fetchEntries(); fetchRejectedOtherCounts() })
 
 function setTab(id: string) {
-  if (id === 'timeoff') return
+  if (id === 'timeoff') { router.push(timeOffRoute.value); return }
   if (VALID_TABS.includes(id as TabId)) activeTab.value = id as TabId
 }
 
@@ -82,36 +83,23 @@ const bottomTabItems = computed<BottomTabItem[]>(() => [
   { id: 'rejected', label: t('nav.rejected_tab'), icon: TriangleAlert, badge: rejectedCount.value + rejectedOtherCount.value },
 ])
 
-const DESKTOP_TAB_BASE = 'inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors focus-visible:outline-none'
-
-function desktopTabClass(id: string) {
-  return activeTab.value === id
-    ? `${DESKTOP_TAB_BASE} border-primary text-primary`
-    : `${DESKTOP_TAB_BASE} border-transparent text-muted-foreground hover:text-foreground`
-}
+const desktopTabs = computed(() => [
+  { id: 'chat', label: t('nav.log_hours') },
+  { id: 'entries', label: t('nav.my_entries') },
+  { id: 'timeoff', label: t('timeOff.nav_label') },
+  {
+    id: 'rejected',
+    label: rejectedCount.value + rejectedOtherCount.value > 0
+      ? `${t('nav.rejected_tab')} (${rejectedCount.value + rejectedOtherCount.value})`
+      : t('nav.rejected_tab'),
+  },
+])
 </script>
 
 <template>
   <!-- Desktop tab nav -->
-  <div v-if="!isMobile" class="-mx-4 px-4 border-b mb-4 flex">
-    <button :class="desktopTabClass('chat')" @click="setTab('chat')">
-      {{ t('nav.log_hours') }}
-    </button>
-    <button :class="desktopTabClass('entries')" @click="setTab('entries')">
-      {{ t('nav.my_entries') }}
-    </button>
-    <RouterLink
-      :to="timeOffRoute"
-      :class="`${DESKTOP_TAB_BASE} border-transparent text-muted-foreground hover:text-foreground`"
-    >
-      {{ t('timeOff.nav_label') }}
-    </RouterLink>
-    <button :class="desktopTabClass('rejected')" @click="setTab('rejected')">
-      {{ t('nav.rejected_tab') }}
-      <Badge v-if="rejectedCount + rejectedOtherCount > 0" variant="destructive" class="h-4 min-w-4 px-1 text-[10px]">
-        {{ rejectedCount + rejectedOtherCount }}
-      </Badge>
-    </button>
+  <div v-if="!isMobile" class="mb-4">
+    <SegTabs :tabs="desktopTabs" :active="activeTab" @change="setTab" />
   </div>
 
   <!-- Tab content -->
