@@ -9,7 +9,7 @@ import type { AbsenceRecord } from '@/composables/useAbsences'
 import EntryCard from '@/components/employee/EntryCard.vue'
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get } = useApi()
 const { entries, clarifyEntry, clarifyKmEntry, deleteEntry, fetchEntries } = useTimeEntries()
 
 const rejectedEntries = ref<TimeEntry[]>([])
@@ -32,8 +32,8 @@ async function refresh() {
   try {
     const [, { proposals }, { absences }] = await Promise.all([
       fetchEntries(),
-      apiFetch<{ proposals: Proposal[] }>('/api/holiday_proposals.php?status=rejected'),
-      apiFetch<{ absences: AbsenceRecord[] }>('/api/absences.php?status=rejected'),
+      get<{ proposals: Proposal[] }>('/api/holiday_proposals?status=rejected'),
+      get<{ absences: AbsenceRecord[] }>('/api/absences?status=rejected'),
     ])
     rejectedProposals.value = proposals
     rejectedAbsences.value = absences

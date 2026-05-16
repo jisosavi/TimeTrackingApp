@@ -53,7 +53,7 @@ export interface TimeOffOverview {
 }
 
 export function useTimeOff() {
-  const { apiFetch } = useApi()
+  const { get } = useApi()
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -62,8 +62,8 @@ export function useTimeOff() {
     error.value = null
     try {
       const [hyData, propData] = await Promise.all([
-        apiFetch<{ holidayYear: HolidayYear | null }>(`/api/holiday_year.php?year=${year}`),
-        apiFetch<{ proposals: Proposal[] }>('/api/holiday_proposals.php?status=all'),
+        get<{ holidayYear: HolidayYear | null }>(`/api/holiday_year?year=${year}`),
+        get<{ proposals: Proposal[] }>('/api/holiday_proposals?status=all'),
       ])
 
       const proposals = propData.proposals

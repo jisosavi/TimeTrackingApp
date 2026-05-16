@@ -11,7 +11,7 @@ defineOptions({ name: 'TeamCalendarView' })
 
 const { t } = useI18n({ useScope: 'global' })
 const { isMobile } = useMobileShell()
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 interface CalendarPerson extends RibbonPerson {
   spans: RibbonSpan[]
@@ -49,8 +49,8 @@ async function fetchMonth() {
   loading.value = true
   try {
     const month = `${viewYear.value}-${String(viewMonth.value).padStart(2, '0')}`
-    const data = await apiFetch<{ people: CalendarPerson[]; stats: Stats }>(
-      `/api/team_calendar.php?month=${month}`,
+    const data = await get<{ people: CalendarPerson[]; stats: Stats }>(
+      `/api/team_calendar?month=${month}`,
     )
     people.value = data.people
     stats.value = data.stats
@@ -65,8 +65,8 @@ async function fetchMonth() {
 async function fetchYear() {
   loading.value = true
   try {
-    const data = await apiFetch<{ people: CalendarPerson[]; stats: Stats }>(
-      `/api/team_calendar.php?year=${viewYear.value}`,
+    const data = await get<{ people: CalendarPerson[]; stats: Stats }>(
+      `/api/team_calendar?year=${viewYear.value}`,
     )
     people.value = data.people
     stats.value = data.stats

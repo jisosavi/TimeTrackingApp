@@ -17,7 +17,7 @@ function bearerToken(authHeader: string | undefined): string {
   return authHeader?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
 }
 
-app.post("/llm_proxy.php", async (c) => {
+app.post("/llm_proxy", async (c) => {
   const claims = await verifyToken(bearerToken(c.req.header("Authorization")));
   if (!claims) return c.json({ error: "Unauthorized" }, 401);
 

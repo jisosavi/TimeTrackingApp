@@ -13,7 +13,7 @@ const { triggerRefresh } = useRefresh()
 
 const auth = useAuthStore()
 const router = useRouter()
-const { apiFetch } = useApi()
+const { get, post } = useApi()
 
 const LANG_NAMES: Record<string, string> = {
   en: 'English', fi: 'Suomi', sv: 'Svenska', et: 'Eesti', uk: 'Українська', xh: 'isiXhosa',
@@ -29,10 +29,7 @@ async function changeLanguage(lang: string) {
   const body: Record<string, unknown> = { lang, target_type: targetType }
   if (targetType === 'employee' || targetType === 'admin') body.target_id = user.id
 
-  await apiFetch('/api/update_language.php', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  }).catch(() => {})
+  await post('/api/update_language', body).catch(() => {})
 
   auth.setAuth(auth.token!, { ...user, uiLanguage: lang })
 }
@@ -43,7 +40,7 @@ onMounted(async () => {
   const type = auth.user?.type
   if (type === 'admin' || type === 'supervisor') {
     try {
-      const data = await apiFetch<{ entries: { status: string; km_status: string | null; hours: number; km: number }[] }>('/api/time_entries.php')
+      const data = await get<{ entries: { status: string; km_status: string | null; hours: number; km: number }[] }>('/api/time_entries')
       pendingCount.value = data.entries.reduce((n, e) => {
         const isPending = (s: string | null) => s === 'pending' || s === 'clarified'
         const dual = e.hours > 0 && e.km > 0
@@ -83,7 +80,7 @@ async function logout() {
   const user = auth.user
   const slug = user?.companySlug
 
-  await apiFetch('/api/logout.php', { method: 'POST' }).catch(() => {})
+  await post('/api/logout').catch(() => {})
   auth.clearAuth()
 
   if (user?.type === 'employee')        router.push(`/${slug}`)

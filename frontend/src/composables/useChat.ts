@@ -62,7 +62,7 @@ export function useChat() {
   const lastSavedIds = ref<number[]>([])
   const pendingPreview = ref<ChatPreview | null>(null)
   const auth = useAuthStore()
-  const { apiFetch } = useApi()
+  const { post, del } = useApi()
   const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
   async function send(text: string): Promise<void> {
@@ -72,7 +72,7 @@ export function useChat() {
     try {
       const recentHistory = history.value.slice(-12).map(({ role, content }) => ({ role, content }))
 
-      const res = await fetch(`${apiBase}/llm_proxy.php`, {
+      const res = await fetch(`${apiBase}/llm_proxy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,18 +131,13 @@ export function useChat() {
   async function saveEntries(parsed: LlmParsedResponse): Promise<number> {
     if (parsed.action === 'update' && lastSavedIds.value.length > 0) {
       await Promise.allSettled(
-        lastSavedIds.value.map((id) =>
-          apiFetch('/api/time_entries.php', {
-            method: 'DELETE',
-            body: JSON.stringify({ id }),
-          }),
-        ),
+        lastSavedIds.value.map((id) => del('/api/time_entries', { id })),
       )
     }
 
-    const result = await apiFetch<{ success: boolean; saved: number; ids: number[] }>(
-      '/api/time_entries.php',
-      { method: 'POST', body: JSON.stringify({ entries: parsed.entries }) },
+    const result = await post<{ success: boolean; saved: number; ids: number[] }>(
+      '/api/time_entries',
+      { entries: parsed.entries },
     )
 
     lastSavedIds.value = result.ids ?? []
@@ -150,27 +145,21 @@ export function useChat() {
   }
 
   async function saveHolidayProposal(block: LlmHolidayProposal): Promise<void> {
-    await apiFetch('/api/holiday_proposals.php', {
-      method: 'POST',
-      body: JSON.stringify({
-        start_date: block.startDate,
-        end_date: block.endDate,
-        label: block.label ?? null,
-        note: block.note ?? null,
-      }),
+    await post('/api/holiday_proposals', {
+      start_date: block.startDate,
+      end_date: block.endDate,
+      label: block.label ?? null,
+      note: block.note ?? null,
     })
   }
 
   async function saveAbsence(block: LlmAbsence): Promise<void> {
-    await apiFetch('/api/absences.php', {
-      method: 'POST',
-      body: JSON.stringify({
-        startDate: block.startDate,
-        endDate: block.endDate,
-        isPaid: block.isPaid,
-        affectsAccrual: block.affectsAccrual,
-        note: block.note ?? null,
-      }),
+    await post('/api/absences', {
+      startDate: block.startDate,
+      endDate: block.endDate,
+      isPaid: block.isPaid,
+      affectsAccrual: block.affectsAccrual,
+      note: block.note ?? null,
     })
   }
 

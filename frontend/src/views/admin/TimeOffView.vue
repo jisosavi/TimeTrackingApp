@@ -14,7 +14,7 @@ import type { Employee } from '@/types/index'
 defineOptions({ name: 'AdminTimeOffView' })
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 const activeTab = ref('calendar')
 const proposals = ref<SupervisorProposal[]>([])
@@ -32,8 +32,8 @@ const recordAbsenceForId = ref<number | null>(null)
 async function fetchProposals() {
   loadingProposals.value = true
   try {
-    const data = await apiFetch<{ proposals: SupervisorProposal[] }>(
-      '/api/supervisor/holiday_proposals.php?status=pending',
+    const data = await get<{ proposals: SupervisorProposal[] }>(
+      '/api/supervisor/holiday_proposals?status=pending',
     )
     proposals.value = data.proposals
   } catch (e) {
@@ -45,13 +45,13 @@ async function fetchProposals() {
 
 async function fetchStats() {
   try {
-    stats.value = await apiFetch<StatsData>('/api/admin/time_off_stats.php')
+    stats.value = await get<StatsData>('/api/admin/time_off_stats')
   } catch { /* non-critical */ }
 }
 
 async function fetchEmployees() {
   try {
-    const data = await apiFetch<{ employees: Employee[] }>('/api/employees.php')
+    const data = await get<{ employees: Employee[] }>('/api/employees')
     employees.value = data.employees.filter((e) => e.active === 1)
   } catch { /* non-critical */ }
 }

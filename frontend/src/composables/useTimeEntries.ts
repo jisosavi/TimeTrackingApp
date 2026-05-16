@@ -6,7 +6,7 @@ export function useTimeEntries() {
   const entries = ref<TimeEntry[]>([])
   const loading = ref(false)
   const error = ref('')
-  const { apiFetch } = useApi()
+  const { get, post, del } = useApi()
 
   const rejectedCount = computed(() =>
     entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected').length,
@@ -16,9 +16,7 @@ export function useTimeEntries() {
     loading.value = true
     error.value = ''
     try {
-      const data = await apiFetch<{ success: boolean; entries: TimeEntry[] }>(
-        '/api/time_entries.php?view=mine',
-      )
+      const data = await get<{ success: boolean; entries: TimeEntry[] }>('/api/time_entries?view=mine')
       entries.value = data.entries
     } catch (e) {
       error.value = (e as Error).message
@@ -28,18 +26,12 @@ export function useTimeEntries() {
   }
 
   async function clarifyEntry(entryId: number, clarification: string) {
-    await apiFetch('/api/clarify_entry.php', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'clarify', id: entryId, clarification }),
-    })
+    await post('/api/clarify_entry', { action: 'clarify', id: entryId, clarification })
     await fetchEntries()
   }
 
   async function clarifyKmEntry(entryId: number, clarification: string) {
-    await apiFetch('/api/clarify_entry.php', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'clarify_km', id: entryId, clarification }),
-    })
+    await post('/api/clarify_entry', { action: 'clarify_km', id: entryId, clarification })
     await fetchEntries()
   }
 
@@ -48,15 +40,9 @@ export function useTimeEntries() {
     if (!entry) return
 
     if (entry.status === 'rejected') {
-      await apiFetch('/api/clarify_entry.php', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'delete', id: entryId }),
-      })
+      await post('/api/clarify_entry', { action: 'delete', id: entryId })
     } else {
-      await apiFetch('/api/time_entries.php', {
-        method: 'DELETE',
-        body: JSON.stringify({ id: entryId }),
-      })
+      await del('/api/time_entries', { id: entryId })
     }
 
     entries.value = entries.value.filter((e) => e.id !== entryId)

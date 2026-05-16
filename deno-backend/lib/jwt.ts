@@ -33,7 +33,7 @@ async function hmacSha256(message: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)));
 }
 
-// PHP produces {"typ":"JWT","alg":"HS256"} — typ before alg — must match exactly for token compat
+// Legacy header order: typ before alg — must match existing tokens for compatibility
 const HEADER = base64UrlEncode('{"typ":"JWT","alg":"HS256"}');
 
 export async function generateToken(

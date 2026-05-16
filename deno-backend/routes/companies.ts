@@ -28,7 +28,7 @@ function getLastActivity(dbFile: string | null | undefined): string | null {
   }
 }
 
-app.get("/api/companies.php", requireSuperAdmin, (c) => {
+app.get("/api/companies", requireSuperAdmin, (c) => {
   const companies = getMasterDb().prepare(
     `SELECT id, name, slug, active, approvals_enabled, time_app_enabled, supervisor_ui_enabled,
             ui_language, salaxy_company_id AS business_id, salaxy_account_id, db_file,
@@ -43,7 +43,7 @@ app.get("/api/companies.php", requireSuperAdmin, (c) => {
   return c.json({ success: true, companies });
 });
 
-app.post("/api/companies.php", requireSuperAdmin, async (c) => {
+app.post("/api/companies", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const db = getMasterDb();
 

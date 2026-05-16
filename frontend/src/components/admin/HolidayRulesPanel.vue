@@ -19,7 +19,7 @@ defineOptions({ name: 'HolidayRulesPanel' })
 const props = defineProps<{ employeeId: number | null }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 const summary = ref<HolidayYear | null>(null)
 const salaxyUrl = ref<string | null>(null)
@@ -30,8 +30,8 @@ async function fetchSummary(id: number) {
   summary.value = null
   salaxyUrl.value = null
   try {
-    const data = await apiFetch<{ summary: HolidayYear | null; salaxy_url: string | null }>(
-      `/api/admin/holiday_year_summary.php?employeeId=${id}`,
+    const data = await get<{ summary: HolidayYear | null; salaxy_url: string | null }>(
+      `/api/admin/holiday_year_summary?employeeId=${id}`,
     )
     summary.value = data.summary
     salaxyUrl.value = data.salaxy_url

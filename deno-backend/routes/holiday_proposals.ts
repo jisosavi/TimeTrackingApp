@@ -5,7 +5,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/holiday_proposals.php", requireEmployee, (c) => {
+app.get("/api/holiday_proposals", requireEmployee, (c) => {
   const emp = c.get("user") as Record<string, unknown>;
   const statusFilter = c.req.query("status");
   const db = getCompanyDb(emp.company_id as number);
@@ -25,7 +25,7 @@ app.get("/api/holiday_proposals.php", requireEmployee, (c) => {
   return c.json({ proposals });
 });
 
-app.post("/api/holiday_proposals.php", requireEmployee, async (c) => {
+app.post("/api/holiday_proposals", requireEmployee, async (c) => {
   const emp = c.get("user") as { id: number; company_id: number };
 
   let body: { start_date?: string; end_date?: string; label?: string | null; note?: string | null };

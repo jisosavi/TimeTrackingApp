@@ -16,7 +16,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { post } = useApi()
 
 const label = ref('')
 const note = ref('')
@@ -48,14 +48,11 @@ async function handleSubmit() {
   submitting.value = true
   submitError.value = null
   try {
-    await apiFetch('/api/holiday_proposals.php', {
-      method: 'POST',
-      body: JSON.stringify({
-        start_date: props.startDate,
-        end_date: props.endDate,
-        label: label.value.trim(),
-        note: note.value.trim() || null,
-      }),
+    await post('/api/holiday_proposals', {
+      start_date: props.startDate,
+      end_date: props.endDate,
+      label: label.value.trim(),
+      note: note.value.trim() || null,
     })
     emit('submitted')
     emit('update:open', false)

@@ -24,9 +24,9 @@ function supervisorTeamIds(db: ReturnType<typeof getCompanyDb>, supervisorId: nu
   return (db.prepare("SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ?").all(supervisorId) as { employee_id: number }[]).map((r) => r.employee_id);
 }
 
-// ── GET /api/admin/time_off_stats.php?month=YYYY-MM ───────────────────────────
+// ── GET /api/admin/time_off_stats?month=YYYY-MM ───────────────────────────
 
-app.get("/api/admin/time_off_stats.php", requireAdminOrSupervisor, (c) => {
+app.get("/api/admin/time_off_stats", requireAdminOrSupervisor, (c) => {
   const actor = c.get("user") as Actor;
   const db = getCompanyDb(actor.company_id);
 
@@ -75,9 +75,9 @@ app.get("/api/admin/time_off_stats.php", requireAdminOrSupervisor, (c) => {
   });
 });
 
-// ── GET /api/admin/holiday_year_summary.php?employeeId=N ─────────────────────
+// ── GET /api/admin/holiday_year_summary?employeeId=N ─────────────────────
 
-app.get("/api/admin/holiday_year_summary.php", requireAdminOrSupervisor, async (c) => {
+app.get("/api/admin/holiday_year_summary", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
   const empIdStr = c.req.query("employeeId");
   if (!empIdStr) return c.json({ error: "missing_employee_id" }, 400);
@@ -113,7 +113,7 @@ app.get("/api/admin/holiday_year_summary.php", requireAdminOrSupervisor, async (
 
 // ── POST /api/admin/record_absence.php ───────────────────────────────────────
 
-app.post("/api/admin/record_absence.php", requireAdminOrSupervisor, async (c) => {
+app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
   const db = getCompanyDb(actor.company_id);
 

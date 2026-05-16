@@ -10,7 +10,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
-app.post("/api/supervisor_login.php", async (c) => {
+app.post("/api/supervisor_login", async (c) => {
   const body = await c.req.json().catch(() => null);
   const pin = String(body?.pin ?? "").trim();
   const slug = String(body?.slug ?? "").trim();

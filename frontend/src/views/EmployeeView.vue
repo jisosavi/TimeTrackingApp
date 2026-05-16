@@ -22,7 +22,7 @@ const auth = useAuthStore()
 const { rejectedCount, fetchEntries } = useTimeEntries()
 const { refreshTick } = useRefresh()
 const { isMobile } = useMobileShell()
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 const entryListRef = ref<InstanceType<typeof EntryList> | null>(null)
 const rejectedListRef = ref<InstanceType<typeof RejectedList> | null>(null)
@@ -44,8 +44,8 @@ watch(
 async function fetchRejectedOtherCounts() {
   try {
     const [{ proposals }, { absences }] = await Promise.all([
-      apiFetch<{ proposals: { id: number }[] }>('/api/holiday_proposals.php?status=rejected'),
-      apiFetch<{ absences: { id: number }[] }>('/api/absences.php?status=rejected'),
+      get<{ proposals: { id: number }[] }>('/api/holiday_proposals?status=rejected'),
+      get<{ absences: { id: number }[] }>('/api/absences?status=rejected'),
     ])
     rejectedOtherCount.value = proposals.length + absences.length
   } catch {

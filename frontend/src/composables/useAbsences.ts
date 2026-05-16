@@ -21,13 +21,13 @@ export interface AbsenceRecord {
 }
 
 export function useAbsences() {
-  const { apiFetch } = useApi()
+  const { get, post } = useApi()
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   async function fetchAbsences(status?: string): Promise<AbsenceRecord[]> {
     const qs = status && status !== 'all' ? `?status=${status}` : '?status=all'
-    const data = await apiFetch<{ absences: AbsenceRecord[] }>(`/api/absences.php${qs}`)
+    const data = await get<{ absences: AbsenceRecord[] }>(`/api/absences${qs}`)
     return data.absences
   }
 
@@ -41,10 +41,7 @@ export function useAbsences() {
     loading.value = true
     error.value = null
     try {
-      const data = await apiFetch<{ absence: AbsenceRecord }>('/api/absences.php', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
+      const data = await post<{ absence: AbsenceRecord }>('/api/absences', body)
       return data.absence
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)

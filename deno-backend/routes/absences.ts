@@ -6,7 +6,7 @@ import { getCompanyCreds, createAbsence } from "../lib/salaxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/absences.php", requireEmployee, (c) => {
+app.get("/api/absences", requireEmployee, (c) => {
   const emp = c.get("user") as { id: number; company_id: number };
   const statusFilter = c.req.query("status");
   const db = getCompanyDb(emp.company_id);
@@ -22,7 +22,7 @@ app.get("/api/absences.php", requireEmployee, (c) => {
   return c.json({ absences });
 });
 
-app.post("/api/absences.php", requireEmployee, async (c) => {
+app.post("/api/absences", requireEmployee, async (c) => {
   const emp = c.get("user") as {
     id: number;
     company_id: number;

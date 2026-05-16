@@ -5,7 +5,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.post("/api/review_entries.php", requireAdminOrSupervisor, async (c) => {
+app.post("/api/review_entries", requireAdminOrSupervisor, async (c) => {
   const reviewer = c.get("user") as Record<string, unknown>;
   const claims = c.get("claims") as Record<string, unknown>;
   const userType = claims["user_type"] as string;

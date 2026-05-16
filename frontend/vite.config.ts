@@ -8,20 +8,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const phpServer = env.VITE_PHP_SERVER || 'http://localhost:8000'
+  const apiServer = env.VITE_API_SERVER || 'http://localhost:8000'
   const appBase = mode === 'production' ? (env.VITE_APP_BASE || '/test/TimeTrackingAppVue/') : '/'
 
   function htaccessPlugin() {
     return {
       name: 'generate-htaccess',
       closeBundle() {
-        const content = `# Protect server-side config from direct access
-<Files "config.php">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-Options -MultiViews
+        const content = `Options -MultiViews
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -53,9 +47,9 @@ Options -MultiViews
 
     server: {
       proxy: {
-        '/api': { target: phpServer, changeOrigin: true },
-        '/validate_pin.php': { target: phpServer, changeOrigin: true },
-        '/llm_proxy.php': { target: phpServer, changeOrigin: true },
+        '/api': { target: apiServer, changeOrigin: true },
+        '/validate_pin': { target: apiServer, changeOrigin: true },
+        '/llm_proxy': { target: apiServer, changeOrigin: true },
       },
     },
   }

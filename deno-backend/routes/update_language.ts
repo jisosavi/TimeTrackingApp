@@ -9,7 +9,7 @@ function bearerToken(authHeader: string | undefined): string {
   return authHeader?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
 }
 
-app.post("/api/update_language.php", async (c) => {
+app.post("/api/update_language", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const lang = String(body.lang ?? "").trim();
   const targetType = String(body.target_type ?? "").trim();

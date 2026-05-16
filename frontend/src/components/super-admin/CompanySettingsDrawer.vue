@@ -27,7 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get, post, patch, del } = useApi()
 
 // ── Tab ───────────────────────────────────────────────────────────────────────
 const activeTab = ref('general')
@@ -197,9 +197,9 @@ async function save() {
       body.salaxy_username  = salaxyForm.salaxy_username.trim()
       if (salaxyForm.salaxy_password !== '') body.salaxy_password = salaxyForm.salaxy_password
     }
-    const res = await apiFetch<{ success: boolean; company: Company }>(
-      '/api/super_admin/update_company.php',
-      { method: 'PATCH', body: JSON.stringify(body) },
+    const res = await patch<{ success: boolean; company: Company }>(
+      '/api/super_admin/update_company',
+      body,
     )
     if (activeTab.value === 'general') {
       generalInitial.value = { name: generalForm.name.trim(), slug: generalForm.slug.trim(), country_code: generalForm.country_code }
@@ -227,8 +227,8 @@ async function fetchSalaxyId() {
   fetchedId.value   = null
   fetchIdError.value = null
   try {
-    const res = await apiFetch<{ success: boolean; business_id: string; salaxy_account_id?: string }>(
-      `/api/fetch_business_id.php?company_id=${props.company.id}`,
+    const res = await get<{ success: boolean; business_id: string; salaxy_account_id?: string }>(
+      `/api/fetch_business_id?company_id=${props.company.id}`,
     )
     fetchedId.value = res.business_id
     salaxyForm.business_id = res.business_id
@@ -249,8 +249,8 @@ async function fetchAdmins() {
   adminsLoading.value = true
   adminsError.value   = null
   try {
-    const res = await apiFetch<{ success: boolean; admins: Admin[] }>(
-      `/api/company_admins.php?company_id=${props.company.id}`,
+    const res = await get<{ success: boolean; admins: Admin[] }>(
+      `/api/company_admins?company_id=${props.company.id}`,
     )
     admins.value = res.admins
     adminsLoaded.value = true
@@ -268,16 +268,13 @@ async function addAdmin() {
   if (addForm.password.length < 6) { addError.value = t('super.drawer.admin_pw_hint'); return }
   addSaving.value = true
   try {
-    const res = await apiFetch<{ success: boolean; admin: Admin }>(
-      '/api/company_admins.php',
+    const res = await post<{ success: boolean; admin: Admin }>(
+      '/api/company_admins',
       {
-        method: 'POST',
-        body: JSON.stringify({
-          company_id: props.company.id,
-          email: addForm.email.trim(),
-          name: '',
-          password: addForm.password,
-        }),
+        company_id: props.company.id,
+        email: addForm.email.trim(),
+        name: '',
+        password: addForm.password,
       },
     )
     admins.value.push(res.admin)
@@ -309,15 +306,12 @@ async function setAdminPassword(admin: Admin) {
   editPwSaving.value = true
   editPwError.value  = null
   try {
-    await apiFetch('/api/company_admins.php', {
-      method: 'POST',
-      body: JSON.stringify({
-        company_id: props.company.id,
-        id: admin.id,
-        email: admin.email,
-        name: admin.name ?? '',
-        password: editPw.value,
-      }),
+    await post('/api/company_admins', {
+      company_id: props.company.id,
+      id: admin.id,
+      email: admin.email,
+      name: admin.name ?? '',
+      password: editPw.value,
     })
     editingPwFor.value = null
     editPw.value = ''
@@ -332,10 +326,7 @@ async function removeAdmin(admin: Admin) {
   if (!props.company) return
   if (!confirm(t('super.drawer.admin_remove_confirm', { email: admin.email, name: props.company.name }))) return
   try {
-    await apiFetch('/api/company_admins.php', {
-      method: 'DELETE',
-      body: JSON.stringify({ company_id: props.company.id, id: admin.id }),
-    })
+    await del('/api/company_admins', { company_id: props.company.id, id: admin.id })
     admins.value = admins.value.filter(a => a.id !== admin.id)
   } catch (e) {
     adminsError.value = e instanceof Error ? e.message : 'Failed to remove'
@@ -356,9 +347,9 @@ async function applyFeatureToggle(feature: 'time_app_enabled' | 'approvals_enabl
   featureSaving.value = feature
   emit('saved', { ...props.company, [feature]: enabled } as Company)
   try {
-    const res = await apiFetch<{ success: boolean; company: Company }>(
-      '/api/super_admin/set_feature.php',
-      { method: 'POST', body: JSON.stringify({ company_id: props.company.id, feature, enabled }) },
+    const res = await post<{ success: boolean; company: Company }>(
+      '/api/super_admin/set_feature',
+      { company_id: props.company.id, feature, enabled },
     )
     emit('saved', res.company)
   } catch (e) {
@@ -376,10 +367,7 @@ async function deleteCompany() {
   deleteLoading.value = true
   deleteError.value   = null
   try {
-    await apiFetch('/api/super_admin/delete_company.php', {
-      method: 'DELETE',
-      body: JSON.stringify({ company_id: props.company.id, confirm_slug: deleteSlugInput.value }),
-    })
+    await del('/api/super_admin/delete_company', { company_id: props.company.id, confirm_slug: deleteSlugInput.value })
     emit('deleted', props.company.id)
     emit('close')
   } catch (e) {

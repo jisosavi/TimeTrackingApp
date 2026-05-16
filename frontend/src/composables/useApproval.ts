@@ -24,15 +24,13 @@ export function useApproval() {
   const entries = ref<ReviewEntry[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const { apiFetch } = useApi()
+  const { get, post } = useApi()
 
   async function fetchEntries() {
     loading.value = true
     error.value = null
     try {
-      const data = await apiFetch<{ success: boolean; entries: ReviewEntry[] }>(
-        '/api/time_entries.php',
-      )
+      const data = await get<{ success: boolean; entries: ReviewEntry[] }>('/api/time_entries')
       entries.value = data.entries
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load entries'
@@ -47,12 +45,9 @@ export function useApproval() {
     rejectionNote = '',
     field: 'status' | 'km_status' = 'status',
   ): Promise<number> {
-    const result = await apiFetch<{ success: boolean; updated: number }>(
-      '/api/review_entries.php',
-      {
-        method: 'POST',
-        body: JSON.stringify({ ids, action, rejection_note: rejectionNote, field }),
-      },
+    const result = await post<{ success: boolean; updated: number }>(
+      '/api/review_entries',
+      { ids, action, rejection_note: rejectionNote, field },
     )
     if (field === 'km_status') {
       entries.value = entries.value.map(e =>
@@ -74,10 +69,7 @@ export function useApproval() {
   }
 
   async function deleteEntry(id: number): Promise<void> {
-    await apiFetch('/api/review_entries.php', {
-      method: 'POST',
-      body: JSON.stringify({ ids: [id], action: 'delete' }),
-    })
+    await post('/api/review_entries', { ids: [id], action: 'delete' })
     entries.value = entries.value.filter(e => e.id !== id)
   }
 

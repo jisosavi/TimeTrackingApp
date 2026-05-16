@@ -9,7 +9,7 @@ function bearerToken(authHeader: string | undefined): string {
   return authHeader?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
 }
 
-app.post("/api/time_entries.php", async (c) => {
+app.post("/api/time_entries", async (c) => {
   const claims = await verifyToken(bearerToken(c.req.header("Authorization")));
   if (!claims || claims["user_type"] !== "employee") return c.json({ success: false, error: "Unauthorized" }, 401);
   const emp = getCompanyDb(claims["company_id"] as number)
@@ -43,7 +43,7 @@ app.post("/api/time_entries.php", async (c) => {
   return c.json({ success: true, saved: ids.length, ids });
 });
 
-app.get("/api/time_entries.php", async (c) => {
+app.get("/api/time_entries", async (c) => {
   const claims = await verifyToken(bearerToken(c.req.header("Authorization")));
   if (!claims) return c.json({ success: false, error: "Unauthorized" }, 401);
 
@@ -114,7 +114,7 @@ app.get("/api/time_entries.php", async (c) => {
   return c.json({ success: true, entries });
 });
 
-app.delete("/api/time_entries.php", async (c) => {
+app.delete("/api/time_entries", async (c) => {
   const claims = await verifyToken(bearerToken(c.req.header("Authorization")));
   if (!claims || claims["user_type"] !== "employee") return c.json({ success: false, error: "Unauthorized" }, 401);
   const emp = getCompanyDb(claims["company_id"] as number)

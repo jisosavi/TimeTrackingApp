@@ -3,7 +3,7 @@ import { getMasterDb } from "../lib/db.ts";
 
 const app = new Hono();
 
-app.get("/api/company_lang.php", (c) => {
+app.get("/api/company_lang", (c) => {
   const slug = String(c.req.query("slug") ?? "").trim();
   if (!slug) return c.json({ ui_language: "en" });
 

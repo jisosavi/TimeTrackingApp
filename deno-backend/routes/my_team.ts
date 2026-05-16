@@ -4,7 +4,7 @@ import { getCompanyDb } from "../lib/db.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/my_team.php", requireSupervisor, (c) => {
+app.get("/api/my_team", requireSupervisor, (c) => {
   const sup = c.get("user") as Record<string, unknown>;
   const members = getCompanyDb(sup.company_id as number).prepare(
     `SELECT e.id, e.name, e.email, e.phone, e.birth_year

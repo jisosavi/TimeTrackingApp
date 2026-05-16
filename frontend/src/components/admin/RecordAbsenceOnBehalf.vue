@@ -17,7 +17,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { post } = useApi()
 
 const employeeId = ref<number | ''>('')
 const startDate = ref('')
@@ -55,16 +55,13 @@ async function submit() {
   saving.value = true
   error.value = null
   try {
-    await apiFetch('/api/admin/record_absence.php', {
-      method: 'POST',
-      body: JSON.stringify({
-        employeeId: employeeId.value,
-        startDate: startDate.value,
-        endDate: endDate.value,
-        isPaid: isPaid.value,
-        affectsAccrual: affectsAccrual.value,
-        note: note.value.trim() || null,
-      }),
+    await post('/api/admin/record_absence', {
+      employeeId: employeeId.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
+      isPaid: isPaid.value,
+      affectsAccrual: affectsAccrual.value,
+      note: note.value.trim() || null,
     })
     emit('saved')
   } catch (e) {

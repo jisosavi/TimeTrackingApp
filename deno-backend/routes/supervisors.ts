@@ -9,7 +9,7 @@ const app = new Hono<{ Variables: Record<string, unknown> }>();
 
 const VALID_LANGS = ["en", "fi", "sv", "et", "uk", "xh"];
 
-app.get("/api/supervisors.php", requireAdmin, (c) => {
+app.get("/api/supervisors", requireAdmin, (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const db = getCompanyDb(admin.company_id as number);
   const supervisors = db.prepare(`
@@ -30,7 +30,7 @@ app.get("/api/supervisors.php", requireAdmin, (c) => {
   return c.json({ success: true, supervisors });
 });
 
-app.post("/api/supervisors.php", requireAdmin, async (c) => {
+app.post("/api/supervisors", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const db = getCompanyDb(admin.company_id as number);
   const body = await c.req.json().catch(() => ({}));
@@ -104,7 +104,7 @@ app.post("/api/supervisors.php", requireAdmin, async (c) => {
   return c.json({ success: true, supervisor });
 });
 
-app.delete("/api/supervisors.php", requireAdmin, async (c) => {
+app.delete("/api/supervisors", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const db = getCompanyDb(admin.company_id as number);
   const body = await c.req.json().catch(() => ({}));

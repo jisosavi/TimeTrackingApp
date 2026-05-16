@@ -66,7 +66,7 @@ function getPeriodsForRange(dateFrom: string, dateTo: string, s: PayrollSettings
   return periods;
 }
 
-app.get("/api/export_payroll.php", requireAdmin, (c) => {
+app.get("/api/export_payroll", requireAdmin, (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
   const db = getCompanyDb(companyId);
@@ -127,7 +127,7 @@ app.get("/api/export_payroll.php", requireAdmin, (c) => {
   return c.json({ success: true, periods });
 });
 
-app.post("/api/export_payroll.php", requireAdmin, async (c) => {
+app.post("/api/export_payroll", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
   const db = getCompanyDb(companyId);

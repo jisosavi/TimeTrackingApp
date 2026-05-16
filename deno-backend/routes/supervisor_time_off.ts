@@ -48,7 +48,7 @@ function determineSeason(startDate: string, year: HolidayYear): "summer" | "wint
 
 // ── GET /api/supervisor/holiday_proposals.php ─────────────────────────────────
 
-app.get("/api/supervisor/holiday_proposals.php", requireAdminOrSupervisor, (c) => {
+app.get("/api/supervisor/holiday_proposals", requireAdminOrSupervisor, (c) => {
   const actor = c.get("user") as Actor;
   const statusFilter = c.req.query("status") ?? "pending";
   const db = getCompanyDb(actor.company_id);
@@ -87,7 +87,7 @@ app.get("/api/supervisor/holiday_proposals.php", requireAdminOrSupervisor, (c) =
 
 // ── POST /api/supervisor/review_proposal.php ──────────────────────────────────
 
-app.post("/api/supervisor/review_proposal.php", requireAdminOrSupervisor, async (c) => {
+app.post("/api/supervisor/review_proposal", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
   const db = getCompanyDb(actor.company_id);
   const teamIds = teamEmployeeIds(actor);
@@ -184,7 +184,7 @@ app.post("/api/supervisor/review_proposal.php", requireAdminOrSupervisor, async 
 
 // ── GET /api/supervisor/day_view.php ─────────────────────────────────────────
 
-app.get("/api/supervisor/day_view.php", requireAdminOrSupervisor, (c) => {
+app.get("/api/supervisor/day_view", requireAdminOrSupervisor, (c) => {
   const actor = c.get("user") as Actor;
   const dateParam = c.req.query("date");
   if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {

@@ -7,7 +7,7 @@ import { SALAXY_TOKEN_URL } from "../lib/config.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.post("/api/sync_employees_from_salaxy.php", requireAdmin, async (c) => {
+app.post("/api/sync_employees_from_salaxy", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
   const db = getCompanyDb(companyId);

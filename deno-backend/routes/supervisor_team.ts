@@ -4,7 +4,7 @@ import { getCompanyDb } from "../lib/db.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/supervisor_team.php", requireAdmin, (c) => {
+app.get("/api/supervisor_team", requireAdmin, (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const db = getCompanyDb(admin.company_id as number);
   const supervisorId = Number(c.req.query("supervisor_id") ?? 0);
@@ -29,7 +29,7 @@ app.get("/api/supervisor_team.php", requireAdmin, (c) => {
   return c.json({ success: true, employees });
 });
 
-app.post("/api/supervisor_team.php", requireAdmin, async (c) => {
+app.post("/api/supervisor_team", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const db = getCompanyDb(admin.company_id as number);
   const body = await c.req.json().catch(() => ({}));

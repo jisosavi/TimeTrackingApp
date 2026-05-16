@@ -11,7 +11,7 @@ interface CalendarPerson extends RibbonPerson {
 defineOptions({ name: 'AdminPerPerson' })
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 const people = ref<CalendarPerson[]>([])
 const loading = ref(false)
@@ -51,8 +51,8 @@ const balances = computed((): PersonBalance[] =>
 async function fetch() {
   loading.value = true
   try {
-    const data = await apiFetch<{ people: CalendarPerson[] }>(
-      `/api/team_calendar.php?year=${year.value}`,
+    const data = await get<{ people: CalendarPerson[] }>(
+      `/api/team_calendar?year=${year.value}`,
     )
     people.value = data.people
   } catch (e) {

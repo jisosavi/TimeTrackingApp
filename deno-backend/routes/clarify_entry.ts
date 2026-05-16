@@ -5,7 +5,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.post("/api/clarify_entry.php", requireEmployee, async (c) => {
+app.post("/api/clarify_entry", requireEmployee, async (c) => {
   const emp = c.get("user") as Record<string, unknown>;
   const body = await c.req.json().catch(() => ({}));
   const id = body.id ? Number(body.id) : null;

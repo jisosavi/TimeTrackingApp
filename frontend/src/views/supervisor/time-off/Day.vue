@@ -40,7 +40,7 @@ interface DayViewData {
 }
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 // Date state
 const now = new Date()
@@ -52,7 +52,7 @@ const loading = ref(false)
 async function fetchDay(date: string) {
   loading.value = true
   try {
-    data.value = await apiFetch<DayViewData>(`/api/supervisor/day_view.php?date=${date}`)
+    data.value = await get<DayViewData>(`/api/supervisor/day_view?date=${date}`)
   } catch (e) {
     console.error('[Day] fetch failed', e)
   } finally {

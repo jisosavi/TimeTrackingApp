@@ -19,7 +19,7 @@ defineOptions({ name: 'SupervisorTimeOffView' })
 const { t } = useI18n({ useScope: 'global' })
 const auth = useAuthStore()
 const { isMobile } = useMobileShell()
-const { apiFetch } = useApi()
+const { get } = useApi()
 
 const activeSegTab = ref('pending')
 const proposals = ref<SupervisorProposal[]>([])
@@ -28,8 +28,8 @@ const loading = ref(false)
 async function fetchProposals() {
   loading.value = true
   try {
-    const data = await apiFetch<{ proposals: SupervisorProposal[] }>(
-      '/api/supervisor/holiday_proposals.php?status=pending',
+    const data = await get<{ proposals: SupervisorProposal[] }>(
+      '/api/supervisor/holiday_proposals?status=pending',
     )
     proposals.value = data.proposals
   } catch (e) {

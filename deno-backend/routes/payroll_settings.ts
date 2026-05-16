@@ -4,7 +4,7 @@ import { getMasterDb } from "../lib/db.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/payroll_settings.php", requireAdmin, (c) => {
+app.get("/api/payroll_settings", requireAdmin, (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const row = getMasterDb().prepare(
     "SELECT payroll_period, payday_1, payday_2, payroll_settings_updated_at, salaxy_company_id FROM companies WHERE id = ?"
@@ -13,7 +13,7 @@ app.get("/api/payroll_settings.php", requireAdmin, (c) => {
   return c.json({ success: true, settings });
 });
 
-app.post("/api/payroll_settings.php", requireAdmin, async (c) => {
+app.post("/api/payroll_settings", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const body = await c.req.json().catch(() => ({}));
   const period = ["monthly", "biweekly"].includes(body.payroll_period) ? body.payroll_period : "monthly";

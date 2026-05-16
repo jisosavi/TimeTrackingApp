@@ -7,7 +7,7 @@ const app = new Hono();
 const TOKEN_URL = "https://test-secure.salaxy.com/oauth2/token";
 const SESSION_URL = "https://test-secure.salaxy.com/v03/api/session/current";
 
-app.post("/api/salaxy_oauth_callback.php", async (c) => {
+app.post("/api/salaxy_oauth_callback", async (c) => {
   const body = await c.req.json().catch(() => null);
   const code = String(body?.code ?? "").trim();
   const redirectUri = String(body?.redirect_uri ?? "").trim();

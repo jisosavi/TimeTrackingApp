@@ -24,7 +24,7 @@ import type { ReviewEntry, TeamMemberDetail } from '@/types'
 const { t } = useI18n({ useScope: 'global' })
 const { entries, loading, error, fetchEntries, reviewEntries, deleteEntry } = useApproval()
 const auth = useAuthStore()
-const { apiFetch } = useApi()
+const { get, post, patch } = useApi()
 const route = useRoute()
 const router = useRouter()
 const { refreshTick } = useRefresh()
@@ -154,7 +154,7 @@ async function loadTeam() {
   teamLoading.value = true
   teamError.value = null
   try {
-    const data = await apiFetch<{ members: TeamMemberDetail[] }>('/api/my_team.php')
+    const data = await get<{ members: TeamMemberDetail[] }>('/api/my_team')
     teamMembers.value = data.members
     teamLoaded.value = true
   } catch (e) {
@@ -173,10 +173,7 @@ const holidayError   = ref<string | null>(null)
 async function saveCountry(code: string) {
   countryCode.value   = code
   holidayResult.value = null
-  await apiFetch('/api/admin/country_setting.php', {
-    method: 'PATCH',
-    body: JSON.stringify({ country_code: code }),
-  }).catch(() => {})
+  await patch('/api/admin/country_setting', { country_code: code }).catch(() => {})
 }
 
 async function doMarkHolidays() {
@@ -186,9 +183,9 @@ async function doMarkHolidays() {
   try {
     const year     = new Date().getFullYear()
     const holidays = await fetchHolidays(countryCode.value, year)
-    const data     = await apiFetch<{ success: boolean; updated: number }>(
-      '/api/admin/mark_holidays.php',
-      { method: 'POST', body: JSON.stringify({ holidays: holidays.map(h => ({ date: h.date, name: h.localName })) }) },
+    const data     = await post<{ success: boolean; updated: number }>(
+      '/api/admin/mark_holidays',
+      { holidays: holidays.map(h => ({ date: h.date, name: h.localName })) },
     )
     holidayResult.value = data.updated > 0
       ? t('admin.holidays.marked', { count: data.updated })
@@ -203,7 +200,7 @@ async function doMarkHolidays() {
 onMounted(async () => {
   fetchEntries()
   if (!isSupervisor.value) {
-    const data = await apiFetch<{ success: boolean; country_code: string }>('/api/admin/country_setting.php').catch(() => null)
+    const data = await get<{ success: boolean; country_code: string }>('/api/admin/country_setting').catch(() => null)
     if (data?.success) countryCode.value = data.country_code ?? 'FI'
   }
 })

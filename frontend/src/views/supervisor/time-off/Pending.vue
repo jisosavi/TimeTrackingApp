@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { apiFetch } = useApi()
+const { post } = useApi()
 
 const submitting = ref(false)
 const selectedIds = reactive(new Set<number>())
@@ -36,10 +36,7 @@ function toggleSelect(id: number, selected: boolean) {
 async function review(proposalId: number, decision: 'approve' | 'reject' | 'clarify', note?: string) {
   submitting.value = true
   try {
-    await apiFetch('/api/supervisor/review_proposal.php', {
-      method: 'POST',
-      body: JSON.stringify({ proposalId, decision, note: note ?? null }),
-    })
+    await post('/api/supervisor/review_proposal', { proposalId, decision, note: note ?? null })
     selectedIds.delete(proposalId)
     emit('reviewed')
   } catch (e) {
@@ -66,10 +63,7 @@ async function bulkApprove() {
   try {
     await Promise.all(
       ids.map((id) =>
-        apiFetch('/api/supervisor/review_proposal.php', {
-          method: 'POST',
-          body: JSON.stringify({ proposalId: id, decision: 'approve', note: null }),
-        }),
+        post('/api/supervisor/review_proposal', { proposalId: id, decision: 'approve', note: null }),
       ),
     )
     selectedIds.clear()

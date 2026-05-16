@@ -16,13 +16,13 @@ export function useAdminData() {
   const loadingSups = ref(false)
   const error = ref<string | null>(null)
   const syncMessage = ref<string | null>(null)
-  const { apiFetch } = useApi()
+  const { get, post, del } = useApi()
 
   async function fetchEmployees() {
     loadingEmps.value = true
     error.value = null
     try {
-      const data = await apiFetch<{ employees: Employee[] }>('/api/employees.php')
+      const data = await get<{ employees: Employee[] }>('/api/employees')
       employees.value = data.employees
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load employees'
@@ -42,10 +42,7 @@ export function useAdminData() {
     phone?: string
     birth_year?: number | null
   }): Promise<Employee> {
-    const data = await apiFetch<{ employee: Employee }>('/api/employees.php', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
+    const data = await post<{ employee: Employee }>('/api/employees', payload)
     const idx = employees.value.findIndex(e => e.id === data.employee.id)
     if (idx >= 0) {
       employees.value[idx] = { ...employees.value[idx]!, ...data.employee }
@@ -59,10 +56,7 @@ export function useAdminData() {
   async function syncFromSalaxy() {
     syncMessage.value = null
     try {
-      const data = await apiFetch<{ added: number; updated: number; total: number }>(
-        '/api/sync_employees_from_salaxy.php',
-        { method: 'POST' },
-      )
+      const data = await post<{ added: number; updated: number; total: number }>('/api/sync_employees_from_salaxy')
       syncMessage.value = `Sync done: ${data.added} added, ${data.updated} updated (${data.total} in Salaxy)`
       await fetchEmployees()
     } catch (e) {
@@ -73,9 +67,9 @@ export function useAdminData() {
   async function clearSyncFromSalaxy() {
     syncMessage.value = null
     try {
-      const data = await apiFetch<{ added: number; deleted: number; total: number }>(
-        '/api/sync_employees_from_salaxy.php',
-        { method: 'POST', body: JSON.stringify({ clear: true }) },
+      const data = await post<{ added: number; deleted: number; total: number }>(
+        '/api/sync_employees_from_salaxy',
+        { clear: true },
       )
       syncMessage.value = `Clear sync done: ${data.deleted} deleted, ${data.added} added from Salaxy (${data.total} in Salaxy)`
       await fetchEmployees()
@@ -88,7 +82,7 @@ export function useAdminData() {
     loadingSups.value = true
     error.value = null
     try {
-      const data = await apiFetch<{ supervisors: Supervisor[] }>('/api/supervisors.php')
+      const data = await get<{ supervisors: Supervisor[] }>('/api/supervisors')
       supervisors.value = data.supervisors
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load supervisors'
@@ -106,10 +100,7 @@ export function useAdminData() {
     pin?: string
     active?: number
   }): Promise<Supervisor> {
-    const data = await apiFetch<{ supervisor: Supervisor }>('/api/supervisors.php', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
+    const data = await post<{ supervisor: Supervisor }>('/api/supervisors', payload)
     const idx = supervisors.value.findIndex(s => s.id === data.supervisor.id)
     if (idx >= 0) {
       supervisors.value[idx] = { ...supervisors.value[idx]!, ...data.supervisor }
@@ -121,46 +112,33 @@ export function useAdminData() {
   }
 
   async function deleteSupervisor(id: number) {
-    await apiFetch('/api/supervisors.php', {
-      method: 'DELETE',
-      body: JSON.stringify({ id }),
-    })
+    await del('/api/supervisors', { id })
     supervisors.value = supervisors.value.filter(s => s.id !== id)
     await fetchSupervisors()
   }
 
   async function fetchTeam(supervisorId: number): Promise<TeamMember[]> {
-    const data = await apiFetch<{ employees: TeamMember[] }>(
-      `/api/supervisor_team.php?supervisor_id=${supervisorId}`,
-    )
+    const data = await get<{ employees: TeamMember[] }>(`/api/supervisor_team?supervisor_id=${supervisorId}`)
     return data.employees
   }
 
   async function saveTeam(supervisorId: number, employeeIds: number[]) {
-    await apiFetch('/api/supervisor_team.php', {
-      method: 'POST',
-      body: JSON.stringify({ supervisor_id: supervisorId, employee_ids: employeeIds }),
-    })
+    await post('/api/supervisor_team', { supervisor_id: supervisorId, employee_ids: employeeIds })
     const sup = supervisors.value.find(s => s.id === supervisorId)
     if (sup) sup.team_size = employeeIds.length
   }
 
   async function fetchPayrollSettings(): Promise<PayrollSettings> {
-    const data = await apiFetch<{ settings: PayrollSettings }>('/api/payroll_settings.php')
+    const data = await get<{ settings: PayrollSettings }>('/api/payroll_settings')
     return data.settings
   }
 
   async function savePayrollSettings(settings: PayrollSettings): Promise<void> {
-    await apiFetch('/api/payroll_settings.php', {
-      method: 'POST',
-      body: JSON.stringify(settings),
-    })
+    await post('/api/payroll_settings', settings)
   }
 
   async function fetchExportPreview(dateFrom: string, dateTo: string): Promise<ExportPeriod[]> {
-    const data = await apiFetch<{ periods: ExportPeriod[] }>(
-      `/api/export_payroll.php?date_from=${dateFrom}&date_to=${dateTo}`,
-    )
+    const data = await get<{ periods: ExportPeriod[] }>(`/api/export_payroll?date_from=${dateFrom}&date_to=${dateTo}`)
     return data.periods
   }
 
@@ -170,10 +148,7 @@ export function useAdminData() {
     employeeIds: number[],
     force = false,
   ): Promise<ExportResult> {
-    return apiFetch<ExportResult>('/api/export_payroll.php', {
-      method: 'POST',
-      body: JSON.stringify({ date_from: dateFrom, date_to: dateTo, employee_ids: employeeIds, force }),
-    })
+    return post<ExportResult>('/api/export_payroll', { date_from: dateFrom, date_to: dateTo, employee_ids: employeeIds, force })
   }
 
   return {

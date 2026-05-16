@@ -5,7 +5,7 @@ import { DB_DIR } from "../lib/config.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.delete("/api/super_admin/delete_company.php", requireSuperAdmin, async (c) => {
+app.delete("/api/super_admin/delete_company", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const companyId = body.company_id ? Number(body.company_id) : null;
   const confirmSlug = String(body.confirm_slug ?? "").trim();
@@ -24,7 +24,7 @@ app.delete("/api/super_admin/delete_company.php", requireSuperAdmin, async (c) =
 
 const ALLOWED_FEATURES = ["time_app_enabled", "supervisor_ui_enabled", "approvals_enabled"] as const;
 
-app.post("/api/super_admin/set_feature.php", requireSuperAdmin, async (c) => {
+app.post("/api/super_admin/set_feature", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const companyId = Number(body.company_id ?? 0);
   const feature = String(body.feature ?? "").trim();
@@ -49,7 +49,7 @@ app.post("/api/super_admin/set_feature.php", requireSuperAdmin, async (c) => {
   return c.json({ success: true, company });
 });
 
-app.patch("/api/super_admin/update_company.php", requireSuperAdmin, async (c) => {
+app.patch("/api/super_admin/update_company", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const id = Number(body.id ?? 0);
   if (!id) return c.json({ success: false, error: "id required" }, 400);

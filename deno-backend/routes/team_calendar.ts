@@ -106,9 +106,9 @@ function fetchSpans(
   return result;
 }
 
-// ── GET /api/team_calendar.php?month=YYYY-MM  (or ?year=YYYY) ────────────────
+// ── GET /api/team_calendar?month=YYYY-MM  (or ?year=YYYY) ────────────────
 
-app.get("/api/team_calendar.php", requireAdminOrSupervisor, (c) => {
+app.get("/api/team_calendar", requireAdminOrSupervisor, (c) => {
   const actor = c.get("user") as Actor;
   const db = getCompanyDb(actor.company_id);
   const empIds = teamEmployeeIds(actor);

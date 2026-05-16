@@ -14,12 +14,13 @@ import HolidayRulesPanel from '@/components/admin/HolidayRulesPanel.vue'
 import RecordAbsenceOnBehalf from '@/components/admin/RecordAbsenceOnBehalf.vue'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 import { useRefresh } from '@/composables/useRefresh'
 import type { Employee, Supervisor, TeamMember } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
 const auth = useAuthStore()
-const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
+const { post } = useApi()
 
 const {
   employees, supervisors, loadingEmps, loadingSups, error, syncMessage,
@@ -280,17 +281,9 @@ const unlocking = ref<number | null>(null)
 
 async function unlockPinAccount(id: number, kind: 'employee' | 'supervisor') {
   unlocking.value = id
-  const endpoint = kind === 'employee' ? `${apiBase}/api/employees.php` : `${apiBase}/api/supervisors.php`
+  const endpoint = kind === 'employee' ? '/api/employees' : '/api/supervisors'
   try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${auth.token}`,
-      },
-      body: JSON.stringify({ id, action: 'unlock_pin' }),
-    })
-    const data = await res.json()
+    const data = await post<{ success: boolean; error?: string }>(endpoint, { id, action: 'unlock_pin' })
     if (!data.success) throw new Error(data.error ?? 'Unlock failed')
     if (kind === 'employee') await fetchEmployees()
     else await fetchSupervisors()

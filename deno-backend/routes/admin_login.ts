@@ -6,7 +6,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
-app.post("/api/admin_login.php", async (c) => {
+app.post("/api/admin_login", async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body?.email || !body?.password) {
     return c.json({ success: false, error: "Email and password are required" }, 400);

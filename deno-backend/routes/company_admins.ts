@@ -5,7 +5,7 @@ import { getCompanyDb } from "../lib/db.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/company_admins.php", requireSuperAdmin, (c) => {
+app.get("/api/company_admins", requireSuperAdmin, (c) => {
   const companyId = Number(c.req.query("company_id") ?? 0);
   if (!companyId) return c.json({ success: false, error: "company_id required" }, 400);
   const admins = getCompanyDb(companyId).prepare(
@@ -14,7 +14,7 @@ app.get("/api/company_admins.php", requireSuperAdmin, (c) => {
   return c.json({ success: true, admins });
 });
 
-app.post("/api/company_admins.php", requireSuperAdmin, async (c) => {
+app.post("/api/company_admins", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const companyId = Number(body.company_id ?? 0);
   const id = body.id ? Number(body.id) : null;
@@ -55,7 +55,7 @@ app.post("/api/company_admins.php", requireSuperAdmin, async (c) => {
   return c.json({ success: true, admin });
 });
 
-app.delete("/api/company_admins.php", requireSuperAdmin, async (c) => {
+app.delete("/api/company_admins", requireSuperAdmin, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const id = Number(body.id ?? 0);
   const companyId = Number(body.company_id ?? 0);

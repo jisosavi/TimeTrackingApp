@@ -12,7 +12,7 @@ function parseYtunnus(raw: string): string | null {
   return `${last8.slice(0, 7)}-${last8[7]}`;
 }
 
-app.get("/api/fetch_business_id.php", requireSuperAdmin, async (c) => {
+app.get("/api/fetch_business_id", requireSuperAdmin, async (c) => {
   const companyId = Number(c.req.query("company_id") ?? 0);
   if (!companyId) return c.json({ success: false, error: "company_id required" }, 400);
 

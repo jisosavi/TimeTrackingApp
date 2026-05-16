@@ -4,14 +4,14 @@ import { getCompanyDb, getMasterDb } from "../lib/db.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/admin/country_setting.php", requireAdmin, (c) => {
+app.get("/api/admin/country_setting", requireAdmin, (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const row = getMasterDb().prepare("SELECT country_code FROM companies WHERE id = ?")
     .get(admin.company_id as number) as { country_code: string | null } | undefined;
   return c.json({ success: true, country_code: row?.country_code ?? "FI" });
 });
 
-app.patch("/api/admin/country_setting.php", requireAdmin, async (c) => {
+app.patch("/api/admin/country_setting", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const body = await c.req.json().catch(() => ({}));
   const cc = String(body.country_code ?? "").trim();
@@ -21,7 +21,7 @@ app.patch("/api/admin/country_setting.php", requireAdmin, async (c) => {
   return c.json({ success: true, country_code: cc });
 });
 
-app.post("/api/admin/mark_holidays.php", requireAdmin, async (c) => {
+app.post("/api/admin/mark_holidays", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const body = await c.req.json().catch(() => ({}));
   const holidays: { date?: string; name?: string }[] = Array.isArray(body.holidays) ? body.holidays : [];

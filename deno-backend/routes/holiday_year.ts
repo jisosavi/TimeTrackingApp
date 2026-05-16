@@ -4,7 +4,7 @@ import { getCompanyCreds, getHolidayYears } from "../lib/salaxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/holiday_year.php", requireEmployee, async (c) => {
+app.get("/api/holiday_year", requireEmployee, async (c) => {
   const emp = c.get("user") as Record<string, unknown>;
   const year = parseInt(c.req.query("year") ?? String(new Date().getFullYear()), 10);
   const salaxyId = emp.salaxy_employment_id as string | null;
