@@ -1,10 +1,10 @@
 import { createI18n } from 'vue-i18n'
-import en from '../../locales/en.json'
-import fi from '../../locales/fi.json'
-import sv from '../../locales/sv.json'
-import et from '../../locales/et.json'
-import uk from '../../locales/uk.json'
-import xh from '../../locales/xh.json'
+import en from '../locales/en.json'
+import fi from '../locales/fi.json'
+import sv from '../locales/sv.json'
+import et from '../locales/et.json'
+import uk from '../locales/uk.json'
+import xh from '../locales/xh.json'
 
 // Locale files use flat dot-notation keys; expand to nested objects for vue-i18n
 function expand(flat: Record<string, string>): Record<string, unknown> {
