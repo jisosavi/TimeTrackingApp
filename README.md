@@ -138,6 +138,9 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | Production | Railway (Deno via Dockerfile) + Apache with `.htaccess` rewrites (frontend) |
 | Testing | Vitest (unit), Playwright (e2e), vue-tsc (type-check) |
 
+> **Database and Deno Deploy compatibility**
+> The backend uses SQLite via `@db/sqlite`, which requires FFI (Foreign Function Interface) to load the native SQLite C library into the Deno process. FFI is not available on Deno Deploy, which runs V8 isolates without native code access. The current setup is therefore **not compatible with Deno Deploy** and must be hosted on a platform that supports persistent disk and FFI — Railway with a mounted volume is the reference deployment target. Migrating to a serverless-compatible database (e.g. Neon/Supabase Postgres via the HTTP driver) would unblock Deno Deploy.
+
 ### Supported languages
 
 | Code | Language |
