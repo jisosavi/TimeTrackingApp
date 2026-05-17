@@ -295,6 +295,35 @@ export interface HolidayPayload {
   note?: string | null;
 }
 
+interface SalaxyHolidayYearRaw {
+  id: string;
+  year: number;
+  period?: { start?: string; end?: string };
+  spec?: { code?: string; accrualFixed?: number };
+  accrual?: { total?: number; defaultAccrual?: number };
+  leaves?: {
+    planned?: Array<{ period?: { daysCount?: number } }>;
+    paid?: Array<{ holidayDays?: number }>;
+  };
+}
+
+function mapHolidayYear(raw: SalaxyHolidayYearRaw): HolidayYear {
+  const y = raw.year;
+  return {
+    id: raw.id,
+    year: y,
+    startDate: raw.period?.start ?? "",
+    endDate: raw.period?.end ?? "",
+    accruedDays: raw.accrual?.total ?? 0,
+    plannedDays: (raw.leaves?.planned ?? []).reduce((s, p) => s + (p.period?.daysCount ?? 0), 0),
+    paidDays: (raw.leaves?.paid ?? []).reduce((s, p) => s + (p.holidayDays ?? 0), 0),
+    summerSeason: { start: `${y}-05-02`, end: `${y}-09-30` },
+    winterSeason: { start: `${y}-10-01`, end: `${y + 1}-04-30` },
+    accrualRule: raw.spec?.code ?? "",
+    monthlyAccrual: raw.accrual?.defaultAccrual ?? 0,
+  };
+}
+
 // ─── In-memory cache (30 s TTL, keyed by employeeSalaxyId or employeeSalaxyId:year) ───
 
 const CACHE_TTL_MS = 30_000;
@@ -315,13 +344,10 @@ export async function getHolidayYears(employeeSalaxyId: string, creds: SalaxyCre
   const cached = _holidayYearsCache.get(employeeSalaxyId);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
 
-  const endpoint = `/holidays/employment/${employeeSalaxyId}`;
-  console.log(`[holiday_year] GET ${creds.apiUrl}${endpoint}`);
-  const r = await salaxyRequest("GET", endpoint, null, creds);
-  console.log(`[holiday_year] response ${r.httpCode}:`, JSON.stringify(r.data));
+  const r = await salaxyRequest("GET", `/holidays/employment/${employeeSalaxyId}`, null, creds);
   if (!r.success) throw new Error(`Salaxy getHolidayYears ${r.httpCode}: ${JSON.stringify(r.data)}`);
 
-  const data = (Array.isArray(r.data) ? r.data : []) as HolidayYear[];
+  const data = (Array.isArray(r.data) ? r.data : []).map((raw) => mapHolidayYear(raw as SalaxyHolidayYearRaw));
   _holidayYearsCache.set(employeeSalaxyId, { data, ts: Date.now() });
   return data;
 }
