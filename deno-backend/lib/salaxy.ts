@@ -315,7 +315,7 @@ export async function getHolidayYears(employeeSalaxyId: string, creds: SalaxyCre
   const cached = _holidayYearsCache.get(employeeSalaxyId);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
 
-  const r = await salaxyRequest("GET", `/employees/${employeeSalaxyId}/holidayYears`, null, creds);
+  const r = await salaxyRequest("GET", `/employments/${employeeSalaxyId}/holidayYears`, null, creds);
   if (!r.success) throw new Error(`Salaxy getHolidayYears ${r.httpCode}: ${JSON.stringify(r.data)}`);
 
   const data = (Array.isArray(r.data) ? r.data : []) as HolidayYear[];
@@ -328,7 +328,7 @@ export async function getAbsences(employeeSalaxyId: string, year: number, creds:
   const cached = _absencesCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
 
-  const r = await salaxyRequest("GET", `/employees/${employeeSalaxyId}/absences?year=${year}`, null, creds);
+  const r = await salaxyRequest("GET", `/employments/${employeeSalaxyId}/absences?year=${year}`, null, creds);
   if (!r.success) throw new Error(`Salaxy getAbsences ${r.httpCode}: ${JSON.stringify(r.data)}`);
 
   const data = (Array.isArray(r.data) ? r.data : []) as Absence[];
@@ -337,27 +337,27 @@ export async function getAbsences(employeeSalaxyId: string, year: number, creds:
 }
 
 export async function createAbsence(employeeSalaxyId: string, payload: AbsencePayload, creds: SalaxyCreds): Promise<Absence> {
-  const r = await salaxyRequest("POST", `/employees/${employeeSalaxyId}/absences`, payload, creds);
+  const r = await salaxyRequest("POST", `/employments/${employeeSalaxyId}/absences`, payload, creds);
   if (!r.success) throw new Error(`Salaxy createAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
   _invalidateEmployeeCache(employeeSalaxyId);
   return r.data as Absence;
 }
 
 export async function updateAbsence(employeeSalaxyId: string, absenceId: string, payload: Partial<AbsencePayload>, creds: SalaxyCreds): Promise<Absence> {
-  const r = await salaxyRequest("PATCH", `/employees/${employeeSalaxyId}/absences/${absenceId}`, payload, creds);
+  const r = await salaxyRequest("PATCH", `/employments/${employeeSalaxyId}/absences/${absenceId}`, payload, creds);
   if (!r.success) throw new Error(`Salaxy updateAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
   _invalidateEmployeeCache(employeeSalaxyId);
   return r.data as Absence;
 }
 
 export async function deleteAbsence(employeeSalaxyId: string, absenceId: string, creds: SalaxyCreds): Promise<void> {
-  const r = await salaxyRequest("DELETE", `/employees/${employeeSalaxyId}/absences/${absenceId}`, null, creds);
+  const r = await salaxyRequest("DELETE", `/employments/${employeeSalaxyId}/absences/${absenceId}`, null, creds);
   if (!r.success) throw new Error(`Salaxy deleteAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
   _invalidateEmployeeCache(employeeSalaxyId);
 }
 
 export async function createHoliday(employeeSalaxyId: string, holidayYearId: string, payload: HolidayPayload, creds: SalaxyCreds): Promise<Holiday> {
-  const r = await salaxyRequest("POST", `/employees/${employeeSalaxyId}/holidayYears/${holidayYearId}/holidays`, payload, creds);
+  const r = await salaxyRequest("POST", `/employments/${employeeSalaxyId}/holidayYears/${holidayYearId}/holidays`, payload, creds);
   if (!r.success) throw new Error(`Salaxy createHoliday ${r.httpCode}: ${JSON.stringify(r.data)}`);
   _invalidateEmployeeCache(employeeSalaxyId);
   return r.data as Holiday;
