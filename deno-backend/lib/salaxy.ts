@@ -315,7 +315,10 @@ export async function getHolidayYears(employeeSalaxyId: string, creds: SalaxyCre
   const cached = _holidayYearsCache.get(employeeSalaxyId);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
 
-  const r = await salaxyRequest("GET", `/employments/${employeeSalaxyId}/holidayYears`, null, creds);
+  const endpoint = `/employments/${employeeSalaxyId}/holidayYears`;
+  console.log(`[holiday_year] GET ${creds.apiUrl}${endpoint}`);
+  const r = await salaxyRequest("GET", endpoint, null, creds);
+  console.log(`[holiday_year] response ${r.httpCode}:`, JSON.stringify(r.data));
   if (!r.success) throw new Error(`Salaxy getHolidayYears ${r.httpCode}: ${JSON.stringify(r.data)}`);
 
   const data = (Array.isArray(r.data) ? r.data : []) as HolidayYear[];
