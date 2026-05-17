@@ -166,7 +166,7 @@ app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
     try {
       const creds = getCompanyCreds(actor.company_id);
       const salaxyAbsence = await createAbsence(salaxyId, {
-        reason: "Kertausharjoitus",
+        causeCode: "militaryRefresherTraining",
         startDate,
         endDate,
         days,

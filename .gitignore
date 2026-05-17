@@ -12,3 +12,6 @@ data/
 .idea/
 .vscode/
 *.swp
+
+# Salaxy OpenAPI spec — large file, re-fetch from code.salaxy.com/api-docs/salaxy-03.json
+deno-backend/docs/salaxy-03.json

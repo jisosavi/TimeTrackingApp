@@ -80,7 +80,7 @@ app.post("/api/absences", requireEmployee, async (c) => {
     try {
       const creds = getCompanyCreds(emp.company_id);
       const salaxyAbsence = await createAbsence(salaxyId, {
-        reason: "Kertausharjoitus",
+        causeCode: "militaryRefresherTraining",
         startDate,
         endDate,
         days,

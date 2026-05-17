@@ -258,9 +258,19 @@ export interface HolidayYear {
   monthlyAccrual: number;
 }
 
+export type AbsenceCauseCode =
+  | "undefined" | "unpaidLeave" | "personalReason" | "illness"
+  | "partTimeSickLeave" | "parentalLeave" | "specialMaternityLeave"
+  | "rehabilitation" | "childIllness" | "partTimeChildCareLeave"
+  | "training" | "jobAlternationLeave" | "studyLeave" | "industrialAction"
+  | "interruptionInWorkProvision" | "leaveOfAbsence" | "militaryRefresherTraining"
+  | "militaryService" | "layOff" | "childCareLeave" | "midWeekHoliday"
+  | "accruedHoliday" | "occupationalAccident" | "annualLeave"
+  | "partTimeAbsenceDueToRehabilitation" | "other";
+
 export interface Absence {
   id: string;
-  reason: string;  // full Salaxy enum; UI gates to 'Kertausharjoitus' for v1 creation
+  causeCode: AbsenceCauseCode;
   startDate: string;
   endDate: string;
   days: number;
@@ -279,7 +289,7 @@ export interface Holiday {
 }
 
 export interface AbsencePayload {
-  reason: string;
+  causeCode: AbsenceCauseCode;
   startDate: string;
   endDate: string;
   days?: number;
@@ -352,24 +362,78 @@ export async function getHolidayYears(employeeSalaxyId: string, creds: SalaxyCre
   return data;
 }
 
+function mapAbsencePeriod(p: Record<string, unknown>): Absence {
+  const period = (p.period ?? {}) as Record<string, unknown>;
+  return {
+    id: String(p.id ?? ""),
+    causeCode: (p.causeCode ?? "other") as AbsenceCauseCode,
+    startDate: String(period.start ?? ""),
+    endDate: String(period.end ?? ""),
+    days: Number(period.daysCount ?? 0),
+    isPaid: Boolean(p.isPaid),
+    affectsAccrual: Boolean(p.isHolidayAccrual),
+    note: (p.notes ?? null) as string | null,
+  };
+}
+
 export async function getAbsences(employeeSalaxyId: string, year: number, creds: SalaxyCreds): Promise<Absence[]> {
   const cacheKey = `${employeeSalaxyId}:${year}`;
   const cached = _absencesCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
 
-  const r = await salaxyRequest("GET", `/employees/${employeeSalaxyId}/absences?year=${year}`, null, creds);
-  if (!r.success) throw new Error(`Salaxy getAbsences ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  const r = await salaxyRequest("GET", `/absences/employment/${employeeSalaxyId}`, null, creds);
+  if (!r.success) {
+    if (r.httpCode === 404) { _absencesCache.set(cacheKey, { data: [], ts: Date.now() }); return []; }
+    throw new Error(`Salaxy getAbsences ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  }
 
-  const data = (Array.isArray(r.data) ? r.data : []) as Absence[];
+  const doc = r.data as Record<string, unknown>;
+  const periods = (Array.isArray(doc.periods) ? doc.periods : []) as Record<string, unknown>[];
+  const data = periods.map(mapAbsencePeriod).filter((a) => {
+    const y1 = new Date(a.startDate).getFullYear();
+    const y2 = new Date(a.endDate).getFullYear();
+    return y1 === year || y2 === year;
+  });
   _absencesCache.set(cacheKey, { data, ts: Date.now() });
   return data;
 }
 
 export async function createAbsence(employeeSalaxyId: string, payload: AbsencePayload, creds: SalaxyCreds): Promise<Absence> {
-  const r = await salaxyRequest("POST", `/employees/${employeeSalaxyId}/absences`, payload, creds);
-  if (!r.success) throw new Error(`Salaxy createAbsence ${r.httpCode}: ${JSON.stringify(r.data)}`);
+  // GET existing WorkerAbsences doc or fetch empty template
+  let doc: Record<string, unknown>;
+  const existing = await salaxyRequest("GET", `/absences/employment/${employeeSalaxyId}`, null, creds);
+  if (existing.success && existing.data) {
+    doc = existing.data as Record<string, unknown>;
+  } else {
+    const tmpl = await salaxyRequest("GET", "/absences/new", null, creds);
+    if (!tmpl.success || !tmpl.data) throw new Error(`Salaxy absences/new ${tmpl.httpCode}: ${JSON.stringify(tmpl.data)}`);
+    doc = tmpl.data as Record<string, unknown>;
+    doc.employmentId = employeeSalaxyId;
+  }
+
+  const periods = (Array.isArray(doc.periods) ? doc.periods : []) as Record<string, unknown>[];
+  periods.push({
+    period: { start: payload.startDate, end: payload.endDate, daysCount: payload.days ?? 0 },
+    causeCode: payload.causeCode,
+    isPaid: payload.isPaid ?? true,
+    isHolidayAccrual: payload.affectsAccrual ?? true,
+    notes: payload.note ?? null,
+  });
+  doc.periods = periods;
+
+  const saved = await salaxyRequest("POST", "/absences", doc, creds);
+  if (!saved.success) throw new Error(`Salaxy createAbsence ${saved.httpCode}: ${JSON.stringify(saved.data)}`);
+
+  const savedDoc = saved.data as Record<string, unknown>;
+  const savedPeriods = (Array.isArray(savedDoc.periods) ? savedDoc.periods : []) as Record<string, unknown>[];
+  const matched = savedPeriods.filter((p) => {
+    const pd = (p.period ?? {}) as Record<string, unknown>;
+    return pd.start === payload.startDate && pd.end === payload.endDate;
+  }).at(-1);
+  if (!matched) throw new Error("Salaxy createAbsence: created period not found in response");
+
   _invalidateEmployeeCache(employeeSalaxyId);
-  return r.data as Absence;
+  return mapAbsencePeriod(matched);
 }
 
 export async function updateAbsence(employeeSalaxyId: string, absenceId: string, payload: Partial<AbsencePayload>, creds: SalaxyCreds): Promise<Absence> {
