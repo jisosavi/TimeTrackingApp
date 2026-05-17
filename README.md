@@ -51,11 +51,12 @@ Support for multiple UI languages, easy to add more locales when needed.
 - Kiosk-style full-viewport PIN pad with live clock; physical keyboard support, auto-submit on last digit, haptic feedback on mobile
 - Voice or text input — natural language like *"Yesterday 2h on project Alpha"*
 - Gemini AI interprets entries, asks follow-up questions if details are missing, then shows an editable preview card (date, hours, project, notes) before saving
-- Three tabs: **Log** (AI chat), **Entries** (full history), **Rejected** (entries needing attention — badge count)
+- Four tabs: **Log** (AI chat), **Entries** (full history), **Rejected** (entries needing attention — badge count), **Time off**
 - Rejected tab shows the manager's rejection note per entry; employee can submit a clarification reply for hours and km rejections independently
 - Entries exported to Salaxy payroll via API — one payroll created per day, entries added as payslip items
 - Mileage allowance (km-korvaus) support with per-type approval tracking
 - Type pills on each entry row identify hours vs. kilometre entries at a glance
+- **Time off tab**: holiday balance card (accrued / planned / pending / remaining) pulled live from Salaxy; touch-friendly MonthGrid calendar with tap-to-pick date range and one-tap holiday proposal; absence recording; pending proposals list
 
 **Company supervisor** (`/{slug}/approval/`)
 - Four tabs: **Review** (pending), **Approved**, **Rejected**, **Team**
@@ -304,6 +305,12 @@ npm run lint         # ESLint + Oxlint
 │   │   ├── super_admin_routes.ts         # DELETE/POST/PATCH /v01/api/super_admin/*
 │   │   ├── my_team.ts                    # GET /v01/api/my_team
 │   │   ├── supervisor_team.ts            # GET/POST /v01/api/supervisor_team
+│   │   ├── supervisor_time_off.ts        # GET/POST /v01/api/supervisor/holiday_proposals
+│   │   ├── team_calendar.ts              # GET /v01/api/team_calendar
+│   │   ├── holiday_year.ts               # GET /v01/api/holiday_year (Salaxy holiday balance)
+│   │   ├── holiday_proposals.ts          # GET/POST/PATCH /v01/api/holiday_proposals
+│   │   ├── absences.ts                   # GET/POST /v01/api/absences
+│   │   ├── admin_time_off.ts             # GET/POST /v01/api/admin/time_off_stats, record absence
 │   │   ├── company_lang.ts               # GET /v01/api/company_lang
 │   │   ├── update_language.ts            # POST /v01/api/update_language
 │   │   ├── logout.ts                     # ALL /v01/api/logout

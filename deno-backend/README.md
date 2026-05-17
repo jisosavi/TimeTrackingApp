@@ -100,6 +100,9 @@ deno-backend/
 │   ├── db.ts            # getMasterDb / getCompanyDb / getCompanyDbBySlug
 │   ├── jwt.ts           # JWT sign/verify (HS256), hashPin (HMAC-SHA256)
 │   ├── pin_rate_limit.ts
-│   └── salaxy.ts        # Token cache, employee sync, payroll export
+│   └── salaxy.ts        # Token cache, employee sync, payroll export, holiday years & absences API
+├── docs/
+│   └── salaxy-03.json   # Salaxy OpenAPI spec — gitignored, re-fetch with:
+│                        # curl -L https://code.salaxy.com/api-docs/salaxy-03.json -o deno-backend/docs/salaxy-03.json
 └── routes/              # One file per endpoint group
 ```
