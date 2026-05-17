@@ -148,8 +148,7 @@ function onProposed() {
 </script>
 
 <template>
-  <!-- Mobile layout -->
-  <template v-if="isMobile">
+  <div :class="isMobile ? '' : 'max-w-md mx-auto'">
     <!-- SegTabs -->
     <SegTabs
       :tabs="segTabs"
@@ -162,7 +161,7 @@ function onProposed() {
     <div class="flex items-center justify-between mb-3">
       <button
         type="button"
-        class="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
+        class="flex items-center justify-center w-11 h-11 rounded-full hover:bg-muted transition-colors"
         :aria-label="t('calendar.month_nav_prev')"
         @click="prevMonth"
       >
@@ -173,7 +172,7 @@ function onProposed() {
       <span class="text-sm font-semibold text-foreground">{{ monthLabel }}</span>
       <button
         type="button"
-        class="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
+        class="flex items-center justify-center w-11 h-11 rounded-full hover:bg-muted transition-colors"
         :aria-label="t('calendar.month_nav_next')"
         @click="nextMonth"
       >
@@ -228,8 +227,11 @@ function onProposed() {
       </div>
     </div>
 
-    <!-- Sticky bottom CTA (above BottomTabs) -->
-    <div class="sticky bottom-[72px] z-20 py-3 bg-background">
+    <!-- Sticky bottom CTA -->
+    <div
+      class="sticky z-20 py-3 bg-background"
+      :class="isMobile ? 'bottom-[72px]' : 'bottom-4'"
+    >
       <!-- Done: clear + continue -->
       <div v-if="pickState === 'done'" class="flex gap-2">
         <button
@@ -247,7 +249,7 @@ function onProposed() {
           {{ t('calendar.continue') }}
         </button>
       </div>
-      <!-- Picking: hint only (user taps grid) -->
+      <!-- Picking: hint -->
       <div v-else-if="pickState === 'picking'" class="py-2.5 text-center text-xs text-muted-foreground">
         {{ t('calendar.pick_end_hint') }}
       </div>
@@ -281,10 +283,5 @@ function onProposed() {
       v-model:open="absenceOpen"
       @saved="emit('absence-saved')"
     />
-  </template>
-
-  <!-- Desktop: coming soon -->
-  <template v-else>
-    <p class="py-16 text-center text-sm text-muted-foreground">Coming soon</p>
-  </template>
+  </div>
 </template>
