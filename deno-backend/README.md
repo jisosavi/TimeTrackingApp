@@ -44,6 +44,11 @@ Starts Deno with `--watch` on port 8080. SQLite databases are created automatica
 
 The Vite dev server (frontend) proxies `/api/`, `/validate_pin`, and `/llm_proxy` to `http://localhost:8080` — both servers must be running for full local dev.
 
+**NOTE!**
+Database and Deno Deploy compatibility: 
+The backend uses SQLite via @db/sqlite, which requires FFI (Foreign Function Interface) to load the native SQLite C library into the Deno process. FFI is not available on Deno Deploy, which runs V8 isolates without native code access. The current setup is therefore not compatible with Deno Deploy and must be hosted on a platform that supports persistent disk and FFI — Railway with a mounted volume is the reference deployment target.
+Migrating to a serverless-compatible database (e.g. Neon/Supabase Postgres via the HTTP driver) would unblock Deno Deploy.
+
 ### Health check
 
 ```
