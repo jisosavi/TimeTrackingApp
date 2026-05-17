@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
+import { API_VERSION } from '@/config'
 import type { LlmParsedResponse, LlmParsedBlock, LlmHolidayProposal, LlmAbsence } from '@/types'
 
 export interface ChatMessage {
@@ -72,7 +73,7 @@ export function useChat() {
     try {
       const recentHistory = history.value.slice(-12).map(({ role, content }) => ({ role, content }))
 
-      const res = await fetch(`${apiBase}/llm_proxy`, {
+      const res = await fetch(`${apiBase}${API_VERSION}/api/llm_proxy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

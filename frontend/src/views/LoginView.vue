@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import type { AuthUser } from '@/stores/auth'
+import { API_VERSION } from '@/config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -50,7 +51,7 @@ async function handleOAuthCallback(code: string) {
   oauthLoading.value = true
   error.value = ''
   try {
-    const res = await fetch(`${apiBase}/api/salaxy_oauth_callback`, {
+    const res = await fetch(`${apiBase}${API_VERSION}/api/salaxy_oauth_callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, redirect_uri: getSuperAdminRedirectUri() }),
@@ -247,7 +248,7 @@ async function submit() {
 }
 
 async function loginEmployee() {
-  const res = await fetch(`${apiBase}/validate_pin`, {
+  const res = await fetch(`${apiBase}${API_VERSION}/api/validate_pin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: pin.value, slug, device_id: getDeviceId() }),
@@ -275,7 +276,7 @@ async function loginEmployee() {
 }
 
 async function loginSupervisor() {
-  const res = await fetch(`${apiBase}/api/supervisor_login`, {
+  const res = await fetch(`${apiBase}${API_VERSION}/api/supervisor_login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: pin.value, slug, device_id: getDeviceId() }),
@@ -304,7 +305,7 @@ async function loginSupervisor() {
 }
 
 async function loginWithPassword() {
-  const res = await fetch(`${apiBase}/api/admin_login`, {
+  const res = await fetch(`${apiBase}${API_VERSION}/api/admin_login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.value, password: password.value, slug }),

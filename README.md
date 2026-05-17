@@ -285,29 +285,29 @@ npm run lint         # ESLint + Oxlint
 │   │   └── salaxy.ts                     # Salaxy API: token cache, employee sync, payroll export
 │   ├── routes/                           # One file per endpoint group
 │   │   ├── health.ts                     # GET /health
-│   │   ├── validate_pin.ts               # POST /validate_pin.php
-│   │   ├── supervisor_login.ts           # POST /api/supervisor_login.php
-│   │   ├── admin_login.ts                # POST /api/admin_login.php (company admin + super-admin)
-│   │   ├── salaxy_oauth_callback.ts      # GET /api/salaxy_oauth_callback.php
-│   │   ├── employees.ts                  # GET/POST/PATCH /api/employees.php
-│   │   ├── supervisors.ts                # GET/POST/PATCH /api/supervisors.php
-│   │   ├── company_admins.ts             # GET/POST/PATCH /api/company_admins.php
-│   │   ├── time_entries.ts               # GET/POST/DELETE /api/time_entries.php
-│   │   ├── review_entries.ts             # POST /api/review_entries.php
-│   │   ├── clarify_entry.ts              # POST /api/clarify_entry.php
-│   │   ├── companies.ts                  # GET/POST /api/companies.php
-│   │   ├── payroll_settings.ts           # GET/POST /api/payroll_settings.php
-│   │   ├── export_payroll.ts             # GET/POST /api/export_payroll.php
-│   │   ├── sync_employees.ts             # POST /api/sync_employees_from_salaxy.php
-│   │   ├── fetch_business_id.ts          # GET /api/fetch_business_id.php
-│   │   ├── admin_routes.ts               # GET/PATCH country_setting, POST mark_holidays
-│   │   ├── super_admin_routes.ts         # DELETE/POST/PATCH /api/super_admin/*
-│   │   ├── my_team.ts                    # GET /api/my_team.php
-│   │   ├── supervisor_team.ts            # GET/POST /api/supervisor_team.php
-│   │   ├── company_lang.ts               # GET /api/company_lang.php
-│   │   ├── update_language.ts            # POST /api/update_language.php
-│   │   ├── logout.ts                     # ALL /api/logout.php
-│   │   └── llm_proxy.ts                  # POST /llm_proxy.php (Gemini API proxy)
+│   │   ├── validate_pin.ts               # POST /v01/api/validate_pin
+│   │   ├── supervisor_login.ts           # POST /v01/api/supervisor_login
+│   │   ├── admin_login.ts                # POST /v01/api/admin_login (company admin + super-admin)
+│   │   ├── salaxy_oauth_callback.ts      # GET /v01/api/salaxy_oauth_callback
+│   │   ├── employees.ts                  # GET/POST/PATCH /v01/api/employees
+│   │   ├── supervisors.ts                # GET/POST/PATCH /v01/api/supervisors
+│   │   ├── company_admins.ts             # GET/POST/PATCH /v01/api/company_admins
+│   │   ├── time_entries.ts               # GET/POST/DELETE /v01/api/time_entries
+│   │   ├── review_entries.ts             # POST /v01/api/review_entries
+│   │   ├── clarify_entry.ts              # POST /v01/api/clarify_entry
+│   │   ├── companies.ts                  # GET/POST /v01/api/companies
+│   │   ├── payroll_settings.ts           # GET/POST /v01/api/payroll_settings
+│   │   ├── export_payroll.ts             # GET/POST /v01/api/export_payroll
+│   │   ├── sync_employees.ts             # POST /v01/api/sync_employees_from_salaxy
+│   │   ├── fetch_business_id.ts          # GET /v01/api/fetch_business_id
+│   │   ├── admin_routes.ts               # GET/PATCH /v01/api/admin/country_setting, POST /v01/api/admin/mark_holidays
+│   │   ├── super_admin_routes.ts         # DELETE/POST/PATCH /v01/api/super_admin/*
+│   │   ├── my_team.ts                    # GET /v01/api/my_team
+│   │   ├── supervisor_team.ts            # GET/POST /v01/api/supervisor_team
+│   │   ├── company_lang.ts               # GET /v01/api/company_lang
+│   │   ├── update_language.ts            # POST /v01/api/update_language
+│   │   ├── logout.ts                     # ALL /v01/api/logout
+│   │   └── llm_proxy.ts                  # POST /v01/api/llm_proxy (Gemini API proxy)
 │   └── scripts/
 │       └── seed_superadmin.ts            # One-time seed script (alternative to env-var auto-seed)
 │

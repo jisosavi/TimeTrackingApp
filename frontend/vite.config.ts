@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
+import { API_VERSION } from './src/config'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
@@ -47,9 +48,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       proxy: {
-        '/api': { target: apiServer, changeOrigin: true },
-        '/validate_pin': { target: apiServer, changeOrigin: true },
-        '/llm_proxy': { target: apiServer, changeOrigin: true },
+        [API_VERSION]: { target: apiServer, changeOrigin: true },
       },
     },
   }

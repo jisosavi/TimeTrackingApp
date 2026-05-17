@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth'
+import { API_VERSION } from '@/config'
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
@@ -14,7 +15,7 @@ export function useApi() {
       headers['Authorization'] = `Bearer ${auth.token}`
     }
 
-    const response = await fetch(`${API_BASE}${path}`, { ...options, headers })
+    const response = await fetch(`${API_BASE}${API_VERSION}${path}`, { ...options, headers })
     const data = await response.json()
 
     if (!response.ok) {

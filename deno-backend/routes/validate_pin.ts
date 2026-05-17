@@ -10,7 +10,7 @@ import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono();
 
-app.post("/validate_pin", async (c) => {
+app.post("/api/validate_pin", async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || !body.pin) {
     return c.json({ valid: false, error: "PIN puuttuu" }, 400);

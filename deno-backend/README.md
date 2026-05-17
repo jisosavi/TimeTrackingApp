@@ -42,7 +42,7 @@ deno task dev
 
 Starts Deno with `--watch` on port 8080. SQLite databases are created automatically under `data/` on first boot.
 
-The Vite dev server (frontend) proxies `/api/`, `/validate_pin`, and `/llm_proxy` to `http://localhost:8080` — both servers must be running for full local dev.
+The Vite dev server (frontend) proxies `/v01` to `http://localhost:8080` — both servers must be running for full local dev.
 
 **NOTE!**
 Database and Deno Deploy compatibility: 

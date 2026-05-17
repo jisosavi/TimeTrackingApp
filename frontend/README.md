@@ -32,7 +32,7 @@ Change the port here if you run the backend on a different port.
 npm run dev
 ```
 
-Starts Vite on `http://localhost:5173`. The proxy in `vite.config.ts` forwards `/api/`, `/validate_pin`, and `/llm_proxy` to the backend automatically — no CORS issues in local dev.
+Starts Vite on `http://localhost:5173`. The proxy in `vite.config.ts` forwards `/v01` to the backend automatically — no CORS issues in local dev.
 
 ---
 
