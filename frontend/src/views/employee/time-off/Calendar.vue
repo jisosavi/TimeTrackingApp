@@ -148,7 +148,7 @@ function onProposed() {
 </script>
 
 <template>
-  <div :class="isMobile ? '' : 'max-w-md mx-auto'">
+  <div>
     <!-- SegTabs -->
     <SegTabs
       :tabs="segTabs"
