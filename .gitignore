@@ -1,3 +1,7 @@
+# Local dev secrets
+.env
+.env.local
+
 # Frontend production env — contains Railway URL, fill in from .env.production.example
 frontend/.env.production
 frontend/.env.production.local
