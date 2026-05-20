@@ -274,7 +274,7 @@ npm run lint         # ESLint + Oxlint
 ├── deploy-frontend.sh                    # rsync dist/ to remote Apache server
 ├── deploy-deno-demo.sh                   # Deploy frontend pointed at a specific Deno URL/path
 │
-├── deno-backend/
+├── backend/
 │   ├── main.ts                           # Hono app entry point; CORS, route registration, super-admin seed
 │   ├── bootstrap.ts                      # SQLite schema init and inline migrations
 │   ├── lib/

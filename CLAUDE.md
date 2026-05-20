@@ -34,13 +34,13 @@ Local dev uses two servers simultaneously: Vite on `:5173`, Deno on `:8080`. The
 
 **Frontend** — Vue 3 SPA (`frontend/src/`) built with Vite. Single `index.html` entry point; history-mode routing; deployed to `frontend/dist/`. Apache `.htaccess` is auto-generated at build time by a Vite plugin in `vite.config.ts` — it sets `RewriteBase` from `VITE_APP_BASE` and routes all non-file requests to `index.html`.
 
-**Backend** — Deno 2 + Hono under `deno-backend/`. Entry point is `deno-backend/main.ts`; each route file lives in `deno-backend/routes/`. SQLite databases are initialized and migrated automatically by `deno-backend/bootstrap.ts` on first access via the DB accessor functions in `deno-backend/lib/db.ts`.
+**Backend** — Deno 2 + Hono under `backend/`. Entry point is `backend/main.ts`; each route file lives in `backend/routes/`. SQLite databases are initialized and migrated automatically by `backend/bootstrap.ts` on first access via the DB accessor functions in `backend/lib/db.ts`.
 
 ### Authentication flow
 
-All roles share the same JWT mechanism. `deno-backend/lib/jwt.ts` signs/verifies HS256 tokens using `JWT_SECRET`. Tokens carry `user_id`, `user_type` (`employee | supervisor | admin | superadmin`), and `company_id` (0 for superadmin). Tokens expire after 7 days.
+All roles share the same JWT mechanism. `backend/lib/jwt.ts` signs/verifies HS256 tokens using `JWT_SECRET`. Tokens carry `user_id`, `user_type` (`employee | supervisor | admin | superadmin`), and `company_id` (0 for superadmin). Tokens expire after 7 days.
 
-Every protected endpoint calls one of the `require*()` middleware guards in `deno-backend/lib/auth.ts`. These verify the Bearer token AND confirm the record still exists and is active in the DB.
+Every protected endpoint calls one of the `require*()` middleware guards in `backend/lib/auth.ts`. These verify the Bearer token AND confirm the record still exists and is active in the DB.
 
 On the frontend, `stores/auth.ts` persists token + user object in `localStorage`. `composables/useApi.ts` injects the `Authorization: Bearer` header on every request. The router guard in `router/index.ts` enforces role-based access — `/admin` must be defined before `/:slug` in the route list so the static path wins over the dynamic one.
 
@@ -53,7 +53,7 @@ On the frontend, `stores/auth.ts` persists token + user object in `localStorage`
 | `/:slug/admin` | company admin | email + password via `api/admin_login.php` |
 | `/admin` | superadmin | email + password via `api/admin_login.php` |
 
-PIN hashing: employee and supervisor PINs are stored as `HMAC-SHA256(pin, JWT_SECRET)` — see `hashPin()` in `deno-backend/lib/jwt.ts`. They are never returned by any API endpoint.
+PIN hashing: employee and supervisor PINs are stored as `HMAC-SHA256(pin, JWT_SECRET)` — see `hashPin()` in `backend/lib/jwt.ts`. They are never returned by any API endpoint.
 
 ### i18n
 
@@ -61,15 +61,15 @@ Locale files live in `locales/` at the repo root as flat dot-notation JSON (e.g.
 
 ### Salaxy API integration
 
-Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in `data/salaxy_token_{companyId}.json` for 23 hours. This cached token is used for employee sync and payroll export calls. See `deno-backend/lib/salaxy.ts`.
+Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in `data/salaxy_token_{companyId}.json` for 23 hours. This cached token is used for employee sync and payroll export calls. See `backend/lib/salaxy.ts`.
 
 ### Config and secrets
 
-`deno-backend/lib/config.ts` reads all configuration from environment variables. For local dev, set them in a `.env` file or shell. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB; `SALAXY_*` env vars are fallback defaults applied when creating a new company. On first boot, set `SA_EMAIL` and `SA_PASSWORD` to auto-seed the super-admin account.
+`backend/lib/config.ts` reads all configuration from environment variables. For local dev, set them in a `.env` file or shell. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB; `SALAXY_*` env vars are fallback defaults applied when creating a new company. On first boot, set `SA_EMAIL` and `SA_PASSWORD` to auto-seed the super-admin account.
 
 ### Database layout
 
-Two SQLite files, both under `data/` (path configurable via `DB_DIR` env var). Accessors in `deno-backend/lib/db.ts`: `getMasterDb()`, `getCompanyDb(id)`, `getCompanyDbBySlug(slug)` — module-level cached.
+Two SQLite files, both under `data/` (path configurable via `DB_DIR` env var). Accessors in `backend/lib/db.ts`: `getMasterDb()`, `getCompanyDb(id)`, `getCompanyDbBySlug(slug)` — module-level cached.
 
 **`data/master.sqlite`** — company registry and super-admin accounts:
 - `companies` — slug, active flag, per-company Salaxy credentials, payroll settings, `db_file` path
@@ -83,7 +83,7 @@ Two SQLite files, both under `data/` (path configurable via `DB_DIR` env var). A
 - `payroll_exports` — deduplication guard for Salaxy payroll creation
 - `pin_rate_limit` — per-device brute-force protection
 
-Schema migrations run inline in `deno-backend/bootstrap.ts` via `ALTER TABLE` checks — check there before adding columns.
+Schema migrations run inline in `backend/bootstrap.ts` via `ALTER TABLE` checks — check there before adding columns.
 
 ### Production deployment
 

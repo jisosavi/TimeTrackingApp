@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev 
 WORKDIR /app
 
 COPY deno.json .
-COPY deno-backend/ deno-backend/
-RUN deno cache deno-backend/main.ts
+COPY backend/ backend/
+RUN deno cache backend/main.ts
 
 COPY . .
 
@@ -14,4 +14,4 @@ COPY . .
 ENV DENO_SQLITE_PATH=/usr/lib/x86_64-linux-gnu/libsqlite3.so.0
 
 # Redirect stderr → stdout so Railway captures startup errors in logs
-CMD ["sh", "-c", "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts 2>&1"]
+CMD ["sh", "-c", "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi backend/main.ts 2>&1"]

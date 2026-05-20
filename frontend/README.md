@@ -7,7 +7,7 @@ Vue 3 + TypeScript SPA. Built with Vite, Pinia, Vue Router, Tailwind CSS v4, and
 ### Prerequisites
 
 - Node.js 20+
-- The Deno backend running on port 8080 (see `deno-backend/README.md`)
+- The Deno backend running on port 8080 (see `backend/README.md`)
 
 ### Install dependencies
 

@@ -76,7 +76,7 @@ Set the same variables as the local `.env` above. `JWT_SECRET` must be consisten
 Push to the connected branch. Railway builds the Docker image and runs:
 
 ```
-deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi deno-backend/main.ts
+deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi backend/main.ts
 ```
 
 The `--allow-ffi` flag is required for SQLite. The `DENO_SQLITE_PATH` env var in the Dockerfile points to the system `libsqlite3` to avoid a runtime download on every start.
@@ -90,7 +90,7 @@ Railway streams stdout/stderr. Startup errors and audit failures are logged ther
 ## Structure
 
 ```
-deno-backend/
+backend/
 ├── main.ts              # Hono entry point — CORS, route registration, super-admin seed
 ├── bootstrap.ts         # SQLite schema init and inline migrations
 ├── lib/
@@ -103,6 +103,6 @@ deno-backend/
 │   └── salaxy.ts        # Token cache, employee sync, payroll export, holiday years & absences API
 ├── docs/
 │   └── salaxy-03.json   # Salaxy OpenAPI spec — gitignored, re-fetch with:
-│                        # curl -L https://code.salaxy.com/api-docs/salaxy-03.json -o deno-backend/docs/salaxy-03.json
+│                        # curl -L https://code.salaxy.com/api-docs/salaxy-03.json -o backend/docs/salaxy-03.json
 └── routes/              # One file per endpoint group
 ```
