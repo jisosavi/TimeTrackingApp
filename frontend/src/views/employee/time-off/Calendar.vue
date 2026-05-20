@@ -2,8 +2,6 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMobileShell } from '@/composables/useMobileShell'
-import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
-import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
 import MonthGrid from '@/components/time-off/MonthGrid.vue'
 import type { DayState } from '@/components/time-off/MonthGrid.vue'
 import ProposeSheet from '@/components/time-off/ProposeSheet.vue'
@@ -14,11 +12,9 @@ defineOptions({ name: 'TimeOffCalendar' })
 
 const props = defineProps<{
   proposals: Proposal[]
-  activeSegTab: string
 }>()
 
 const emit = defineEmits<{
-  'update:activeSegTab': [val: string]
   proposed: []
   'absence-saved': []
 }>()
@@ -45,12 +41,6 @@ function nextMonth() {
   if (viewMonth.value === 12) { viewYear.value++; viewMonth.value = 1 }
   else viewMonth.value++
 }
-
-const segTabs = computed((): SegTab[] => [
-  { id: 'overview', label: t('timeOff.overview') },
-  { id: 'calendar', label: t('timeOff.calendar') },
-  { id: 'proposals', label: t('timeOff.proposals') },
-])
 
 // Build grid data from proposals
 const gridData = computed((): Record<number, DayState> => {
@@ -149,14 +139,6 @@ function onProposed() {
 
 <template>
   <div>
-    <!-- SegTabs -->
-    <SegTabs
-      :tabs="segTabs"
-      :active="activeSegTab"
-      class="mb-4"
-      @change="emit('update:activeSegTab', $event)"
-    />
-
     <!-- Month nav -->
     <div class="flex items-center justify-between mb-3">
       <button

@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
-import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
 import AbsenceSheet from '@/components/time-off/AbsenceSheet.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import type { Proposal } from '@/composables/useTimeOff'
@@ -15,27 +11,17 @@ defineOptions({ name: 'TimeOffProposals' })
 const props = defineProps<{
   proposals: Proposal[]
   absences: AbsenceRecord[]
-  activeSegTab: string
   loading: boolean
 }>()
 
 const emit = defineEmits<{
-  'update:activeSegTab': [val: string]
   'absence-saved': []
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const router = useRouter()
-const auth = useAuthStore()
 
 const absenceOpen = ref(false)
 const filter = ref<'all' | 'pending' | 'approved'>('all')
-
-const segTabs = computed((): SegTab[] => [
-  { id: 'overview', label: t('timeOff.overview') },
-  { id: 'calendar', label: t('timeOff.calendar') },
-  { id: 'proposals', label: t('timeOff.proposals') },
-])
 
 // Merge proposals + absences into a unified view model, excluding rejected
 interface Row {
@@ -165,47 +151,9 @@ function statusPillLabel(row: Row): string {
   return `${status}: ${row.label}, ${fmtRange(row.startDate, row.endDate)}`
 }
 
-function navigateBack() {
-  router.push({ name: 'employee-home', params: { slug: auth.user?.companySlug } })
-}
 </script>
 
 <template>
-  <!-- Header row -->
-  <div class="flex items-start justify-between mb-3">
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 rounded-full text-foreground hover:bg-muted transition-colors"
-        @click="navigateBack"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <div>
-        <p class="text-lg font-bold leading-tight text-foreground">{{ t('timeOff.title') }}</p>
-        <p class="text-xs text-muted-foreground leading-tight">{{ t('proposals.subtitle') }}</p>
-      </div>
-    </div>
-    <button
-      type="button"
-      class="flex items-center justify-center w-9 h-9 rounded-xl border border-input text-foreground hover:bg-muted transition-colors text-lg font-light"
-      :aria-label="t('absence.title')"
-      @click="absenceOpen = true"
-    >
-      +
-    </button>
-  </div>
-
-  <!-- SegTabs -->
-  <SegTabs
-    :tabs="segTabs"
-    :active="activeSegTab"
-    class="mb-4"
-    @change="emit('update:activeSegTab', $event)"
-  />
-
   <!-- Filter chips -->
   <div class="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
     <button

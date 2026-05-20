@@ -3,12 +3,8 @@ import { computed } from 'vue'
 
 defineOptions({ name: 'TimeOffOverview' })
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useMobileShell } from '@/composables/useMobileShell'
 import type { TimeOffOverview } from '@/composables/useTimeOff'
-import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
-import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 
 const props = defineProps<{
@@ -16,29 +12,14 @@ const props = defineProps<{
   year: number
   loading: boolean
   error: string | null
-  activeSegTab: string
 }>()
 
 const emit = defineEmits<{
-  'update:year': [year: number]
   'update:activeSegTab': [val: string]
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const router = useRouter()
-const auth = useAuthStore()
 const { isMobile } = useMobileShell()
-
-const segTabs: SegTab[] = [
-  { id: 'overview', label: t('timeOff.overview') },
-  { id: 'calendar', label: t('timeOff.calendar') },
-  { id: 'proposals', label: t('timeOff.proposals') },
-]
-
-const yearOptions = computed(() => {
-  const cur = new Date().getFullYear()
-  return [cur - 1, cur, cur + 1]
-})
 
 const hy = computed(() => props.overview?.holidayYear ?? null)
 const planned = computed(() => hy.value?.plannedDays ?? 0)
@@ -107,45 +88,11 @@ function statusPillLabel(item: NonNullable<TimeOffOverview['upcoming']>[number])
   return `${status}: ${item.label}, ${dateRange(item.startDate, item.endDate)}`
 }
 
-function navigateBack() {
-  router.push({ name: 'employee-home', params: { slug: auth.user?.companySlug } })
-}
 </script>
 
 <template>
   <!-- ─── MOBILE LAYOUT ─────────────────────────────────────────────────────── -->
   <template v-if="isMobile">
-    <!-- Header row -->
-    <div class="flex items-start justify-between mb-3">
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="flex items-center justify-center w-8 h-8 rounded-full text-foreground hover:bg-muted transition-colors"
-          @click="navigateBack"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <div>
-          <p class="text-lg font-bold leading-tight text-foreground">{{ t('timeOff.title') }}</p>
-          <p class="text-xs text-muted-foreground leading-tight">
-            {{ t('timeOff.holiday_year', { year }) }}
-          </p>
-        </div>
-      </div>
-      <select
-        :value="year"
-        class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-        @change="emit('update:year', Number(($event.target as HTMLSelectElement).value))"
-      >
-        <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-      </select>
-    </div>
-
-    <!-- SegTabs -->
-    <SegTabs :tabs="segTabs" :active="activeSegTab" class="mb-4" @change="emit('update:activeSegTab', $event)" />
-
     <!-- Loading / error states -->
     <div v-if="loading" class="py-12 text-center text-sm text-muted-foreground">
       {{ t('timeOff.loading') }}
@@ -154,8 +101,7 @@ function navigateBack() {
       {{ t('timeOff.error') }}
     </div>
 
-    <!-- Overview tab content -->
-    <template v-else-if="activeSegTab === 'overview'">
+    <template v-else>
       <!-- No Salaxy account -->
       <div v-if="!hy" class="py-12 text-center text-sm text-muted-foreground">
         {{ t('timeOff.no_salaxy') }}
@@ -273,44 +219,10 @@ function navigateBack() {
       </div>
     </template>
 
-    <!-- Calendar / Proposals placeholder -->
-    <template v-else>
-      <p class="py-16 text-center text-sm text-muted-foreground">Coming soon</p>
-    </template>
   </template>
 
   <!-- ─── DESKTOP LAYOUT ────────────────────────────────────────────────────── -->
   <template v-else>
-    <!-- Heading row -->
-    <div class="flex items-start justify-between mb-1">
-      <div>
-        <h1 class="text-xl font-bold text-foreground">
-          {{ t('timeOff.desktop.heading', { year }) }}
-        </h1>
-        <p v-if="hy" class="text-sm text-muted-foreground mt-0.5">
-          {{ t('timeOff.desktop.holiday_year_period', { start: fmtDate(hy.startDate, { day: '2-digit', month: '2-digit', year: 'numeric' }), end: fmtDate(hy.endDate, { day: '2-digit', month: '2-digit', year: 'numeric' }) }) }}
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <select
-          :value="year"
-          class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-          @change="emit('update:year', Number(($event.target as HTMLSelectElement).value))"
-        >
-          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-        </select>
-        <button
-          type="button"
-          class="rounded-lg bg-indigo-600 text-white font-semibold px-4 py-1.5 text-sm hover:bg-indigo-700 transition-colors"
-        >
-          {{ t('timeOff.propose_holiday') }}
-        </button>
-      </div>
-    </div>
-
-    <!-- SegTabs -->
-    <SegTabs :tabs="segTabs" :active="activeSegTab" class="mb-5 mt-3" @change="emit('update:activeSegTab', $event)" />
-
     <!-- Loading / error -->
     <div v-if="loading" class="py-12 text-center text-sm text-muted-foreground">
       {{ t('timeOff.loading') }}
@@ -319,7 +231,7 @@ function navigateBack() {
       {{ t('timeOff.error') }}
     </div>
 
-    <template v-else-if="activeSegTab === 'overview'">
+    <template v-else>
       <!-- No Salaxy -->
       <div v-if="!hy" class="py-12 text-center text-sm text-muted-foreground">
         {{ t('timeOff.no_salaxy') }}
@@ -461,9 +373,5 @@ function navigateBack() {
       </template>
     </template>
 
-    <!-- Calendar / Proposals placeholder -->
-    <template v-else>
-      <p class="py-16 text-center text-sm text-muted-foreground">Coming soon</p>
-    </template>
   </template>
 </template>
