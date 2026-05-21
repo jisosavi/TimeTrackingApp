@@ -86,6 +86,8 @@ Support for multiple UI languages, easy to add more locales when needed.
 
 ## Screenshots
 
+> **Note:** Screenshots below were taken from an earlier version of the app. The UI has evolved since then — some views, layouts, and features may look different in the current version.
+
 **Simple PIN login** — each company has its own login URL at `/{slug}/`.
 Employees and managers/supervisors only need to open the URL on any device and give their unique PIN.
 Nothing else is needed for onboarding, no configuration or installing anything!
