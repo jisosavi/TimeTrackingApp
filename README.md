@@ -355,16 +355,17 @@ npm run lint         # ESLint + Oxlint
 
 ## Audit Trail
 
-Every meaningful action in the system — authentication, time entry changes, personnel management, and payroll exports — is recorded in an append-only `audit_log` table. Records are never updated or deleted.
+Every meaningful action in the system — authentication, time entry changes, personnel management, payroll exports, and super-admin company management — is recorded in an append-only `audit_log` table. Records are never updated or deleted.
 
 ### What is recorded
 
 | Category | Events |
 |---|---|
-| Authentication | `auth.pin.success`, `auth.pin.failure`, `auth.login.success`, `auth.login.failure` |
+| Authentication | `auth.pin.success`, `auth.pin.failure` (employee/supervisor PIN); `auth.login.success`, `auth.login.failure` (company admin and super-admin login) |
 | Time entries | `time_entry.created`, `time_entry.approved`, `time_entry.rejected`, `time_entry.deleted`, `time_entry.clarified`, `time_entry.km_clarified` |
 | Personnel | `employee.created`, `employee.updated`, `employee.pin_unlocked`, `supervisor.created`, `supervisor.updated`, `supervisor.deleted`, `supervisor.pin_unlocked` |
 | Payroll | `payroll.exported` |
+| Companies (super-admin) | `company.created`, `company.updated`, `company.deleted`, `company.feature_set` |
 | System | `system.audit_failure` (see failure handling below) |
 
 Each record carries: timestamp (UTC), event name, actor type and ID, client IP (from `x-forwarded-for`), resource type and ID, before/after state snapshots for mutations, outcome (`ok` / `error`), and a free-form metadata field.

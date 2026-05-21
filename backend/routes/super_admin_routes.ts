@@ -1,6 +1,7 @@
 import { Hono } from "@hono/hono";
 import { requireSuperAdmin } from "../lib/auth.ts";
 import { sql } from "../lib/db.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -26,6 +27,15 @@ app.delete("/api/super_admin/delete_company", requireSuperAdmin, async (c) => {
   await sql`DELETE FROM pin_rate_limit WHERE company_id = ${companyId}`;
   await sql`DELETE FROM salaxy_tokens WHERE company_id = ${companyId}`;
   await sql`DELETE FROM audit_log WHERE company_id = ${companyId}`;
+  writeAudit(0, {
+    event: "company.deleted",
+    actorType: "superadmin",
+    actorId: ((c.get("claims") as Record<string, unknown>)["user_id"] as number),
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "company",
+    resourceId: String(companyId),
+    before: { id: companyId, slug: company["slug"] },
+  });
   await sql`DELETE FROM companies WHERE id = ${companyId}`;
   return c.json({ success: true });
 });
@@ -52,6 +62,15 @@ app.post("/api/super_admin/set_feature", requireSuperAdmin, async (c) => {
            ui_language, salaxy_company_id AS business_id, salaxy_api_url, salaxy_username
     FROM companies WHERE id = ${companyId}
   `;
+  writeAudit(0, {
+    event: "company.feature_set",
+    actorType: "superadmin",
+    actorId: ((c.get("claims") as Record<string, unknown>)["user_id"] as number),
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "company",
+    resourceId: String(companyId),
+    after: { feature, enabled },
+  });
   return c.json({ success: true, company });
 });
 
@@ -93,6 +112,15 @@ app.patch("/api/super_admin/update_company", requireSuperAdmin, async (c) => {
            salaxy_api_url, salaxy_username, country_code
     FROM companies WHERE id = ${id}
   `;
+  writeAudit(0, {
+    event: "company.updated",
+    actorType: "superadmin",
+    actorId: ((c.get("claims") as Record<string, unknown>)["user_id"] as number),
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "company",
+    resourceId: String(id),
+    after: { name: company["name"], slug: company["slug"] },
+  });
   return c.json({ success: true, company });
 });
 

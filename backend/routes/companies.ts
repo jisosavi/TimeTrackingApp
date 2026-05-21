@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { requireSuperAdmin } from "../lib/auth.ts";
 import { sql } from "../lib/db.ts";
 import { SALAXY_API_URL, SALAXY_PASSWORD, SALAXY_USERNAME } from "../lib/config.ts";
+import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -91,6 +92,15 @@ app.post("/api/companies", requireSuperAdmin, async (c) => {
     const company = co as Record<string, unknown>;
     company["employee_count"] = await countActiveEmployees(id);
     company["last_activity_at"] = await getLastActivity(id);
+    writeAudit(0, {
+      event: "company.updated",
+      actorType: "superadmin",
+      actorId: ((c.get("claims") as Record<string, unknown>)["user_id"] as number),
+      actorIp: reqIp(c.req.header("x-forwarded-for")),
+      resource: "company",
+      resourceId: String(id),
+      after: { name: company["name"], slug: company["slug"] },
+    });
     return c.json({ success: true, company });
   }
 
@@ -123,6 +133,15 @@ app.post("/api/companies", requireSuperAdmin, async (c) => {
     VALUES (${companyId}, ${email}, ${hash}, ${email}, 'company_admin', TRUE)
   `;
 
+  writeAudit(0, {
+    event: "company.created",
+    actorType: "superadmin",
+    actorId: ((c.get("claims") as Record<string, unknown>)["user_id"] as number),
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "company",
+    resourceId: String(companyId),
+    after: { id: companyId, name, slug },
+  });
   return c.json({ success: true, company: { id: companyId, name, slug, employee_count: 0 } }, 201);
 });
 

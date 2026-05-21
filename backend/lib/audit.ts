@@ -21,6 +21,8 @@ export type AuditEventName =
   | "absence.created" | "absence.approved" | "absence.rejected" | "absence.deleted"
   // salaxy sync
   | "salaxy.holiday.synced" | "salaxy.absence.synced"
+  // companies (super-admin)
+  | "company.created" | "company.updated" | "company.deleted" | "company.feature_set"
   // system
   | "system.audit_failure";
 
