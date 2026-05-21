@@ -58,10 +58,28 @@ Returns `200 OK` when the server is up. Used by Railway as a liveness probe.
 
 ### One-time setup
 
-1. Create a new Railway service and connect the GitHub repo.
+1. Create a new Railway project and add two services: **GitHub repo** (Deno) and **PostgreSQL**.
+   Both must be in the **same Railway project** so private networking works.
 2. Railway detects `railway.toml` and uses the `Dockerfile` automatically.
-3. Add a **Postgres** database (or point `DATABASE_URL` at Neon / any external Postgres).
-4. Set all environment variables in the Railway dashboard.
+3. In the Deno service's **Variables**, set:
+
+   ```
+   PG_URL=${{Postgres.DATABASE_URL}}
+   JWT_SECRET=...
+   GEMINI_API_KEY=...
+   SA_EMAIL=...
+   SA_PASSWORD=...
+   ```
+
+   Using `PG_URL` (not `DATABASE_URL`) avoids a conflict with the internal `DATABASE_URL` that
+   Railway auto-injects. The `${{Postgres.DATABASE_URL}}` reference resolves to the internal
+   connection string (`postgres.railway.internal:5432`) automatically.
+
+4. **Do not enable SSL** for internal connections — `db.ts` handles this automatically: SSL is
+   disabled when the host ends in `.railway.internal`, and required otherwise.
+
+> **External Postgres (Neon, Supabase, etc.):** set `PG_URL` to the external connection string
+> directly. Standard port 5432 with SSL is reachable from Railway without restrictions.
 
 ### Redeploy
 

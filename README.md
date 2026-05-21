@@ -252,7 +252,7 @@ npm run lint         # ESLint + Oxlint
 
 ### Deploying
 
-**Backend** — push to a Railway service configured with the `Dockerfile`. Set all environment variables in the Railway dashboard, including `DATABASE_URL` pointing to your Postgres instance (e.g. Neon). No persistent volume needed.
+**Backend** — push to a Railway service configured with the `Dockerfile`. Add a **PostgreSQL** service to the **same Railway project** and set `PG_URL=${{Postgres.DATABASE_URL}}` in the Deno service variables (using the same project enables private networking; SSL is handled automatically). See `backend/README.md` for full Railway setup instructions.
 
 **Frontend** — build with `VITE_API_BASE` pointing to the Railway service URL and `VITE_APP_BASE` set to the sub-path on your Apache server, then rsync `frontend/dist/` to the server:
 ```bash
