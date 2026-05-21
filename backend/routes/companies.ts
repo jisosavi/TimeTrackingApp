@@ -108,9 +108,11 @@ app.post("/api/companies", requireSuperAdmin, async (c) => {
   if (slugTaken) return c.json({ success: false, error: "Slug already taken" }, 409);
 
   const salaxyAccountId = String(body.salaxy_account_id ?? "").trim() || null;
+  const salaxyUsername = String(body.salaxy_username ?? "").trim() || SALAXY_USERNAME;
+  const salaxyPassword = String(body.salaxy_password ?? "") || SALAXY_PASSWORD;
   const [result] = await sql`
     INSERT INTO companies (name, slug, salaxy_account_id, salaxy_api_url, salaxy_username, salaxy_password)
-    VALUES (${name}, ${slug}, ${salaxyAccountId}, ${SALAXY_API_URL}, ${SALAXY_USERNAME}, ${SALAXY_PASSWORD})
+    VALUES (${name}, ${slug}, ${salaxyAccountId}, ${SALAXY_API_URL}, ${salaxyUsername}, ${salaxyPassword})
     RETURNING id
   `;
   const companyId = Number(result.id);

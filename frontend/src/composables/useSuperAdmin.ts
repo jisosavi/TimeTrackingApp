@@ -43,6 +43,8 @@ export function useSuperAdmin() {
     email: string
     password: string
     salaxy_account_id?: string
+    salaxy_username?: string
+    salaxy_password?: string
   }): Promise<Company> {
     const data = await post<{ company: Company }>('/api/companies', payload)
     companies.value.push({ ...data.company, active: 1, approvals_enabled: 0, ui_language: 'en', employee_count: 0, business_id: null })

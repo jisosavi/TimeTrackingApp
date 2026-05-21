@@ -128,14 +128,14 @@ function onDrawerDeleted(companyId: number) {
 
 // ── Create form ───────────────────────────────────────────────────────────────
 const showCreateForm = ref(false)
-const createForm = ref({ name: '', slug: '', email: '', password: '', salaxy_account_id: '' })
+const createForm = ref({ name: '', slug: '', email: '', password: '', salaxy_account_id: '', salaxy_username: '', salaxy_password: '' })
 const createError = ref<string | null>(null)
 const creating = ref(false)
 
 const createSlugError = computed(() => validateSlug(createForm.value.slug))
 
 function openCreateForm() {
-  createForm.value = { name: '', slug: '', email: '', password: '', salaxy_account_id: '' }
+  createForm.value = { name: '', slug: '', email: '', password: '', salaxy_account_id: '', salaxy_username: '', salaxy_password: '' }
   createError.value = null
   showCreateForm.value = true
 }
@@ -166,6 +166,8 @@ async function submitCreate() {
       email: createForm.value.email.trim(),
       password: createForm.value.password,
       salaxy_account_id: createForm.value.salaxy_account_id.trim() || undefined,
+      salaxy_username: createForm.value.salaxy_username.trim() || undefined,
+      salaxy_password: createForm.value.salaxy_password || undefined,
     })
     showCreateForm.value = false
   } catch (e) {
@@ -333,6 +335,14 @@ async function submitCreate() {
         <div class="space-y-1">
           <Label class="text-xs">Salaxy Account ID</Label>
           <Input v-model="createForm.salaxy_account_id" placeholder="Optional" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs">Salaxy API Email</Label>
+          <Input v-model="createForm.salaxy_username" type="email" placeholder="Optional" autocomplete="off" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs">Salaxy API Password</Label>
+          <Input v-model="createForm.salaxy_password" type="password" placeholder="Optional" autocomplete="new-password" />
         </div>
       </div>
       <p v-if="createError" class="text-xs text-destructive">{{ createError }}</p>
