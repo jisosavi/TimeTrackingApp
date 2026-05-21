@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { verifyToken } from "../lib/jwt.ts";
-import { getCompanyDb, getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 
 const app = new Hono();
 const VALID_LANGS = ["en", "fi", "sv", "et", "uk", "xh"];
@@ -29,31 +29,31 @@ app.post("/api/update_language", async (c) => {
 
   if (targetType === "employee") {
     if (userType !== "employee") return c.json({ success: false, error: "Unauthorized" }, 401);
-    getCompanyDb(companyId).prepare("UPDATE employees SET ui_language = ? WHERE id = ?").run(langValue, userId);
+    await sql`UPDATE employees SET ui_language = ${langValue} WHERE id = ${userId} AND company_id = ${companyId}`;
     return c.json({ success: true });
   }
 
   if (targetType === "supervisor_self") {
     if (userType !== "supervisor") return c.json({ success: false, error: "Unauthorized" }, 401);
-    getCompanyDb(companyId).prepare("UPDATE supervisors SET ui_language = ? WHERE id = ?").run(langValue, userId);
+    await sql`UPDATE supervisors SET ui_language = ${langValue} WHERE id = ${userId} AND company_id = ${companyId}`;
     return c.json({ success: true });
   }
 
   if (targetType === "admin") {
     if (userType !== "admin") return c.json({ success: false, error: "Unauthorized" }, 401);
-    getCompanyDb(companyId).prepare("UPDATE company_admins SET ui_language = ? WHERE id = ?").run(langValue, userId);
+    await sql`UPDATE company_admins SET ui_language = ${langValue} WHERE id = ${userId} AND company_id = ${companyId}`;
     return c.json({ success: true });
   }
 
   if (targetType === "superadmin") {
     if (userType !== "superadmin") return c.json({ success: false, error: "Unauthorized" }, 401);
-    getMasterDb().prepare("UPDATE super_admins SET ui_language = ? WHERE id = ?").run(langValue, userId);
+    await sql`UPDATE super_admins SET ui_language = ${langValue} WHERE id = ${userId}`;
     return c.json({ success: true });
   }
 
   if (targetType === "company") {
     if (userType !== "admin") return c.json({ success: false, error: "Unauthorized" }, 401);
-    getMasterDb().prepare("UPDATE companies SET ui_language = ? WHERE id = ?").run(langValue, companyId);
+    await sql`UPDATE companies SET ui_language = ${langValue} WHERE id = ${companyId}`;
     return c.json({ success: true });
   }
 

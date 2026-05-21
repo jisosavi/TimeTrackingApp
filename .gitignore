@@ -9,6 +9,11 @@ frontend/.env.production.local
 # Data directory (user data)
 data/
 
+# SQLite files anywhere in the tree (safety net)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
 # macOS
 .DS_Store
 

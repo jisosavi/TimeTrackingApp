@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { useMobileShell } from '@/composables/useMobileShell'
 import { useApi } from '@/composables/useApi'
+import { lastName, firstNames } from '@/utils/name'
 import PersonRibbon from '@/components/time-off/PersonRibbon.vue'
 import type { RibbonSpan, RibbonPerson } from '@/components/time-off/PersonRibbon.vue'
 
@@ -32,7 +33,26 @@ const viewMonth = ref(now.getMonth() + 1) // 1-12
 const people = ref<CalendarPerson[]>([])
 const stats = ref<Stats | null>(null)
 const loading = ref(false)
-const collapsed = ref<Set<number>>(new Set())
+const expanded = ref<Set<number>>(new Set())
+const search = ref('')
+
+
+const filteredPeople = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return [...people.value]
+    .filter(p => !q || p.name.toLowerCase().includes(q))
+    .sort((a, b) => lastName(a.name).localeCompare(lastName(b.name), 'fi', { sensitivity: 'base' }))
+})
+
+const allExpanded = computed(() => filteredPeople.value.length > 0 && filteredPeople.value.every(p => expanded.value.has(p.id)))
+
+function toggleExpandAll() {
+  if (allExpanded.value) {
+    expanded.value = new Set()
+  } else {
+    expanded.value = new Set(filteredPeople.value.map(p => p.id))
+  }
+}
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -113,10 +133,9 @@ function spansForMonth(person: CalendarPerson, month: number): RibbonSpan[] {
 }
 
 function toggleCollapse(id: number) {
-  if (collapsed.value.has(id)) collapsed.value.delete(id)
-  else collapsed.value.add(id)
-  // trigger reactivity
-  collapsed.value = new Set(collapsed.value)
+  if (expanded.value.has(id)) expanded.value.delete(id)
+  else expanded.value.add(id)
+  expanded.value = new Set(expanded.value)
 }
 </script>
 
@@ -254,10 +273,27 @@ function toggleCollapse(id: number) {
       {{ t('common.loading') }}
     </div>
 
+    <!-- Search + expand/collapse all -->
+    <div v-if="!loading && people.length > 0" class="flex items-center gap-3">
+      <input
+        v-model="search"
+        type="search"
+        :placeholder="t('approval.search_placeholder')"
+        class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      <button
+        type="button"
+        class="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        @click="toggleExpandAll"
+      >
+        {{ allExpanded ? t('supervisor.calendar.collapse_all') : t('supervisor.calendar.expand_all') }}
+      </button>
+    </div>
+
     <!-- Per-person sections -->
-    <div v-else-if="people.length > 0" class="space-y-3">
+    <div v-if="!loading && people.length > 0" class="space-y-3">
       <div
-        v-for="person in people"
+        v-for="person in filteredPeople"
         :key="person.id"
         class="border border-border rounded-lg overflow-hidden"
       >
@@ -272,16 +308,16 @@ function toggleCollapse(id: number) {
           >
             {{ person.initials }}
           </div>
-          <span class="text-sm font-medium text-foreground flex-1 text-left">{{ person.name }}</span>
+          <span class="text-sm font-medium text-foreground flex-1 text-left"><span class="font-bold">{{ lastName(person.name) }}</span><template v-if="firstNames(person.name)">, {{ firstNames(person.name) }}</template></span>
           <span class="text-xs text-muted-foreground mr-1">
             {{ t('supervisor.calendar.spans_count', { count: person.spans.length }) }}
           </span>
-          <ChevronUp v-if="!collapsed.has(person.id)" class="w-4 h-4 text-muted-foreground" />
+          <ChevronUp v-if="expanded.has(person.id)" class="w-4 h-4 text-muted-foreground" />
           <ChevronDown v-else class="w-4 h-4 text-muted-foreground" />
         </button>
 
         <!-- 12-month ribbons -->
-        <div v-if="!collapsed.has(person.id)" class="divide-y divide-border">
+        <div v-if="expanded.has(person.id)" class="divide-y divide-border">
           <PersonRibbon
             v-for="m in 12"
             :key="m"
@@ -298,7 +334,7 @@ function toggleCollapse(id: number) {
       </div>
     </div>
 
-    <p v-else class="py-8 text-center text-sm text-muted-foreground">
+    <p v-if="!loading && filteredPeople.length === 0" class="py-8 text-center text-sm text-muted-foreground">
       {{ t('supervisor.calendar.empty') }}
     </p>
   </div>

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useApi } from '@/composables/useApi'
+import { lastName, firstNames } from '@/utils/name'
 import type { RibbonPerson, RibbonSpan } from '@/components/time-off/PersonRibbon.vue'
 
 interface CalendarPerson extends RibbonPerson {
@@ -35,6 +36,7 @@ interface PersonBalance {
   pending: number
 }
 
+
 const balances = computed((): PersonBalance[] =>
   people.value.map((person) => {
     let planned = 0, pending = 0
@@ -45,7 +47,7 @@ const balances = computed((): PersonBalance[] =>
       else if (span.status === 'pending') pending += days
     }
     return { person, planned, pending }
-  }),
+  }).sort((a, b) => lastName(a.person.name).localeCompare(lastName(b.person.name), 'fi', { sensitivity: 'base' })),
 )
 
 async function fetch() {
@@ -97,7 +99,7 @@ onMounted(fetch)
           >
             {{ person.initials }}
           </div>
-          <span class="text-sm font-medium text-foreground truncate">{{ person.name }}</span>
+          <span class="text-sm font-medium text-foreground truncate"><span class="font-bold">{{ lastName(person.name) }}</span><template v-if="firstNames(person.name)">, {{ firstNames(person.name) }}</template></span>
         </div>
 
         <!-- Planned -->

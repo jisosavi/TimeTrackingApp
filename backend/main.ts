@@ -1,9 +1,10 @@
 import { Hono } from "@hono/hono";
 import { cors } from "@hono/hono/cors";
-import { getMasterDb } from "./lib/db.ts";
+import bcrypt from "bcryptjs";
+import { sql } from "./lib/db.ts";
+import { runMigrations } from "./lib/migrate.ts";
 
 const API_V = "/v01";
-import bcrypt from "bcryptjs";
 import health from "./routes/health.ts";
 import validatePin from "./routes/validate_pin.ts";
 import supervisorLogin from "./routes/supervisor_login.ts";
@@ -46,20 +47,29 @@ app.use(
   }),
 );
 
-const db = getMasterDb(); // init schema + fail fast if DB is unavailable
+// Run schema migrations on every startup (idempotent)
+await runMigrations();
 
 // Auto-seed super-admin on first boot if SA_EMAIL + SA_PASSWORD env vars are set
 const saEmail = Deno.env.get("SA_EMAIL");
 const saPassword = Deno.env.get("SA_PASSWORD");
 if (saEmail && saPassword) {
-  const existing = db.prepare("SELECT id FROM super_admins WHERE email = ?").get(saEmail);
+  const [existing] = await sql`SELECT id FROM super_admins WHERE email = ${saEmail}`;
   if (!existing) {
     const hash = await bcrypt.hash(saPassword, 10);
-    db.prepare("INSERT OR IGNORE INTO super_admin_orgs (name) VALUES ('Default')").run();
-    const org = db.prepare("SELECT id FROM super_admin_orgs LIMIT 1").get() as { id: number };
-    db.prepare("INSERT INTO super_admins (org_id, email, password_hash, name) VALUES (?, ?, ?, ?)").run(
-      org.id, saEmail, hash, saEmail,
-    );
+    const [existingOrg] = await sql`SELECT id FROM super_admin_orgs LIMIT 1`;
+    let orgId: unknown;
+    if (existingOrg) {
+      orgId = existingOrg.id;
+    } else {
+      const [newOrg] = await sql`INSERT INTO super_admin_orgs (name) VALUES ('Default') RETURNING id`;
+      orgId = newOrg.id;
+    }
+    await sql`
+      INSERT INTO super_admins (org_id, email, password_hash, name)
+      VALUES (${orgId}, ${saEmail}, ${hash}, ${saEmail})
+      ON CONFLICT (email) DO NOTHING
+    `;
     console.log(`Seeded super-admin: ${saEmail}`);
   }
 }

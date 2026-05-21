@@ -11,7 +11,7 @@ app.get("/api/holiday_year", requireEmployee, async (c) => {
   if (!salaxyId) return c.json({ holidayYear: null });
 
   try {
-    const creds = getCompanyCreds(emp.company_id as number);
+    const creds = await getCompanyCreds(emp.company_id as number);
     const years = await getHolidayYears(salaxyId, creds);
     const hy = years.find((y) => y.year === year) ?? years[0] ?? null;
     return c.json({ holidayYear: hy });

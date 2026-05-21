@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { requireAdminOrSupervisor } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { initials } from "../lib/conflicts.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
@@ -26,95 +26,71 @@ export interface CalendarPerson {
   spans: CalendarSpan[];
 }
 
-function teamEmployeeIds(actor: Actor): number[] {
-  const db = getCompanyDb(actor.company_id);
+async function teamEmployeeIds(actor: Actor): Promise<number[]> {
   if (actor._type === "admin") {
-    return (
-      db
-        .prepare("SELECT id FROM employees WHERE company_id = ? AND active = 1")
-        .all(actor.company_id) as { id: number }[]
-    ).map((r) => r.id);
+    const rows = await sql`SELECT id FROM employees WHERE company_id = ${actor.company_id} AND active = TRUE`;
+    return rows.map((r) => Number(r.id));
   }
-  return (
-    db
-      .prepare("SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ?")
-      .all(actor.id) as { employee_id: number }[]
-  ).map((r) => r.employee_id);
+  const rows = await sql`SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ${actor.id}`;
+  return rows.map((r) => Number(r.employee_id));
 }
 
-// Returns spans for a set of employees within [rangeStart, rangeEnd]
-function fetchSpans(
-  db: ReturnType<typeof getCompanyDb>,
+async function fetchSpans(
+  companyId: number,
   empIds: number[],
   rangeStart: string,
   rangeEnd: string,
-): Map<number, CalendarSpan[]> {
+): Promise<Map<number, CalendarSpan[]>> {
   const result = new Map<number, CalendarSpan[]>();
   for (const id of empIds) result.set(id, []);
 
   if (empIds.length === 0) return result;
-  const ph = empIds.map(() => "?").join(",");
 
-  const propRows = db.prepare(
-    `SELECT hp.employee_id, hp.start_date, hp.end_date, hp.label, hp.status
-     FROM holiday_proposals hp
-     WHERE hp.employee_id IN (${ph})
-       AND hp.status NOT IN ('withdrawn')
-       AND hp.start_date <= ? AND hp.end_date >= ?`,
-  ).all(...empIds, rangeEnd, rangeStart) as {
-    employee_id: number;
-    start_date: string;
-    end_date: string;
-    label: string | null;
-    status: string;
-  }[];
+  const propRows = await sql`
+    SELECT hp.employee_id, hp.start_date, hp.end_date, hp.label, hp.status
+    FROM holiday_proposals hp
+    WHERE hp.company_id = ${companyId} AND hp.employee_id IN ${sql(empIds)}
+      AND hp.status NOT IN ('withdrawn')
+      AND hp.start_date <= ${rangeEnd} AND hp.end_date >= ${rangeStart}
+  `;
 
   for (const r of propRows) {
-    result.get(r.employee_id)!.push({
+    result.get(Number(r.employee_id))?.push({
       type: "holiday",
-      status: r.status,
-      start_date: r.start_date,
-      end_date: r.end_date,
-      label: r.label,
+      status: r.status as string,
+      start_date: r.start_date as string,
+      end_date: r.end_date as string,
+      label: r.label as string | null,
     });
   }
 
-  const absRows = db.prepare(
-    `SELECT ar.employee_id, ar.start_date, ar.end_date, ar.reason AS label, ar.status
-     FROM absence_records ar
-     WHERE ar.employee_id IN (${ph})
-       AND ar.status NOT IN ('rejected','withdrawn')
-       AND ar.start_date <= ? AND ar.end_date >= ?`,
-  ).all(...empIds, rangeEnd, rangeStart) as {
-    employee_id: number;
-    start_date: string;
-    end_date: string;
-    label: string | null;
-    status: string;
-  }[];
+  const absRows = await sql`
+    SELECT ar.employee_id, ar.start_date, ar.end_date, ar.reason AS label, ar.status
+    FROM absence_records ar
+    WHERE ar.company_id = ${companyId} AND ar.employee_id IN ${sql(empIds)}
+      AND ar.status NOT IN ('rejected','withdrawn')
+      AND ar.start_date <= ${rangeEnd} AND ar.end_date >= ${rangeStart}
+  `;
 
   for (const r of absRows) {
-    result.get(r.employee_id)!.push({
+    result.get(Number(r.employee_id))?.push({
       type: "absence",
-      status: r.status,
-      start_date: r.start_date,
-      end_date: r.end_date,
-      label: r.label,
+      status: r.status as string,
+      start_date: r.start_date as string,
+      end_date: r.end_date as string,
+      label: r.label as string | null,
     });
   }
 
   return result;
 }
 
-// ── GET /api/team_calendar?month=YYYY-MM  (or ?year=YYYY) ────────────────
-
-app.get("/api/team_calendar", requireAdminOrSupervisor, (c) => {
+app.get("/api/team_calendar", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
-  const db = getCompanyDb(actor.company_id);
-  const empIds = teamEmployeeIds(actor);
+  const empIds = await teamEmployeeIds(actor);
 
-  const monthParam = c.req.query("month"); // YYYY-MM
-  const yearParam = c.req.query("year");   // YYYY
+  const monthParam = c.req.query("month");
+  const yearParam = c.req.query("year");
 
   let rangeStart: string;
   let rangeEnd: string;
@@ -144,22 +120,17 @@ app.get("/api/team_calendar", requireAdminOrSupervisor, (c) => {
     return c.json({ people: [], stats: { total: 0, off_any_day: 0, range_start: rangeStart, range_end: rangeEnd, mode } });
   }
 
-  // Fetch employee names
-  const ph = empIds.map(() => "?").join(",");
-  const empRows = db.prepare(
-    `SELECT id, name FROM employees WHERE id IN (${ph}) AND active = 1`,
-  ).all(...empIds) as { id: number; name: string }[];
+  const empRows = await sql`SELECT id, name FROM employees WHERE id IN ${sql(empIds)} AND active = TRUE`;
 
-  const spansByEmp = fetchSpans(db, empIds, rangeStart, rangeEnd);
+  const spansByEmp = await fetchSpans(actor.company_id, empIds, rangeStart, rangeEnd);
 
-  const people: CalendarPerson[] = empRows.map((e) => ({
-    id: e.id,
-    name: e.name,
-    initials: initials(e.name),
-    spans: spansByEmp.get(e.id) ?? [],
+  const people: CalendarPerson[] = (empRows as { id: unknown; name: unknown }[]).map((e) => ({
+    id: Number(e.id),
+    name: e.name as string,
+    initials: initials(e.name as string),
+    spans: spansByEmp.get(Number(e.id)) ?? [],
   }));
 
-  // Stats: how many employees have at least one approved/pending span in range
   const offAnyDay = people.filter((p) => p.spans.length > 0).length;
 
   return c.json({

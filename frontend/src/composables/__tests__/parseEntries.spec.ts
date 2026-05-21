@@ -72,12 +72,12 @@ describe('parseBlock', () => {
   })
 
   it('parses an absence block', () => {
-    const text = '```json\n{"type":"absence","startDate":"2026-05-05","endDate":"2026-05-07","isPaid":true,"affectsAccrual":true,"reason":"Kertausharjoitus","note":""}\n```'
+    const text = '```json\n{"type":"absence","startDate":"2026-05-05","endDate":"2026-05-07","isPaid":true,"affectsAccrual":true,"causeCode":"militaryRefresherTraining","note":""}\n```'
     const result = parseBlock(text)
     expect(result).not.toBeNull()
     expect(result!.type).toBe('absence')
     expect((result as { isPaid: boolean }).isPaid).toBe(true)
-    expect((result as { reason: string }).reason).toBe('Kertausharjoitus')
+    expect((result as { causeCode: string }).causeCode).toBe('militaryRefresherTraining')
   })
 
   it('returns null for malformed JSON', () => {

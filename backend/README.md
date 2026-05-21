@@ -7,7 +7,7 @@ Deno 2 + Hono API server. Handles auth, time entries, Salaxy payroll integration
 ### Prerequisites
 
 - [Deno 2.x](https://deno.com)
-- `libsqlite3` installed on the system (on macOS: `brew install sqlite`)
+- A PostgreSQL database (local or cloud — [Neon](https://neon.tech) free tier works well)
 
 ### Environment variables
 
@@ -16,6 +16,7 @@ Create a `.env` file in the repo root (or export these in your shell):
 ```
 JWT_SECRET=a-long-random-secret
 GEMINI_API_KEY=your-gemini-api-key
+DATABASE_URL=postgres://user:pass@host/dbname
 
 # Salaxy API credentials (OAuth2 password grant)
 SALAXY_API_URL=https://api.salaxy.com/v03/api
@@ -27,8 +28,7 @@ SALAXY_PASSWORD=your-password
 SA_EMAIL=superadmin@yourcompany.com
 SA_PASSWORD=your-superadmin-password
 
-# Optional overrides
-DB_DIR=data          # directory for SQLite files (default: data/)
+# Optional
 PORT=8080            # listening port (default: 8080)
 ```
 
@@ -40,14 +40,9 @@ Run from the repo root:
 deno task dev
 ```
 
-Starts Deno with `--watch` on port 8080. SQLite databases are created automatically under `data/` on first boot.
+Starts Deno with `--watch` on port 8080. On first boot, pending SQL migrations in `backend/migrations/` are applied automatically.
 
 The Vite dev server (frontend) proxies `/v01` to `http://localhost:8080` — both servers must be running for full local dev.
-
-**NOTE!**
-Database and Deno Deploy compatibility: 
-The backend uses SQLite via @db/sqlite, which requires FFI (Foreign Function Interface) to load the native SQLite C library into the Deno process. FFI is not available on Deno Deploy, which runs V8 isolates without native code access. The current setup is therefore not compatible with Deno Deploy and must be hosted on a platform that supports persistent disk and FFI — Railway with a mounted volume is the reference deployment target.
-Migrating to a serverless-compatible database (e.g. Neon/Supabase Postgres via the HTTP driver) would unblock Deno Deploy.
 
 ### Health check
 
@@ -64,26 +59,17 @@ Returns `200 OK` when the server is up. Used by Railway as a liveness probe.
 ### One-time setup
 
 1. Create a new Railway service and connect the GitHub repo.
-2. Railway detects `railway.toml` and uses the `Dockerfile` automatically — no additional build config needed.
-3. Add a **Volume** to the service, mounted at `/app/data`. This is where SQLite databases live; without a persistent volume they are lost on every redeploy.
-
-### Environment variables (Railway dashboard)
-
-Set the same variables as the local `.env` above. `JWT_SECRET` must be consistent across deploys — changing it invalidates all active sessions.
+2. Railway detects `railway.toml` and uses the `Dockerfile` automatically.
+3. Add a **Postgres** database (or point `DATABASE_URL` at Neon / any external Postgres).
+4. Set all environment variables in the Railway dashboard.
 
 ### Redeploy
 
-Push to the connected branch. Railway builds the Docker image and runs:
-
-```
-deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi backend/main.ts
-```
-
-The `--allow-ffi` flag is required for SQLite. The `DENO_SQLITE_PATH` env var in the Dockerfile points to the system `libsqlite3` to avoid a runtime download on every start.
+Push to the connected branch. Railway builds the Docker image and runs the backend. Migrations apply automatically at startup.
 
 ### Logs
 
-Railway streams stdout/stderr. Startup errors and audit failures are logged there. The `writeAudit()` function also writes a `system.audit_failure` row to `master.sqlite` if a business-logic audit write fails — check Railway logs first, then the master DB if you need to investigate gaps.
+Railway streams stdout/stderr. Startup errors and audit failures are logged there.
 
 ---
 
@@ -92,17 +78,19 @@ Railway streams stdout/stderr. Startup errors and audit failures are logged ther
 ```
 backend/
 ├── main.ts              # Hono entry point — CORS, route registration, super-admin seed
-├── bootstrap.ts         # SQLite schema init and inline migrations
+├── migrations/          # Numbered .sql files applied at startup by lib/migrate.ts
 ├── lib/
 │   ├── auth.ts          # requireEmployee / requireSupervisor / requireAdmin / requireSuperAdmin
 │   ├── audit.ts         # writeAudit() helper
 │   ├── config.ts        # All config read from env vars
-│   ├── db.ts            # getMasterDb / getCompanyDb / getCompanyDbBySlug
+│   ├── db.ts            # postgres.js sql client (single Postgres connection)
+│   ├── migrate.ts       # Applies pending migrations from migrations/ at startup
 │   ├── jwt.ts           # JWT sign/verify (HS256), hashPin (HMAC-SHA256)
 │   ├── pin_rate_limit.ts
-│   └── salaxy.ts        # Token cache, employee sync, payroll export, holiday years & absences API
+│   └── salaxy.ts        # Token cache (salaxy_tokens table), employee sync, payroll export
 ├── docs/
 │   └── salaxy-03.json   # Salaxy OpenAPI spec — gitignored, re-fetch with:
 │                        # curl -L https://code.salaxy.com/api-docs/salaxy-03.json -o backend/docs/salaxy-03.json
 └── routes/              # One file per endpoint group
+    └── super_admin_routes.ts  # Includes GET /api/super_admin/audit_log — paginated, filterable audit log read (super-admin only, testing use)
 ```

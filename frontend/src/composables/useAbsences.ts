@@ -34,6 +34,7 @@ export function useAbsences() {
   async function submitAbsence(body: {
     startDate: string
     endDate: string
+    causeCode: string
     isPaid: boolean
     affectsAccrual: boolean
     note?: string | null

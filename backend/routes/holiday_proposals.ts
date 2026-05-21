@@ -1,26 +1,21 @@
 import { Hono } from "@hono/hono";
 import { requireEmployee } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/holiday_proposals", requireEmployee, (c) => {
+app.get("/api/holiday_proposals", requireEmployee, async (c) => {
   const emp = c.get("user") as Record<string, unknown>;
+  const companyId = emp.company_id as number;
+  const empId = emp.id as number;
   const statusFilter = c.req.query("status");
-  const db = getCompanyDb(emp.company_id as number);
 
   const proposals = statusFilter && statusFilter !== "all"
     ? statusFilter === "rejected"
-      ? db.prepare(
-          "SELECT * FROM holiday_proposals WHERE employee_id = ? AND status IN ('rejected','clarifying') ORDER BY start_date ASC"
-        ).all(emp.id as number)
-      : db.prepare(
-          "SELECT * FROM holiday_proposals WHERE employee_id = ? AND status = ? ORDER BY start_date ASC"
-        ).all(emp.id as number, statusFilter)
-    : db.prepare(
-        "SELECT * FROM holiday_proposals WHERE employee_id = ? ORDER BY start_date ASC"
-      ).all(emp.id as number);
+      ? await sql`SELECT * FROM holiday_proposals WHERE company_id = ${companyId} AND employee_id = ${empId} AND status IN ('rejected','clarifying') ORDER BY start_date ASC`
+      : await sql`SELECT * FROM holiday_proposals WHERE company_id = ${companyId} AND employee_id = ${empId} AND status = ${statusFilter} ORDER BY start_date ASC`
+    : await sql`SELECT * FROM holiday_proposals WHERE company_id = ${companyId} AND employee_id = ${empId} ORDER BY start_date ASC`;
 
   return c.json({ proposals });
 });
@@ -42,24 +37,22 @@ app.post("/api/holiday_proposals", requireEmployee, async (c) => {
   const workDays = computeWorkDays(start_date, end_date);
   if (workDays === 0) return c.json({ error: "no_work_days" }, 400);
 
-  const db = getCompanyDb(emp.company_id);
-
-  // Check for overlapping non-cancelled proposals
-  const overlap = db.prepare(
-    `SELECT id FROM holiday_proposals
-     WHERE employee_id = ? AND status NOT IN ('rejected','withdrawn')
-       AND start_date <= ? AND end_date >= ?`
-  ).get(emp.id, end_date, start_date);
+  const [overlap] = await sql`
+    SELECT id FROM holiday_proposals
+    WHERE company_id = ${emp.company_id} AND employee_id = ${emp.id}
+      AND status NOT IN ('rejected','withdrawn')
+      AND start_date <= ${end_date} AND end_date >= ${start_date}
+  `;
   if (overlap) return c.json({ error: "overlap" }, 409);
 
   const now = new Date().toISOString();
-  const result = db.prepare(
-    `INSERT INTO holiday_proposals
-       (employee_id, start_date, end_date, work_days, label, note, source, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'calendar', 'pending', ?, ?)`
-  ).run(emp.id, start_date, end_date, workDays, label ?? null, note ?? null, now, now);
-
-  const proposalId = result.lastInsertRowid;
+  const [result] = await sql`
+    INSERT INTO holiday_proposals
+      (company_id, employee_id, start_date, end_date, work_days, label, note, source, status, created_at, updated_at)
+    VALUES (${emp.company_id}, ${emp.id}, ${start_date}, ${end_date}, ${workDays}, ${label ?? null}, ${note ?? null}, 'calendar', 'pending', ${now}, ${now})
+    RETURNING id
+  `;
+  const proposalId = Number(result.id);
 
   writeAudit(emp.company_id, {
     event: "holiday_proposal.created",
@@ -71,8 +64,42 @@ app.post("/api/holiday_proposals", requireEmployee, async (c) => {
     after: { start_date, end_date, work_days: workDays },
   });
 
-  const proposal = db.prepare("SELECT * FROM holiday_proposals WHERE id = ?").get(proposalId);
+  const [proposal] = await sql`SELECT * FROM holiday_proposals WHERE id = ${proposalId}`;
   return c.json({ proposal }, 201);
+});
+
+app.post("/api/holiday_proposals/:id/clarify", requireEmployee, async (c) => {
+  const emp = c.get("user") as { id: number; company_id: number };
+  const proposalId = Number(c.req.param("id"));
+
+  let body: { text?: string };
+  try { body = await c.req.json(); } catch { return c.json({ error: "invalid_json" }, 400); }
+  if (!body.text?.trim()) return c.json({ error: "missing_text" }, 400);
+
+  const [proposal] = await sql`
+    SELECT * FROM holiday_proposals WHERE id = ${proposalId} AND company_id = ${emp.company_id} AND employee_id = ${emp.id}
+  `;
+  if (!proposal) return c.json({ error: "not_found" }, 404);
+  if (proposal.status !== "clarifying") return c.json({ error: "not_clarifying" }, 409);
+
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE holiday_proposals
+    SET status = 'pending', employee_clarification = ${body.text.trim()}, updated_at = ${now}
+    WHERE id = ${proposalId}
+  `;
+
+  writeAudit(emp.company_id, {
+    event: "holiday_proposal.clarified",
+    actorType: "employee",
+    actorId: emp.id,
+    actorIp: reqIp(c.req.header("x-forwarded-for")),
+    resource: "holiday_proposal",
+    resourceId: String(proposalId),
+    after: { employee_clarification: body.text.trim() },
+  });
+
+  return c.json({ ok: true });
 });
 
 function computeWorkDays(startIso: string, endIso: string): number {

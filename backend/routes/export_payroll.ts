@@ -1,7 +1,7 @@
 import { Hono } from "@hono/hono";
 import { requireAdmin } from "../lib/auth.ts";
-import { getCompanyDb, getMasterDb } from "../lib/db.ts";
-import { getCompanyCreds, exportEmployeeEntries, salaxyRequest, type EntryForExport } from "../lib/salaxy.ts";
+import { sql } from "../lib/db.ts";
+import { getCompanyCreds, exportEmployeeEntries, salaxyRequest, findPayrollByPeriod, periodSourceId, type EntryForExport } from "../lib/salaxy.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
@@ -66,25 +66,22 @@ function getPeriodsForRange(dateFrom: string, dateTo: string, s: PayrollSettings
   return periods;
 }
 
-app.get("/api/export_payroll", requireAdmin, (c) => {
+app.get("/api/export_payroll", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
-  const db = getCompanyDb(companyId);
 
   const dateFrom = c.req.query("date_from") ?? "";
   const dateTo = c.req.query("date_to") ?? "";
   if (!dateFrom || !dateTo) return c.json({ success: false, error: "date_from ja date_to vaaditaan" }, 400);
 
-  const settingsRow = getMasterDb().prepare(
-    "SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = ?"
-  ).get(companyId) as PayrollSettings | undefined;
-  const settings: PayrollSettings = settingsRow ?? { payroll_period: "monthly", payday_1: 15, payday_2: 0 };
+  const [settingsRow] = await sql`SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = ${companyId}`;
+  const settings: PayrollSettings = settingsRow
+    ? { payroll_period: settingsRow.payroll_period as string, payday_1: Number(settingsRow.payday_1), payday_2: Number(settingsRow.payday_2) }
+    : { payroll_period: "monthly", payday_1: 15, payday_2: 0 };
 
   const byPeriod = new Map<string, Record<string, unknown>>();
   for (const [pk, p] of getPeriodsForRange(dateFrom, dateTo, settings)) {
-    const ex = db.prepare(
-      "SELECT salaxy_payroll_id FROM payroll_exports WHERE company_id = ? AND period_start = ? AND period_end = ?"
-    ).get(companyId, p.start, p.end) as { salaxy_payroll_id: string } | undefined;
+    const [ex] = await sql`SELECT salaxy_payroll_id FROM payroll_exports WHERE company_id = ${companyId} AND period_start = ${p.start} AND period_end = ${p.end}`;
     byPeriod.set(pk, {
       period_start: p.start, period_end: p.end, period_label: p.label,
       existing_payroll_id: ex?.salaxy_payroll_id ?? null,
@@ -92,12 +89,13 @@ app.get("/api/export_payroll", requireAdmin, (c) => {
     });
   }
 
-  const entries = db.prepare(
-    `SELECT te.*, e.name AS employee_name, e.salaxy_employment_id
-     FROM time_entries te JOIN employees e ON e.id = te.employee_id
-     WHERE te.company_id = ? AND te.status = 'approved' AND te.entry_date >= ? AND te.entry_date <= ?
-     ORDER BY te.entry_date ASC, e.name ASC`
-  ).all(companyId, dateFrom, dateTo) as Record<string, unknown>[];
+  const entries = await sql`
+    SELECT te.*, e.name AS employee_name, e.salaxy_employment_id
+    FROM time_entries te JOIN employees e ON e.id = te.employee_id
+    WHERE te.company_id = ${companyId} AND te.status = 'approved'
+      AND te.entry_date >= ${dateFrom} AND te.entry_date <= ${dateTo}
+    ORDER BY te.entry_date ASC, e.name ASC
+  `;
 
   for (const row of entries) {
     const pk = getPeriodForDate(row.entry_date as string, settings).start;
@@ -112,7 +110,7 @@ app.get("/api/export_payroll", requireAdmin, (c) => {
     const exportableKm = isDual && row.km_status !== "approved" ? 0 : Number(row.km);
     emps[eid].total_hours = Number(emps[eid].total_hours) + Number(row.hours);
     emps[eid].total_km = Number(emps[eid].total_km) + exportableKm;
-    if (!Number(row.exported_to_salaxy)) {
+    if (!row.exported_to_salaxy) {
       emps[eid].pending_hours = Number(emps[eid].pending_hours) + Number(row.hours);
       emps[eid].pending_km = Number(emps[eid].pending_km) + exportableKm;
     }
@@ -130,7 +128,6 @@ app.get("/api/export_payroll", requireAdmin, (c) => {
 app.post("/api/export_payroll", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
-  const db = getCompanyDb(companyId);
 
   const body = await c.req.json().catch(() => ({}));
   const dateFrom = String(body.date_from ?? "").trim();
@@ -140,26 +137,25 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
 
   if (!dateFrom || !dateTo) return c.json({ success: false, error: "date_from ja date_to vaaditaan" }, 400);
 
-  const settingsRow = getMasterDb().prepare(
-    "SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = ?"
-  ).get(companyId) as PayrollSettings | undefined;
-  const settings: PayrollSettings = settingsRow ?? { payroll_period: "monthly", payday_1: 15, payday_2: 0 };
+  const [settingsRow] = await sql`SELECT payroll_period, payday_1, payday_2 FROM companies WHERE id = ${companyId}`;
+  const settings: PayrollSettings = settingsRow
+    ? { payroll_period: settingsRow.payroll_period as string, payday_1: Number(settingsRow.payday_1), payday_2: Number(settingsRow.payday_2) }
+    : { payroll_period: "monthly", payday_1: 15, payday_2: 0 };
 
   const allPeriods = getPeriodsForRange(dateFrom, dateTo, settings);
-  const creds = getCompanyCreds(companyId);
+  const creds = await getCompanyCreds(companyId);
 
-  // Load entries grouped by period → salaxy_employment_id
   const entriesByPeriod = new Map<string, Map<string, EntryForExport[]>>();
 
   if (employeeIds.length) {
-    const placeholders = employeeIds.map(() => "?").join(",");
-    const exportedFilter = force ? "" : "AND te.exported_to_salaxy = 0";
-    const rows = db.prepare(
+    const exportedFilter = force ? "" : "AND te.exported_to_salaxy = FALSE";
+    const rows = await sql.unsafe(
       `SELECT te.*, e.salaxy_employment_id FROM time_entries te JOIN employees e ON e.id = te.employee_id
-       WHERE te.company_id = ? AND te.status = 'approved' ${exportedFilter}
-         AND te.entry_date >= ? AND te.entry_date <= ? AND te.employee_id IN (${placeholders})
-       ORDER BY te.entry_date ASC`
-    ).all(companyId, dateFrom, dateTo, ...employeeIds) as Record<string, unknown>[];
+       WHERE te.company_id = $1 AND te.status = 'approved' ${exportedFilter}
+         AND te.entry_date >= $2 AND te.entry_date <= $3 AND te.employee_id = ANY($4)
+       ORDER BY te.entry_date ASC`,
+      [companyId, dateFrom, dateTo, employeeIds]
+    ) as Record<string, unknown>[];
 
     for (const row of rows) {
       const pk = getPeriodForDate(row.entry_date as string, settings).start;
@@ -180,9 +176,11 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
     }
   }
 
-  const fallbackRow = db.prepare(
-    "SELECT salaxy_employment_id FROM employees WHERE company_id = ? AND salaxy_employment_id IS NOT NULL AND active = 1 LIMIT 1"
-  ).get(companyId) as { salaxy_employment_id: string } | undefined;
+  const [fallbackRow] = await sql`
+    SELECT salaxy_employment_id FROM employees
+    WHERE company_id = ${companyId} AND salaxy_employment_id IS NOT NULL AND active = TRUE
+    LIMIT 1
+  `;
   const fallbackEmpId = fallbackRow?.salaxy_employment_id ?? null;
 
   let totalSent = 0, totalAdded = 0, totalAlready = 0;
@@ -193,21 +191,34 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
   for (const [pk, p] of allPeriods) {
     const empEntries = entriesByPeriod.get(pk) ?? new Map<string, EntryForExport[]>();
 
-    // Get or create Salaxy payroll for this period
-    let exportRow = db.prepare(
-      "SELECT id, salaxy_payroll_id FROM payroll_exports WHERE company_id = ? AND period_start = ? AND period_end = ?"
-    ).get(companyId, p.start, p.end) as { id: number; salaxy_payroll_id: string } | undefined;
+    const [exportRow] = await sql`
+      SELECT id, salaxy_payroll_id FROM payroll_exports
+      WHERE company_id = ${companyId} AND period_start = ${p.start} AND period_end = ${p.end}
+    `;
 
-    let payrollId: string;
-    let exportId: number;
+    let payrollId: string = "";
+    let exportId = 0;
     let needCreate = true;
 
-    if (exportRow) {
-      const check = await salaxyRequest("GET", `/payroll/${exportRow.salaxy_payroll_id}`, null, creds);
-      if (check.success && (check.data as Record<string, unknown>)?.id) {
-        payrollId = exportRow.salaxy_payroll_id;
-        exportId = exportRow.id;
-        needCreate = false;
+    // Always check Salaxy first — pick up any payroll for this period (incl. manually created ones)
+    const salaxyPayrollId = await findPayrollByPeriod(p.start, p.end, creds);
+
+    if (salaxyPayrollId) {
+      payrollId = salaxyPayrollId;
+      needCreate = false;
+      if (exportRow) {
+        exportId = Number(exportRow.id);
+        if ((exportRow.salaxy_payroll_id as string) !== salaxyPayrollId) {
+          await sql`UPDATE payroll_exports SET salaxy_payroll_id = ${salaxyPayrollId} WHERE id = ${exportId}`;
+          await sql`DELETE FROM payroll_export_calculations WHERE payroll_export_id = ${exportId}`;
+        }
+      } else {
+        const [ins] = await sql`
+          INSERT INTO payroll_exports (company_id, period_start, period_end, salaxy_payroll_id)
+          VALUES (${companyId}, ${p.start}, ${p.end}, ${salaxyPayrollId})
+          RETURNING id
+        `;
+        exportId = Number(ins.id);
       }
     }
 
@@ -220,7 +231,17 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
       const createResp = await salaxyRequest("POST", "/payroll", {
         employmentId: refEmpId,
         status: "Draft",
-        input: { title: p.label, payDay: p.paydayDate },
+        input: {
+          title: p.label,
+          salaryDate: p.paydayDate,
+          salaryDateKind: "inPast",
+          sourceId: periodSourceId(p.start, p.end),
+          period: {
+            start: p.start,
+            end: p.end,
+            daysCount: Math.round((new Date(p.end + "T12:00:00Z").getTime() - new Date(p.start + "T12:00:00Z").getTime()) / 86400000) + 1,
+          },
+        },
       }, creds);
       if (!createResp.success || !(createResp.data as Record<string, unknown>)?.id) {
         errors.push({ period: pk, error: "Palkkalistan luonti epäonnistui", detail: createResp.data });
@@ -228,34 +249,40 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
       }
       payrollId = String((createResp.data as Record<string, unknown>).id);
       if (exportRow) {
-        exportId = exportRow.id;
-        db.prepare("UPDATE payroll_exports SET salaxy_payroll_id = ? WHERE id = ?").run(payrollId, exportId);
-        db.prepare("DELETE FROM payroll_export_calculations WHERE payroll_export_id = ?").run(exportId);
+        exportId = Number(exportRow.id);
+        await sql`UPDATE payroll_exports SET salaxy_payroll_id = ${payrollId} WHERE id = ${exportId}`;
+        await sql`DELETE FROM payroll_export_calculations WHERE payroll_export_id = ${exportId}`;
       } else {
-        const ins = db.prepare(
-          "INSERT INTO payroll_exports (company_id, period_start, period_end, salaxy_payroll_id) VALUES (?,?,?,?)"
-        ).run(companyId, p.start, p.end, payrollId);
-        exportId = Number(ins.lastInsertRowid);
+        const [ins] = await sql`
+          INSERT INTO payroll_exports (company_id, period_start, period_end, salaxy_payroll_id)
+          VALUES (${companyId}, ${p.start}, ${p.end}, ${payrollId})
+          RETURNING id
+        `;
+        exportId = Number(ins.id);
       }
     }
 
-    payrollLinks[pk] = payrollId!;
+    payrollLinks[pk] = payrollId;
 
     for (const [empSalaxyId, empEnts] of empEntries) {
-      const calcRow = db.prepare(
-        "SELECT salaxy_calculation_id FROM payroll_export_calculations WHERE payroll_export_id = ? AND salaxy_employment_id = ?"
-      ).get(exportId!, empSalaxyId) as { salaxy_calculation_id: string } | undefined;
+      const [calcRow] = await sql`
+        SELECT salaxy_calculation_id FROM payroll_export_calculations
+        WHERE payroll_export_id = ${exportId} AND salaxy_employment_id = ${empSalaxyId}
+      `;
 
-      const r = await exportEmployeeEntries(payrollId!, empEnts, calcRow?.salaxy_calculation_id ?? null, empSalaxyId, creds);
+      const periodDays = Math.round((new Date(p.end + "T12:00:00Z").getTime() - new Date(p.start + "T12:00:00Z").getTime()) / 86400000) + 1;
+      const r = await exportEmployeeEntries(payrollId, empEnts, calcRow?.salaxy_calculation_id ?? null, empSalaxyId, creds, p.start, p.end, periodDays);
       const funcOk = r.success as boolean;
       const saveOk = (r.saveResponse as Record<string, unknown>)?.success as boolean;
 
       if (funcOk && saveOk) {
         const newCalcId = r.finalCalculationId as string | undefined;
         if (newCalcId && newCalcId !== calcRow?.salaxy_calculation_id) {
-          db.prepare(
-            "INSERT OR REPLACE INTO payroll_export_calculations (payroll_export_id, salaxy_employment_id, salaxy_calculation_id) VALUES (?,?,?)"
-          ).run(exportId!, empSalaxyId, newCalcId);
+          await sql`
+            INSERT INTO payroll_export_calculations (payroll_export_id, salaxy_employment_id, salaxy_calculation_id)
+            VALUES (${exportId}, ${empSalaxyId}, ${newCalcId})
+            ON CONFLICT (payroll_export_id, salaxy_employment_id) DO UPDATE SET salaxy_calculation_id = EXCLUDED.salaxy_calculation_id
+          `;
         }
         for (const entry of empEnts) exportedIds.push(entry.id);
         totalSent += empEnts.length;
@@ -268,9 +295,11 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
   }
 
   if (exportedIds.length) {
-    const ph = exportedIds.map(() => "?").join(",");
     const now = new Date().toISOString();
-    db.prepare(`UPDATE time_entries SET exported_to_salaxy = 1, exported_at = ? WHERE id IN (${ph})`).run(now, ...exportedIds);
+    await sql`
+      UPDATE time_entries SET exported_to_salaxy = TRUE, exported_at = ${now}
+      WHERE id = ANY(${exportedIds})
+    `;
   }
 
   writeAudit(companyId, {

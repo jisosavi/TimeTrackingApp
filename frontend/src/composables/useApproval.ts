@@ -68,8 +68,8 @@ export function useApproval() {
     return result.updated
   }
 
-  async function deleteEntry(id: number): Promise<void> {
-    await post('/api/review_entries', { ids: [id], action: 'delete' })
+  async function deleteEntry(id: number, reason: string): Promise<void> {
+    await post('/api/review_entries', { ids: [id], action: 'delete', deletion_reason: reason })
     entries.value = entries.value.filter(e => e.id !== id)
   }
 

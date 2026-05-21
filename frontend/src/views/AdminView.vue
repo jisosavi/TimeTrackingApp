@@ -99,7 +99,7 @@ function openEditEmp(id: number) {
   const emp = employees.value.find(e => e.id === id)
   if (!emp) return
   editingEmpId.value = id
-  empForm.value = { name: emp.name, pin: '', active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.employmentId ?? '', email: emp.email ?? '', phone: emp.phone ?? '', birth_year: emp.birth_year != null ? String(emp.birth_year) : '' }
+  empForm.value = { name: emp.name, pin: '', active: emp.active, ui_language: emp.ui_language ?? 'en', employmentId: emp.salaxy_employment_id ?? emp.employmentId ?? '', email: emp.email ?? '', phone: emp.phone ?? '', birth_year: emp.birth_year != null ? String(emp.birth_year) : '' }
   empFormError.value = null
 }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { lastName, firstNames } from '@/utils/name'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,8 +63,8 @@ function computeStat(period: { from: string; to: string; label: string }, allEnt
   for (const e of countable) {
     const key = e.project?.trim() ?? ''
     const row = projectMap.get(key) ?? { hours: 0, km: 0 }
-    row.hours += e.hours
-    row.km += e.km
+    row.hours += Number(e.hours)
+    row.km += Number(e.km)
     projectMap.set(key, row)
   }
   const projectRows: ProjectRow[] = [...projectMap.entries()]
@@ -280,7 +281,7 @@ async function doExport(force = false) {
                   class="h-4 w-4"
                   @change="toggleExportEmployee(emp.employee_id)"
                 />
-                <span class="flex-1">{{ emp.employee_name }}</span>
+                <span class="flex-1"><span class="font-bold">{{ lastName(emp.employee_name) }}</span><template v-if="firstNames(emp.employee_name)">, {{ firstNames(emp.employee_name) }}</template></span>
                 <span class="text-muted-foreground text-xs">
                   {{ emp.total_hours }}h<span v-if="emp.total_km > 0">, {{ emp.total_km }}km</span>
                   <template v-if="emp.pending_hours < emp.total_hours">

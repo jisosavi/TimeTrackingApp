@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { requireSuperAdmin } from "../lib/auth.ts";
-import { getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { getCompanyCreds, getSalaxyToken, salaxyRequest } from "../lib/salaxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
@@ -16,10 +16,10 @@ app.get("/api/fetch_business_id", requireSuperAdmin, async (c) => {
   const companyId = Number(c.req.query("company_id") ?? 0);
   if (!companyId) return c.json({ success: false, error: "company_id required" }, 400);
 
-  const company = getMasterDb().prepare("SELECT id FROM companies WHERE id = ?").get(companyId);
+  const [company] = await sql`SELECT id FROM companies WHERE id = ${companyId}`;
   if (!company) return c.json({ success: false, error: "Company not found" }, 404);
 
-  const creds = getCompanyCreds(companyId);
+  const creds = await getCompanyCreds(companyId);
   if (!creds.username || !creds.password) {
     return c.json({ success: false, error: "Salaxy credentials not configured for this company" }, 422);
   }

@@ -1,5 +1,5 @@
-import { DB_DIR, SALAXY_API_URL, SALAXY_PASSWORD, SALAXY_TOKEN_URL, SALAXY_USERNAME } from "./config.ts";
-import { getMasterDb } from "./db.ts";
+import { SALAXY_API_URL, SALAXY_PASSWORD, SALAXY_TOKEN_URL, SALAXY_USERNAME } from "./config.ts";
+import { sql } from "./db.ts";
 
 export interface SalaxyCreds {
   apiUrl: string;
@@ -26,10 +26,10 @@ export interface EntryForExport {
   notes: string;
 }
 
-export function getCompanyCreds(companyId: number): SalaxyCreds {
-  const row = getMasterDb().prepare(
-    "SELECT salaxy_api_url, salaxy_username, salaxy_password FROM companies WHERE id = ?"
-  ).get(companyId) as { salaxy_api_url: string | null; salaxy_username: string | null; salaxy_password: string | null } | undefined;
+export async function getCompanyCreds(companyId: number): Promise<SalaxyCreds> {
+  const [row] = await sql`
+    SELECT salaxy_api_url, salaxy_username, salaxy_password FROM companies WHERE id = ${companyId}
+  ` as { salaxy_api_url: string | null; salaxy_username: string | null; salaxy_password: string | null }[];
   return {
     apiUrl: row?.salaxy_api_url || SALAXY_API_URL,
     tokenUrl: SALAXY_TOKEN_URL,
@@ -40,13 +40,12 @@ export function getCompanyCreds(companyId: number): SalaxyCreds {
 }
 
 export async function getSalaxyToken(creds: SalaxyCreds): Promise<string | null> {
-  const tokenFile = `${DB_DIR}/salaxy_token_${creds.companyId}.json`;
-  try {
-    const cached = JSON.parse(await Deno.readTextFile(tokenFile));
-    if (cached?.access_token && cached?.fetched_at && Date.now() / 1000 - cached.fetched_at < 23 * 3600) {
-      return cached.access_token;
-    }
-  } catch { /* cache miss */ }
+  const [cached] = await sql`
+    SELECT access_token, updated_at FROM salaxy_tokens WHERE company_id = ${creds.companyId}
+  `;
+  if (cached?.access_token && Date.now() - new Date(cached.updated_at as string).getTime() < 23 * 3600 * 1000) {
+    return cached.access_token as string;
+  }
 
   const res = await fetch(creds.tokenUrl, {
     method: "POST",
@@ -59,7 +58,16 @@ export async function getSalaxyToken(creds: SalaxyCreds): Promise<string | null>
   const data = await res.json().catch(() => null);
   if (!data?.access_token) return null;
 
-  await Deno.writeTextFile(tokenFile, JSON.stringify({ access_token: data.access_token, fetched_at: Math.floor(Date.now() / 1000) })).catch(() => {});
+  const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 23 * 3600 * 1000).toISOString();
+  await sql`
+    INSERT INTO salaxy_tokens (company_id, access_token, expires_at, updated_at)
+    VALUES (${creds.companyId}, ${data.access_token}, ${expiresAt}, ${now})
+    ON CONFLICT (company_id) DO UPDATE SET
+      access_token = EXCLUDED.access_token,
+      expires_at   = EXCLUDED.expires_at,
+      updated_at   = EXCLUDED.updated_at
+  `.catch(() => {});
   return data.access_token;
 }
 
@@ -118,7 +126,14 @@ interface CalcResult {
   createData?: unknown;
 }
 
-async function getOrCreateCalculation(payrollId: string, existingCalcId: string | null, employmentId: string, creds: SalaxyCreds): Promise<CalcResult> {
+async function getOrCreateCalculation(
+  existingCalcId: string | null,
+  employmentId: string,
+  creds: SalaxyCreds,
+  periodStart: string,
+  periodEnd: string,
+  periodDays: number,
+): Promise<CalcResult> {
   if (existingCalcId) {
     const r = await salaxyRequest("GET", `/calculations/${existingCalcId}`, null, creds);
     if (r.success && r.data) {
@@ -126,10 +141,12 @@ async function getOrCreateCalculation(payrollId: string, existingCalcId: string 
     }
   }
 
+  const workDays = { start: periodStart, end: periodEnd, daysCount: periodDays };
   const templateResp = await salaxyRequest("POST", "/calculations/update-from-employment?save=false&updateRows=true", {
     workflow: { status: "PayrollDraft" },
     employer: { isSelf: true },
     worker: { employmentId },
+    worktime: { workDays },
   }, creds);
 
   if (!templateResp.success || !templateResp.data) {
@@ -151,8 +168,11 @@ export async function exportEmployeeEntries(
   existingCalcId: string | null,
   employmentId: string,
   creds: SalaxyCreds,
+  periodStart: string,
+  periodEnd: string,
+  periodDays: number,
 ): Promise<Record<string, unknown>> {
-  const calcResult = await getOrCreateCalculation(payrollId, existingCalcId, employmentId, creds);
+  const calcResult = await getOrCreateCalculation(existingCalcId, employmentId, creds, periodStart, periodEnd, periodDays);
   if (!calcResult.success) {
     return { success: false, error: calcResult.error ?? "Failed to get/create calculation", createHttpCode: calcResult.createHttpCode, createData: calcResult.createData };
   }
@@ -177,7 +197,7 @@ export async function exportEmployeeEntries(
     baseRows = newBase;
   }
 
-  const defaultHourlyPrice = templateHourlyPrice ?? defaultHourlyPriceFetched ?? 0;
+  const defaultHourlyPrice = templateHourlyPrice ?? defaultHourlyPriceFetched ?? null;
   let maxIdx = baseRows.reduce((c, r) => Math.max(c, (r.rowIndex as number) ?? -1), -1);
 
   const existingMsgs: Record<string, boolean> = {};
@@ -220,7 +240,18 @@ export async function exportEmployeeEntries(
   }
 
   calcObject.rows = [...baseRows, ...addedRows];
-  if (isNew) calcObject.info = { ...((calcObject.info as Record<string, unknown>) ?? {}), payrollId };
+  if (isNew) {
+    calcObject.info = {
+      ...((calcObject.info as Record<string, unknown>) ?? {}),
+      payrollId,
+      workStartDate: periodStart,
+      workEndDate: periodEnd,
+    };
+    calcObject.worktime = {
+      ...((calcObject.worktime as Record<string, unknown>) ?? {}),
+      workDays: { start: periodStart, end: periodEnd, daysCount: periodDays },
+    };
+  }
 
   const saveResponse = await salaxyRequest("POST", "/calculations/update-from-employment?save=true&updateRows=false", calcObject, creds);
   if (!saveResponse.success || !(saveResponse.data as Record<string, unknown>)?.id) {
@@ -235,6 +266,32 @@ export async function exportEmployeeEntries(
   }
 
   return result;
+}
+
+export function periodSourceId(start: string, end: string): string {
+  return `salaxy-app__${start}__${end}`;
+}
+
+export async function findPayrollByPeriod(start: string, end: string, creds: SalaxyCreds): Promise<string | null> {
+  // Primary: match by sourceId we set on creation
+  const srcId = periodSourceId(start, end);
+  const bySource = await salaxyRequest("GET", `/payroll?$filter=${encodeURIComponent(`sourceId eq '${srcId}'`)}&$top=1`, null, creds);
+  if (bySource.success && bySource.data) {
+    const items = (bySource.data as Record<string, unknown>).items;
+    if (Array.isArray(items) && items.length > 0) {
+      const id = (items[0] as Record<string, unknown>).id;
+      if (id) return String(id);
+    }
+  }
+
+  // Fallback: OData date filter (no quotes — OData 4.0 date literal syntax)
+  const filter = `startAt eq ${start} and endAt eq ${end}`;
+  const r = await salaxyRequest("GET", `/payroll?$filter=${encodeURIComponent(filter)}&$top=1`, null, creds);
+  if (!r.success || !r.data) return null;
+  const items = (r.data as Record<string, unknown>).items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const id = (items[0] as Record<string, unknown>).id;
+  return id ? String(id) : null;
 }
 
 // ─── Holiday & Absence types ───────────────────────────────────────────────
@@ -454,4 +511,39 @@ export async function createHoliday(employeeSalaxyId: string, holidayYearId: str
   if (!r.success) throw new Error(`Salaxy createHoliday ${r.httpCode}: ${JSON.stringify(r.data)}`);
   _invalidateEmployeeCache(employeeSalaxyId);
   return r.data as Holiday;
+}
+
+export interface PlannedHoliday {
+  id: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  season: "summer" | "winter";
+  note: string | null;
+}
+
+export async function getPlannedHolidays(employeeSalaxyId: string, creds: SalaxyCreds): Promise<PlannedHoliday[]> {
+  const r = await salaxyRequest("GET", `/holidays/employment/${employeeSalaxyId}`, null, creds);
+  if (!r.success) return [];
+  const years = Array.isArray(r.data) ? r.data as Record<string, unknown>[] : [];
+  const result: PlannedHoliday[] = [];
+  for (const year of years) {
+    const leaves = (year.leaves ?? {}) as Record<string, unknown>;
+    const planned = Array.isArray(leaves.planned) ? leaves.planned as Record<string, unknown>[] : [];
+    for (const leave of planned) {
+      const period = (leave.period ?? {}) as Record<string, unknown>;
+      const startDate = String(period.start ?? "");
+      const endDate = String(period.end ?? "");
+      if (!startDate || !endDate || !leave.id) continue;
+      result.push({
+        id: String(leave.id),
+        startDate,
+        endDate,
+        days: Number(period.daysCount ?? 0),
+        season: String(leave.season ?? "") === "winter" ? "winter" : "summer",
+        note: leave.notes != null ? String(leave.notes) : null,
+      });
+    }
+  }
+  return result;
 }

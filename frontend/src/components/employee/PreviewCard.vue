@@ -36,7 +36,7 @@ function toInputDate(raw: string): string {
 const holidayDraft = ref({ startDate: '', endDate: '', label: '', note: '' })
 
 // ── Absence state ─────────────────────────────────────────────────────────────
-const absenceDraft = ref({ startDate: '', endDate: '', isPaid: true, affectsAccrual: true, note: '' })
+const absenceDraft = ref({ startDate: '', endDate: '', isPaid: true, affectsAccrual: true, causeCode: 'other', note: '' })
 
 watch(
   () => props.parsed,
@@ -54,6 +54,7 @@ watch(
         endDate: toInputDate(p.endDate ?? ''),
         isPaid: p.isPaid ?? true,
         affectsAccrual: p.affectsAccrual ?? true,
+        causeCode: p.causeCode ?? 'other',
         note: p.note ?? '',
       }
     } else {
@@ -110,6 +111,7 @@ function handleConfirm() {
       endDate: absenceDraft.value.endDate,
       isPaid: absenceDraft.value.isPaid,
       affectsAccrual: absenceDraft.value.affectsAccrual,
+      causeCode: absenceDraft.value.causeCode,
       note: absenceDraft.value.note || undefined,
     })
   } else {
@@ -182,7 +184,7 @@ function handleConfirm() {
         </p>
         <div class="space-y-1">
           <Label class="text-xs">{{ t('absence.reason_label') }}</Label>
-          <Input :value="t('absence.reason')" disabled class="h-8 text-sm" />
+          <Input :value="t(`absence.cause.${absenceDraft.causeCode}`, absenceDraft.causeCode)" disabled class="h-8 text-sm" />
         </div>
         <div class="flex items-center justify-between">
           <Label class="text-xs">{{ t('absence.is_paid') }}</Label>

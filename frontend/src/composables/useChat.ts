@@ -158,6 +158,7 @@ export function useChat() {
     await post('/api/absences', {
       startDate: block.startDate,
       endDate: block.endDate,
+      causeCode: block.causeCode,
       isPaid: block.isPaid,
       affectsAccrual: block.affectsAccrual,
       note: block.note ?? null,

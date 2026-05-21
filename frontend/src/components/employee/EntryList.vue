@@ -16,11 +16,14 @@ const { refreshTick } = useRefresh()
 onMounted(fetchEntries)
 watch(refreshTick, fetchEntries)
 
-const displayEntries = computed(() =>
-  props.showRejectedOnly
-    ? entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected')
-    : entries.value,
-)
+const displayEntries = computed(() => {
+  if (props.showRejectedOnly) {
+    return entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected')
+  }
+  const needsAction = entries.value.filter((e) => e.status === 'rejected' || e.km_status === 'rejected')
+  const rest = entries.value.filter((e) => e.status !== 'rejected' && e.km_status !== 'rejected')
+  return [...needsAction, ...rest]
+})
 
 defineExpose({ refresh: fetchEntries })
 </script>
@@ -48,7 +51,7 @@ defineExpose({ refresh: fetchEntries })
       :entry="entry"
       @clarify="clarifyEntry"
       @clarify-km="clarifyKmEntry"
-      @delete="deleteEntry"
+      @delete="(id, reason) => deleteEntry(id, reason)"
     />
   </div>
 </template>

@@ -35,9 +35,21 @@ async function changeLanguage(lang: string) {
 }
 
 const pendingCount = ref(0)
+const pendingTimeOffCount = ref(0)
 
 onMounted(async () => {
   const type = auth.user?.type
+  if (type === 'employee') {
+    try {
+      const [{ proposals }, { entries }] = await Promise.all([
+        get<{ proposals: { status: string }[] }>('/api/holiday_proposals?status=clarifying'),
+        get<{ entries: { status: string; km_status: string | null }[] }>('/api/time_entries'),
+      ])
+      pendingCount.value =
+        proposals.length +
+        entries.filter(e => e.status === 'rejected' || e.km_status === 'rejected').length
+    } catch {}
+  }
   if (type === 'admin' || type === 'supervisor') {
     try {
       const data = await get<{ entries: { status: string; km_status: string | null; hours: number; km: number }[] }>('/api/time_entries')
@@ -48,6 +60,13 @@ onMounted(async () => {
         return n + (isPending(e.status) ? 1 : 0)
       }, 0)
     } catch {}
+    try {
+      const [{ proposals }, { absences }] = await Promise.all([
+        get<{ proposals: { status: string }[] }>('/api/supervisor/holiday_proposals?status=pending'),
+        get<{ absences: unknown[] }>('/api/supervisor/pending_absences'),
+      ])
+      pendingTimeOffCount.value = proposals.filter(p => p.status === 'pending').length + absences.length
+    } catch {}
   }
 })
 
@@ -56,22 +75,28 @@ const companyDisplayName = computed(() => auth.user?.companyName ?? '')
 const navLinks = computed(() => {
   const { type, companySlug: slug } = auth.user ?? {}
   if (type === 'employee') {
-    return [{ to: `/${slug}/home`, label: t('nav.log_hours'), badge: 0 }]
+    return [{ to: `/${slug}/home`, label: t('nav.log_hours'), badge: pendingCount.value }]
   }
   if (type === 'supervisor') {
-    return [{ to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value }]
+    return [
+      { to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value },
+      { to: `/${slug}/approval/time-off`, label: t('timeOff.nav_label'), badge: pendingTimeOffCount.value },
+    ]
   }
   if (type === 'admin') {
     return [
       { to: `/${slug}/admin/payroll-summary`, label: t('nav.payroll'), badge: 0 },
       { to: `/${slug}/admin/dashboard`, label: t('admin.employees_title'), badge: 0 },
       { to: `/${slug}/approval/home`, label: t('approval.dashboard_title'), badge: pendingCount.value },
-      { to: `/${slug}/admin/time-off`, label: t('timeOff.nav_label'), badge: 0 },
+      { to: `/${slug}/admin/time-off`, label: t('timeOff.nav_label'), badge: pendingTimeOffCount.value },
       { to: `/${slug}/admin/payroll-settings`, label: t('nav.settings'), badge: 0 },
     ]
   }
   if (type === 'superadmin') {
-    return [{ to: '/admin/dashboard', label: 'Companies', badge: 0 }]
+    return [
+      { to: '/admin/dashboard', label: 'Companies', badge: 0 },
+      { to: '/admin/audit-log', label: 'Audit Log', badge: 0 },
+    ]
   }
   return []
 })
@@ -135,7 +160,7 @@ async function logout() {
           {{ link.label }}
           <span
             v-if="link.badge > 0"
-            class="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none"
+            class="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-100 text-red-600 text-[10px] font-semibold leading-none"
           >
             {{ link.badge }}
           </span>

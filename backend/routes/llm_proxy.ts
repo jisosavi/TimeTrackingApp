@@ -55,18 +55,23 @@ Tunnistat myös kaksi uutta tyyppiä tuntikirjauksien lisäksi:
    Jos 'viikolla' tai 'next week': ma–pe kyseisellä viikolla
    Jos vain 'lomaa' ilman päiviä: kysy päivämäärät
 
-2. POISSAOLO (absence): virallinen poissaolo, erityisesti kertausharjoitus
-   Avainsanat (fi): 'kertausharjoitus', 'kertausharjoitukset', 'harjoitus', 'reservin harjoitus'
-   Avainsanat (en): 'reservist training', 'military training', 'reserve training', 'refresher training'
-   Syy on AINA 'Kertausharjoitus' (ainoa tuettu syy v1)
-   isPaid ja affectsAccrual ovat oletuksena true
+2. POISSAOLO (absence): virallinen poissaolo (sairaus, kertausharjoitus, äitiysloma jne.)
+   Avainsanat (fi): 'kertausharjoitus', 'sairaus', 'sairas', 'äitiysloma', 'vanhempainvapaa', 'poissaolo', 'palkaton vapaa'
+   Avainsanat (en): 'sick', 'illness', 'military training', 'parental leave', 'maternity leave', 'unpaid leave', 'absence'
+   Valitse causeCode parhaiten sopivan mukaan:
+     illness | partTimeSickLeave | childIllness | parentalLeave | specialMaternityLeave |
+     childCareLeave | partTimeChildCareLeave | rehabilitation | occupationalAccident |
+     unpaidLeave | personalReason | leaveOfAbsence | training | studyLeave |
+     jobAlternationLeave | militaryRefresherTraining | militaryService | layOff | other
+   isPaid ja affectsAccrual ovat oletuksena true (palkaton vapaa: isPaid=false)
    Jos ei päiviä: kysy päivämäärät
 
 ESIMERKKEJÄ (intent-tunnistus, tänään on ${today}):
 - "lomaa 23.6.-4.7." → type:'holiday_proposal', startDate:'2026-06-23', endDate:'2026-07-04'
 - "vacation 23 June to 4 July" → type:'holiday_proposal', startDate:'2026-06-23', endDate:'2026-07-04'
-- "kertausharjoitus 5.-7.5." → type:'absence', startDate:'2026-05-05', endDate:'2026-05-07'
-- "reservist training next Mon-Wed" → type:'absence', startDate:<ensi ma>, endDate:<ensi ke>
+- "kertausharjoitus 5.-7.5." → type:'absence', startDate:'2026-05-05', endDate:'2026-05-07', causeCode:'militaryRefresherTraining'
+- "sairaana huomenna" → type:'absence', startDate:<huominen>, endDate:<huominen>, causeCode:'illness'
+- "reservist training next Mon-Wed" → type:'absence', startDate:<ensi ma>, endDate:<ensi ke>, causeCode:'militaryRefresherTraining'
 - "vuosilomaa ensi viikolla" → type:'holiday_proposal', startDate:<ensi ma>, endDate:<ensi pe>
 - "take a week off starting 14 July" → type:'holiday_proposal', startDate:'2026-07-14', endDate:'2026-07-18'
 - "kesälomani on 1.-31.7." → type:'holiday_proposal', startDate:'2026-07-01', endDate:'2026-07-31'
@@ -123,7 +128,7 @@ JSON-muoto loma-ehdotukselle:
 
 JSON-muoto poissaololle:
 \`\`\`json
-{"type":"absence","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","isPaid":true,"affectsAccrual":true,"reason":"Kertausharjoitus","note":""}
+{"type":"absence","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","isPaid":true,"affectsAccrual":true,"causeCode":"militaryRefresherTraining","note":""}
 \`\`\`
 `;
 

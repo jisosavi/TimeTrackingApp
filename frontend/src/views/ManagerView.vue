@@ -234,17 +234,24 @@ const needsReviewCards = computed(() =>
   allCards.value.filter(c => c.cardStatus === 'pending' || c.cardStatus === 'clarified'),
 )
 const approvedCards = computed(() => allCards.value.filter(c => c.cardStatus === 'approved'))
-const rejectedCards = computed(() => allCards.value.filter(c => c.cardStatus === 'rejected'))
+const rejectedCards = computed(() => allCards.value.filter(c => c.cardStatus === 'rejected' || c.cardStatus === 'deleted'))
 
-function cardSortFn(a: VirtualCard, b: VirtualCard): number {
-  const nameCmp = teamLastName(a.entry.employee_name).localeCompare(
-    teamLastName(b.entry.employee_name), 'fi', { sensitivity: 'base' },
-  )
-  return nameCmp !== 0 ? nameCmp : a.entry.entry_date.localeCompare(b.entry.entry_date)
+function dateSortDesc(a: VirtualCard, b: VirtualCard): number {
+  const dateCmp = b.entry.entry_date.localeCompare(a.entry.entry_date)
+  if (dateCmp !== 0) return dateCmp
+  return teamLastName(a.entry.employee_name).localeCompare(teamLastName(b.entry.employee_name), 'fi', { sensitivity: 'base' })
+}
+
+function reviewSortFn(a: VirtualCard, b: VirtualCard): number {
+  // clarified (employee replied) before pending, then newest date first, then last name
+  const clarifiedA = a.cardStatus === 'clarified' ? 0 : 1
+  const clarifiedB = b.cardStatus === 'clarified' ? 0 : 1
+  if (clarifiedA !== clarifiedB) return clarifiedA - clarifiedB
+  return dateSortDesc(a, b)
 }
 
 const sortedNeedsReviewCards = computed(() =>
-  [...needsReviewCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(cardSortFn),
+  [...needsReviewCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(reviewSortFn),
 )
 const visibleNeedsReviewCards = computed(() =>
   filterEmployeeId.value
@@ -252,28 +259,27 @@ const visibleNeedsReviewCards = computed(() =>
     : sortedNeedsReviewCards.value,
 )
 const sortedApprovedCards = computed(() =>
-  [...approvedCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(cardSortFn),
+  [...approvedCards.value].filter(c => matchesTypeFilter(c) && matchesSearch(c)).sort(dateSortDesc),
 )
 
-interface CardGroup { name: string; cards: VirtualCard[] }
-const rejectedCardGroups = computed<CardGroup[]>(() => {
-  const map = new Map<string, VirtualCard[]>()
-  for (const c of rejectedCards.value.filter(c => matchesTypeFilter(c) && matchesSearch(c))) {
-    const name = c.entry.employee_name
-    const group = map.get(name)
-    if (group) group.push(c)
-    else map.set(name, [c])
-  }
-  return [...map.entries()]
-    .map(([name, cards]) => ({ name, cards }))
-    .sort((a, b) => teamLastName(a.name).localeCompare(teamLastName(b.name), 'fi', { sensitivity: 'base' }))
-})
+const rejectedStatusFilter = ref<'all' | 'rejected' | 'deleted'>('all')
+const rejectedNameSearch = ref('')
+
+const rejectedCardsFlat = computed(() =>
+  rejectedCards.value
+    .filter(c => matchesTypeFilter(c))
+    .filter(c => rejectedStatusFilter.value === 'all' || c.cardStatus === rejectedStatusFilter.value)
+    .filter(c => !rejectedNameSearch.value || c.entry.employee_name.toLowerCase().includes(rejectedNameSearch.value.toLowerCase()))
+    .sort(dateSortDesc),
+)
 
 // ── Per-card reject ───────────────────────────────────────────────────────────
 const rejectingId = ref<string | null>(null)
 const rejectNote = ref('')
 
 function startReject(key: string) {
+  deletingId.value = null
+  deleteReason.value = ''
   rejectingId.value = key
   rejectNote.value = ''
 }
@@ -293,10 +299,41 @@ async function submitReject(key: string) {
   rejectNote.value = ''
 }
 
+// ── Per-card delete ───────────────────────────────────────────────────────────
+const deletingId = ref<string | null>(null)
+const deleteReason = ref('')
+
+function startDelete(key: string) {
+  rejectingId.value = null
+  rejectNote.value = ''
+  deletingId.value = key
+  deleteReason.value = ''
+}
+
+function cancelDelete() {
+  deletingId.value = null
+  deleteReason.value = ''
+}
+
+async function submitDelete(key: string) {
+  if (!deleteReason.value.trim()) return
+  const dashIdx = key.indexOf('-')
+  const id = parseInt(key.slice(0, dashIdx))
+  await deleteEntry(id, deleteReason.value.trim())
+  deletingId.value = null
+  deleteReason.value = ''
+}
+
 // ── Card styling ──────────────────────────────────────────────────────────────
 function cardBorderClass(card: VirtualCard): string {
   const isKm = card.field === 'km_status' || (!card.isDual && card.entry.km > 0)
   return isKm ? 'border-l-amber-500' : 'border-l-primary'
+}
+
+function fmtNum(n: number | string): string {
+  const v = Number(n)
+  if (isNaN(v)) return String(n)
+  return parseFloat(v.toFixed(2)).toString()
 }
 
 function formatDate(iso: string) {
@@ -312,16 +349,13 @@ function formatDateTime(iso: string | null): string {
   }).format(new Date(iso))
 }
 
-async function handleDelete(id: number) {
-  if (!confirm(t('entries.confirm_delete'))) return
-  await deleteEntry(id)
-}
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending:   { label: 'Pending',   variant: 'secondary' },
   clarified: { label: 'Clarified', variant: 'outline' },
   approved:  { label: 'Approved',  variant: 'default' },
   rejected:  { label: 'Rejected',  variant: 'destructive' },
+  deleted:   { label: 'Deleted',   variant: 'outline' },
 }
 
 const statusKey: Record<string, string> = {
@@ -329,6 +363,7 @@ const statusKey: Record<string, string> = {
   approved:  'status.approved',
   rejected:  'status.rejected',
   clarified: 'status.clarified',
+  deleted:   'status.deleted',
 }
 
 function getCfg(status: string) {
@@ -384,19 +419,19 @@ function setMobileTab(id: string) {
         >
           <div class="flex items-start gap-2">
             <div class="flex-1 min-w-0">
+              <p class="text-sm text-foreground tabular-nums">{{ formatDate(card.entry.entry_date) }}</p>
               <p class="font-bold text-sm text-foreground">{{ teamLastName(card.entry.employee_name) }}<template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template></p>
-              <p class="text-sm text-foreground">{{ formatDate(card.entry.entry_date) }}</p>
               <p class="text-xs text-muted-foreground">
                 <template v-if="!card.isDual">
-                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ card.entry.hours }}h</span>
-                  <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
-                  <span v-if="card.entry.km > 0"> · {{ card.entry.km }} km</span>
+                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ fmtNum(card.entry.hours) }}h</span>
+                  <span v-else-if="Number(card.entry.hours) > 0">{{ fmtNum(card.entry.hours) }}h</span>
+                  <span v-if="card.entry.km > 0"><template v-if="Number(card.entry.hours) > 0 || (card.entry.start_time && card.entry.end_time)"> · </template>{{ fmtNum(card.entry.km) }} km</span>
                 </template>
                 <template v-else-if="card.field === 'status'">
-                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ card.entry.hours }}h</span>
-                  <span v-else>{{ card.entry.hours }}h</span>
+                  <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} · {{ fmtNum(card.entry.hours) }}h</span>
+                  <span v-else>{{ fmtNum(card.entry.hours) }}h</span>
                 </template>
-                <template v-else>{{ card.entry.km }} km</template>
+                <template v-else>{{ fmtNum(card.entry.km) }} km</template>
               </p>
               <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic mt-0.5">{{ card.entry.comment }}</p>
             </div>
@@ -547,26 +582,26 @@ function setMobileTab(id: string) {
                 @change="toggleSelected(card.key)"
               />
               <div class="space-y-0.5 flex-1">
-                <p class="font-semibold text-sm">
-                  <span class="font-bold">{{ teamLastName(card.entry.employee_name) }}</span><template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template>
+                <p class="text-sm flex items-baseline gap-2">
+                  <span class="shrink-0 tabular-nums w-24 font-medium">{{ formatDate(card.entry.entry_date) }}</span>
+                  <span class="font-semibold"><span class="font-bold">{{ teamLastName(card.entry.employee_name) }}</span><template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template></span>
                 </p>
-                <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
                 <p class="text-sm text-muted-foreground">
                   <template v-if="!card.isDual">
                     <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h
                     </span>
-                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
-                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                    <span v-else-if="Number(card.entry.hours) > 0">{{ fmtNum(card.entry.hours) }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="Number(card.entry.hours) > 0 || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ fmtNum(card.entry.km) }} km</span>
                   </template>
                   <template v-else-if="card.field === 'status'">
                     <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h
                     </span>
-                    <span v-else>{{ card.entry.hours }}h</span>
+                    <span v-else>{{ fmtNum(card.entry.hours) }}h</span>
                   </template>
                   <template v-else>
-                    {{ card.entry.km }} km
+                    {{ fmtNum(card.entry.km) }} km
                   </template>
                 </p>
                 <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
@@ -602,14 +637,14 @@ function setMobileTab(id: string) {
             </div>
 
             <!-- Action buttons -->
-            <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
+            <div v-if="rejectingId !== card.key && deletingId !== card.key" class="flex gap-2 pt-1">
               <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
               <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
-              <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto" @click="handleDelete(card.id)">{{ t('common.delete') }}</Button>
+              <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto" @click="startDelete(card.key)">{{ t('common.delete') }}</Button>
             </div>
 
             <!-- Inline rejection form -->
-            <div v-else class="space-y-2 pt-1">
+            <div v-else-if="rejectingId === card.key" class="space-y-2 pt-1">
               <Textarea
                 v-model="rejectNote"
                 :placeholder="t('approval.rejection_placeholder')"
@@ -626,6 +661,20 @@ function setMobileTab(id: string) {
                   {{ t('approval.reject') }}
                 </Button>
                 <Button size="sm" variant="ghost" @click="cancelReject">{{ t('common.cancel') }}</Button>
+              </div>
+            </div>
+
+            <!-- Inline delete reason form -->
+            <div v-else class="space-y-2 pt-1">
+              <Textarea
+                v-model="deleteReason"
+                :placeholder="t('entries.delete_reason_placeholder')"
+                class="text-sm min-h-14 resize-none"
+                autofocus
+              />
+              <div class="flex gap-2">
+                <Button size="sm" variant="destructive" :disabled="!deleteReason.trim()" @click="submitDelete(card.key)">{{ t('common.delete') }}</Button>
+                <Button size="sm" variant="ghost" @click="cancelDelete">{{ t('common.cancel') }}</Button>
               </div>
             </div>
           </div>
@@ -652,23 +701,26 @@ function setMobileTab(id: string) {
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5">
-                <p class="font-medium text-sm">{{ card.entry.employee_name }} &middot; {{ formatDate(card.entry.entry_date) }}</p>
+                <p class="font-medium text-sm flex items-baseline gap-2">
+                  <span class="shrink-0 tabular-nums w-24">{{ formatDate(card.entry.entry_date) }}</span>
+                  <span><span class="font-bold">{{ teamLastName(card.entry.employee_name) }}</span><template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template></span>
+                </p>
                 <p class="text-sm text-muted-foreground">
                   <template v-if="!card.isDual">
                     <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h
                     </span>
-                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
-                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                    <span v-else-if="Number(card.entry.hours) > 0">{{ fmtNum(card.entry.hours) }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="Number(card.entry.hours) > 0 || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ fmtNum(card.entry.km) }} km</span>
                   </template>
                   <template v-else-if="card.field === 'status'">
                     <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
+                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h
                     </span>
-                    <span v-else>{{ card.entry.hours }}h</span>
+                    <span v-else>{{ fmtNum(card.entry.hours) }}h</span>
                   </template>
                   <template v-else>
-                    {{ card.entry.km }} km
+                    {{ fmtNum(card.entry.km) }} km
                   </template>
                 </p>
                 <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
@@ -680,101 +732,125 @@ function setMobileTab(id: string) {
         </div>
       </TabsContent>
 
-      <!-- Rejected tab -->
+      <!-- Rejected & Deleted tab -->
       <TabsContent value="rejected">
+        <!-- Filter pills + name search -->
+        <div v-if="!loading && rejectedCards.length > 0" class="flex items-center gap-2 mb-4 flex-wrap">
+          <div class="flex gap-1">
+            <button
+              type="button"
+              :class="['px-3 py-1 rounded-full text-xs font-medium transition-colors', rejectedStatusFilter === 'all' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground']"
+              @click="rejectedStatusFilter = 'all'"
+            >{{ t('approval.filter_all') }}</button>
+            <button
+              type="button"
+              :class="['px-3 py-1 rounded-full text-xs font-medium transition-colors', rejectedStatusFilter === 'rejected' ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-muted-foreground hover:text-foreground']"
+              @click="rejectedStatusFilter = 'rejected'"
+            >{{ t('status.rejected') }}</button>
+            <button
+              type="button"
+              :class="['px-3 py-1 rounded-full text-xs font-medium transition-colors', rejectedStatusFilter === 'deleted' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:text-foreground']"
+              @click="rejectedStatusFilter = 'deleted'"
+            >{{ t('status.deleted') }}</button>
+          </div>
+          <input
+            v-model="rejectedNameSearch"
+            type="search"
+            :placeholder="t('approval.search_placeholder')"
+            class="flex-1 min-w-32 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+
         <EmptyState
-          v-if="!loading && rejectedCardGroups.length === 0"
-          :title="approvalSearch ? t('empty.search') : t('empty.rejected')"
-          :body="approvalSearch ? t('empty.search_body') : undefined"
+          v-if="!loading && rejectedCardsFlat.length === 0"
+          :title="(rejectedNameSearch || rejectedStatusFilter !== 'all') ? t('empty.search') : t('empty.rejected')"
+          :body="(rejectedNameSearch || rejectedStatusFilter !== 'all') ? t('empty.search_body') : undefined"
         >
-          <Search v-if="approvalSearch" class="size-10" />
+          <Search v-if="rejectedNameSearch || rejectedStatusFilter !== 'all'" class="size-10" />
           <XCircle v-else class="size-10" />
         </EmptyState>
 
-        <div v-for="group in rejectedCardGroups" :key="group.name" class="space-y-2 mb-6">
-          <h3 class="text-sm font-semibold">{{ group.name }}</h3>
-
+        <div class="space-y-2">
           <div
-            v-for="card in group.cards"
+            v-for="card in rejectedCardsFlat"
             :key="card.key"
             class="rounded-lg border border-l-4 p-4 space-y-2 bg-card"
-            :class="cardBorderClass(card)"
+            :class="card.cardStatus === 'deleted' ? 'border-l-muted-foreground/50' : cardBorderClass(card)"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-0.5 flex-1">
-                <p class="font-medium text-sm">{{ formatDate(card.entry.entry_date) }}</p>
+                <p class="text-sm flex items-baseline gap-2">
+                  <span class="shrink-0 tabular-nums w-24 font-medium">{{ formatDate(card.entry.entry_date) }}</span>
+                  <span><span class="font-bold">{{ teamLastName(card.entry.employee_name) }}</span><template v-if="teamFirstNames(card.entry.employee_name)">, {{ teamFirstNames(card.entry.employee_name) }}</template></span>
+                </p>
                 <p class="text-sm text-muted-foreground">
                   <template v-if="!card.isDual">
-                    <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
-                    </span>
-                    <span v-else-if="card.entry.hours">{{ card.entry.hours }}h</span>
-                    <span v-if="card.entry.km > 0"><template v-if="card.entry.hours || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ card.entry.km }} km</span>
+                    <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h</span>
+                    <span v-else-if="Number(card.entry.hours) > 0">{{ fmtNum(card.entry.hours) }}h</span>
+                    <span v-if="card.entry.km > 0"><template v-if="Number(card.entry.hours) > 0 || (card.entry.start_time && card.entry.end_time)"> &middot; </template>{{ fmtNum(card.entry.km) }} km</span>
                   </template>
                   <template v-else-if="card.field === 'status'">
-                    <span v-if="card.entry.start_time && card.entry.end_time">
-                      {{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ card.entry.hours }}h
-                    </span>
-                    <span v-else>{{ card.entry.hours }}h</span>
+                    <span v-if="card.entry.start_time && card.entry.end_time">{{ card.entry.start_time }} – {{ card.entry.end_time }} &middot; {{ fmtNum(card.entry.hours) }}h</span>
+                    <span v-else>{{ fmtNum(card.entry.hours) }}h</span>
                   </template>
-                  <template v-else>
-                    {{ card.entry.km }} km
-                  </template>
+                  <template v-else>{{ fmtNum(card.entry.km) }} km</template>
                 </p>
                 <p v-if="card.entry.project" class="text-xs text-muted-foreground">{{ card.entry.project }}</p>
                 <p v-if="card.entry.comment" class="text-xs text-muted-foreground italic">{{ card.entry.comment }}</p>
               </div>
-              <Badge variant="destructive" class="shrink-0">{{ getCfg(card.cardStatus).label }}</Badge>
+              <Badge :variant="getCfg(card.cardStatus).variant" class="shrink-0">{{ getCfg(card.cardStatus).label }}</Badge>
             </div>
 
-            <div v-if="card.field === 'status' && card.entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.rejection_note }}
-            </div>
-            <div v-else-if="card.field === 'km_status' && card.entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.km_rejection_note }}
-            </div>
-            <div
-              v-if="card.field === 'status' && card.entry.reviewed_by_name && card.entry.reviewed_at"
-              class="text-xs text-muted-foreground"
-            >
-              {{ card.entry.reviewed_by_name }} · {{ formatDateTime(card.entry.reviewed_at) }}
+            <!-- Deletion reason -->
+            <div v-if="card.cardStatus === 'deleted' && card.entry.deletion_reason" class="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <span class="font-medium">{{ t('entries.deletion_reason_label') }} </span>{{ card.entry.deletion_reason }}
             </div>
 
-            <div v-if="card.field === 'status' && card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
-              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
-            </div>
-            <div v-else-if="card.field === 'km_status' && card.entry.km_employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
-              <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.km_employee_clarification }}
-            </div>
+            <!-- Rejection note + reviewer (rejected only) -->
+            <template v-if="card.cardStatus !== 'deleted'">
+              <div v-if="card.field === 'status' && card.entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.rejection_note }}
+              </div>
+              <div v-else-if="card.field === 'km_status' && card.entry.km_rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <span class="font-medium">{{ t('approval.rejection_note_label') }} </span>{{ card.entry.km_rejection_note }}
+              </div>
+              <div v-if="card.field === 'status' && card.entry.reviewed_by_name && card.entry.reviewed_at" class="text-xs text-muted-foreground">
+                {{ card.entry.reviewed_by_name }} · {{ formatDateTime(card.entry.reviewed_at) }}
+              </div>
+              <div v-if="card.field === 'status' && card.entry.employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+                <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.employee_clarification }}
+              </div>
+              <div v-else-if="card.field === 'km_status' && card.entry.km_employee_clarification" class="rounded-md bg-muted px-3 py-2 text-sm">
+                <span class="font-medium">{{ t('entries.clarification_label') }} </span>{{ card.entry.km_employee_clarification }}
+              </div>
 
-            <!-- Approve/reject when employee has clarified this field -->
-            <template v-if="(card.field === 'status' && card.entry.employee_clarification) || (card.field === 'km_status' && card.entry.km_employee_clarification)">
-              <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
-                <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
-                <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
+              <!-- Approve/reject when employee has clarified -->
+              <template v-if="(card.field === 'status' && card.entry.employee_clarification) || (card.field === 'km_status' && card.entry.km_employee_clarification)">
+                <div v-if="rejectingId !== card.key" class="flex gap-2 pt-1">
+                  <Button size="sm" @click="reviewEntries([card.id], 'approve', '', card.field)">{{ t('approval.approve') }}</Button>
+                  <Button size="sm" variant="outline" @click="startReject(card.key)">{{ t('approval.reject') }}</Button>
+                </div>
+                <div v-else class="space-y-2 pt-1">
+                  <Textarea v-model="rejectNote" :placeholder="t('approval.rejection_placeholder')" class="text-sm min-h-14 resize-none" autofocus />
+                  <div class="flex gap-2">
+                    <Button size="sm" variant="destructive" :disabled="!rejectNote.trim()" @click="submitReject(card.key)">{{ t('approval.reject') }}</Button>
+                    <Button size="sm" variant="ghost" @click="cancelReject">{{ t('common.cancel') }}</Button>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Delete button / inline reason form -->
+              <div v-if="deletingId !== card.key" class="flex justify-end pt-1">
+                <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="startDelete(card.key)">{{ t('common.delete') }}</Button>
               </div>
               <div v-else class="space-y-2 pt-1">
-                <Textarea
-                  v-model="rejectNote"
-                  :placeholder="t('approval.rejection_placeholder')"
-                  class="text-sm min-h-14 resize-none"
-                  autofocus
-                />
+                <Textarea v-model="deleteReason" :placeholder="t('entries.delete_reason_placeholder')" class="text-sm min-h-14 resize-none" autofocus />
                 <div class="flex gap-2">
-                  <Button size="sm" variant="destructive" :disabled="!rejectNote.trim()" @click="submitReject(card.key)">
-                    {{ t('approval.reject') }}
-                  </Button>
-                  <Button size="sm" variant="ghost" @click="cancelReject">{{ t('common.cancel') }}</Button>
+                  <Button size="sm" variant="destructive" :disabled="!deleteReason.trim()" @click="submitDelete(card.key)">{{ t('common.delete') }}</Button>
+                  <Button size="sm" variant="ghost" @click="cancelDelete">{{ t('common.cancel') }}</Button>
                 </div>
               </div>
             </template>
-
-            <!-- Delete button (always available on rejected cards) -->
-            <div v-if="rejectingId !== card.key" class="flex justify-end pt-1">
-              <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(card.id)">
-                {{ t('common.delete') }}
-              </Button>
-            </div>
           </div>
         </div>
       </TabsContent>

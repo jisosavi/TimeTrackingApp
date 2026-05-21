@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import bcrypt from "bcryptjs";
-import { getCompanyDb, getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { generateToken } from "../lib/jwt.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
 
@@ -19,18 +19,15 @@ app.post("/api/admin_login", async (c) => {
   try {
     if (!slug) {
       // Super-admin login
-      const db = getMasterDb();
-      const admin = db
-        .prepare("SELECT * FROM super_admins WHERE email = ? AND active = 1")
-        .get(email) as Record<string, unknown> | undefined;
+      const [admin] = await sql`SELECT * FROM super_admins WHERE email = ${email} AND active = TRUE`;
 
       if (!admin || !(await bcrypt.compare(password, admin.password_hash as string))) {
         writeAudit(0, { event: "auth.login.failure", actorType: "superadmin", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { email } });
         return c.json({ success: false, error: "Invalid credentials" }, 401);
       }
 
-      const token = await generateToken(admin.id as number, "superadmin", 0);
-      writeAudit(0, { event: "auth.login.success", actorType: "superadmin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "super_admin", resourceId: String(admin.id) });
+      const token = await generateToken(Number(admin.id), "superadmin", 0);
+      writeAudit(0, { event: "auth.login.success", actorType: "superadmin", actorId: Number(admin.id), actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "super_admin", resourceId: String(admin.id) });
       return c.json({
         success: true,
         token,
@@ -47,22 +44,19 @@ app.post("/api/admin_login", async (c) => {
       });
     } else {
       // Company admin login
-      const masterDb = getMasterDb();
-      const company = masterDb
-        .prepare(
-          "SELECT id, name, slug, active, approvals_enabled, ui_language FROM companies WHERE slug = ? AND active = 1",
-        )
-        .get(slug) as Record<string, unknown> | undefined;
+      const [company] = await sql`
+        SELECT id, name, slug, active, approvals_enabled, ui_language
+        FROM companies WHERE slug = ${slug} AND active = TRUE
+      `;
 
       if (!company) {
         return c.json({ success: false, error: "Invalid credentials" }, 401);
       }
 
-      const companyId = company.id as number;
-      const db = getCompanyDb(companyId);
-      const admin = db
-        .prepare("SELECT * FROM company_admins WHERE email = ? AND active = 1")
-        .get(email) as Record<string, unknown> | undefined;
+      const companyId = Number(company.id);
+      const [admin] = await sql`
+        SELECT * FROM company_admins WHERE email = ${email} AND company_id = ${companyId} AND active = TRUE
+      `;
 
       if (!admin || !(await bcrypt.compare(password, admin.password_hash as string))) {
         writeAudit(companyId, { event: "auth.login.failure", actorType: "admin", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { email } });
@@ -72,8 +66,8 @@ app.post("/api/admin_login", async (c) => {
       const compLang = (company.ui_language as string) ?? "en";
       const adminLang = (admin.ui_language as string | null) ?? null;
       const effectiveLang = adminLang ?? compLang ?? "en";
-      const token = await generateToken(admin.id as number, "admin", companyId);
-      writeAudit(companyId, { event: "auth.login.success", actorType: "admin", actorId: admin.id as number, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "company_admin", resourceId: String(admin.id) });
+      const token = await generateToken(Number(admin.id), "admin", companyId);
+      writeAudit(companyId, { event: "auth.login.success", actorType: "admin", actorId: Number(admin.id), actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "company_admin", resourceId: String(admin.id) });
 
       return c.json({
         success: true,

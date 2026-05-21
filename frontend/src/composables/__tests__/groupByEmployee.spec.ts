@@ -23,6 +23,7 @@ function makeEntry(id: number, employeeName: string): ReviewEntry {
     rejection_note: null,
     employee_clarification: null,
     clarification_at: null,
+    deletion_reason: null,
     exported_to_salaxy: 0,
     exported_at: null,
     km_status: 'pending',

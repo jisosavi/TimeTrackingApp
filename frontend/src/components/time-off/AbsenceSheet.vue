@@ -14,6 +14,16 @@ const emit = defineEmits<{
 const { t } = useI18n({ useScope: 'global' })
 const { loading, error, submitAbsence } = useAbsences()
 
+const CAUSE_CODES = [
+  'illness', 'partTimeSickLeave', 'childIllness', 'parentalLeave',
+  'specialMaternityLeave', 'childCareLeave', 'partTimeChildCareLeave',
+  'rehabilitation', 'partTimeAbsenceDueToRehabilitation', 'occupationalAccident',
+  'unpaidLeave', 'personalReason', 'leaveOfAbsence', 'training',
+  'studyLeave', 'jobAlternationLeave', 'militaryRefresherTraining',
+  'militaryService', 'layOff', 'other',
+] as const
+
+const causeCode = ref<string>('illness')
 const startDate = ref('')
 const endDate = ref('')
 const isPaid = ref(true)
@@ -23,6 +33,7 @@ watch(
   () => props.open,
   (open) => {
     if (open) {
+      causeCode.value = 'illness'
       startDate.value = ''
       endDate.value = ''
       isPaid.value = true
@@ -46,22 +57,21 @@ function workDays(start: string, end: string): number {
   return count
 }
 
-const daysInPeriod = computed(() => workDays(startDate.value, endDate.value))
+const daysInPeriod = computed(() => workDays(startDate.value, effectiveEndDate.value))
+
+const effectiveEndDate = computed(() => endDate.value || startDate.value)
 
 const canSave = computed(
-  () =>
-    !!startDate.value &&
-    !!endDate.value &&
-    endDate.value >= startDate.value &&
-    daysInPeriod.value > 0,
+  () => !!startDate.value && effectiveEndDate.value >= startDate.value,
 )
 
 async function handleSave() {
   if (!canSave.value) return
   try {
     await submitAbsence({
+      causeCode: causeCode.value,
       startDate: startDate.value,
-      endDate: endDate.value,
+      endDate: effectiveEndDate.value,
       isPaid: isPaid.value,
       affectsAccrual: affectsAccrual.value,
     })
@@ -80,11 +90,14 @@ const LABEL_CLASS =
 
 <template>
   <BottomSheet :open="open" :title="t('absence.title')" @update:open="emit('update:open', $event)">
-    <!-- Reason (read-only) -->
+    <!-- Reason select -->
     <div class="mb-5 mt-1">
-      <p :class="LABEL_CLASS">{{ t('absence.reason_label') }}</p>
-      <p class="text-sm font-semibold text-foreground">{{ t('absence.reason') }}</p>
-      <p class="text-xs text-muted-foreground mt-0.5">{{ t('absence.reason_caption') }}</p>
+      <label :class="LABEL_CLASS">{{ t('absence.reason_label') }}</label>
+      <select v-model="causeCode" :class="INPUT_CLASS">
+        <option v-for="code in CAUSE_CODES" :key="code" :value="code">
+          {{ t(`absence.cause.${code}`) }}
+        </option>
+      </select>
     </div>
 
     <!-- Date pickers -->
@@ -106,7 +119,7 @@ const LABEL_CLASS =
 
     <!-- Days in period -->
     <p
-      v-if="startDate && endDate && endDate >= startDate"
+      v-if="startDate"
       class="text-sm text-muted-foreground mb-5"
     >
       {{ t('absence.days_in_period', { count: daysInPeriod }) }}

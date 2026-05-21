@@ -34,7 +34,7 @@ Local dev uses two servers simultaneously: Vite on `:5173`, Deno on `:8080`. The
 
 **Frontend** — Vue 3 SPA (`frontend/src/`) built with Vite. Single `index.html` entry point; history-mode routing; deployed to `frontend/dist/`. Apache `.htaccess` is auto-generated at build time by a Vite plugin in `vite.config.ts` — it sets `RewriteBase` from `VITE_APP_BASE` and routes all non-file requests to `index.html`.
 
-**Backend** — Deno 2 + Hono under `backend/`. Entry point is `backend/main.ts`; each route file lives in `backend/routes/`. SQLite databases are initialized and migrated automatically by `backend/bootstrap.ts` on first access via the DB accessor functions in `backend/lib/db.ts`.
+**Backend** — Deno 2 + Hono under `backend/`. Entry point is `backend/main.ts`; each route file lives in `backend/routes/`. Database is PostgreSQL (via the `postgres` npm package); `backend/lib/db.ts` exports a single `sql` tagged-template client. Migrations run at startup from `backend/migrations/*.sql` via `backend/lib/migrate.ts`.
 
 ### Authentication flow
 
@@ -61,29 +61,28 @@ Locale files live in `locales/` at the repo root as flat dot-notation JSON (e.g.
 
 ### Salaxy API integration
 
-Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in `data/salaxy_token_{companyId}.json` for 23 hours. This cached token is used for employee sync and payroll export calls. See `backend/lib/salaxy.ts`.
+Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_password`) are stored in the `companies` table. The backend fetches an OAuth2 password-grant token from Salaxy's token endpoint and caches it per company in the `salaxy_tokens` database table for 23 hours. This cached token is used for employee sync and payroll export calls. See `backend/lib/salaxy.ts`.
 
 ### Config and secrets
 
-`backend/lib/config.ts` reads all configuration from environment variables. For local dev, set them in a `.env` file or shell. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`. Salaxy credentials are per-company in the DB; `SALAXY_*` env vars are fallback defaults applied when creating a new company. On first boot, set `SA_EMAIL` and `SA_PASSWORD` to auto-seed the super-admin account.
+`backend/lib/config.ts` reads all configuration from environment variables. For local dev, set them in a `.env` file or shell. Required variables: `JWT_SECRET`, `GEMINI_API_KEY`, `DATABASE_URL` (Postgres connection string). Salaxy credentials are per-company in the DB; `SALAXY_*` env vars are fallback defaults applied when creating a new company. On first boot, set `SA_EMAIL` and `SA_PASSWORD` to auto-seed the super-admin account.
 
 ### Database layout
 
-Two SQLite files, both under `data/` (path configurable via `DB_DIR` env var). Accessors in `backend/lib/db.ts`: `getMasterDb()`, `getCompanyDb(id)`, `getCompanyDbBySlug(slug)` — module-level cached.
+Single PostgreSQL database. `backend/lib/db.ts` exports one `sql` tagged-template client (postgres.js). Schema is applied at startup by `backend/lib/migrate.ts` which runs any unapplied `.sql` files from `backend/migrations/` in order. To add a column, create a new numbered migration file there.
 
-**`data/master.sqlite`** — company registry and super-admin accounts:
-- `companies` — slug, active flag, per-company Salaxy credentials, payroll settings, `db_file` path
-- `super_admin_orgs` — super-admin organizations (one default org)
-- `super_admins` — super-admin accounts (reference `super_admin_orgs`)
-
-**`data/companies/{id}.sqlite`** — one file per company, all operational data:
-- `company_admins` — company-level admins (`role='company_admin'`)
-- `employees` / `supervisors` — PIN (HMAC hash), `salaxy_employment_id` for sync
-- `time_entries` — status: `pending | approved | rejected`; `hours` and `km` are separate approval targets; `exported_to_salaxy` flag
-- `payroll_exports` — deduplication guard for Salaxy payroll creation
+Key tables:
+- `companies` — slug, active flag, per-company Salaxy credentials, payroll settings
+- `super_admin_orgs` / `super_admins` — super-admin accounts
+- `company_admins` — company-level admins
+- `employees` / `supervisors` — PIN (HMAC-SHA256 hash), `salaxy_employment_id` for sync
+- `supervisor_employees` — many-to-many team assignments
+- `time_entries` — status: `pending | approved | rejected | clarified | deleted`; `hours` and `km` are separate approval targets with independent `km_status`; `deletion_reason` field for audit trail
+- `payroll_exports` / `payroll_export_calculations` — deduplication guard for Salaxy payroll creation
 - `pin_rate_limit` — per-device brute-force protection
-
-Schema migrations run inline in `backend/bootstrap.ts` via `ALTER TABLE` checks — check there before adding columns.
+- `holiday_proposals` / `absence_records` — time-off management
+- `salaxy_tokens` — Salaxy OAuth2 token cache per company (replaces old JSON files)
+- `audit_log` — append-only; `company_id NULL` = master-level event (super-admin actions)
 
 ### Production deployment
 

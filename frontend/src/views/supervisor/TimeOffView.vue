@@ -8,7 +8,8 @@ import BottomTabs from '@/components/ui/bottom-tabs/BottomTabs.vue'
 import type { BottomTabItem } from '@/components/ui/bottom-tabs/BottomTabs.vue'
 import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
-import Pending from './time-off/Pending.vue'
+import PendingUnified from '@/components/time-off/PendingUnified.vue'
+import type { PendingAbsence } from '@/components/time-off/PendingUnified.vue'
 import Day from './time-off/Day.vue'
 import TeamCalendar from './time-off/TeamCalendar.vue'
 import type { SupervisorProposal } from '@/components/time-off/PendingCard.vue'
@@ -24,6 +25,7 @@ const { get } = useApi()
 const activeSegTab = ref('pending')
 const proposals = ref<SupervisorProposal[]>([])
 const loading = ref(false)
+const pendingAbsences = ref<PendingAbsence[]>([])
 
 async function fetchProposals() {
   loading.value = true
@@ -39,9 +41,18 @@ async function fetchProposals() {
   }
 }
 
-onMounted(fetchProposals)
+async function fetchPendingAbsences() {
+  try {
+    const data = await get<{ absences: PendingAbsence[] }>('/api/supervisor/pending_absences')
+    pendingAbsences.value = data.absences
+  } catch { /* non-critical */ }
+}
 
-const pendingCount = computed(() => proposals.value.filter((p) => p.status === 'pending').length)
+onMounted(() => { fetchProposals(); fetchPendingAbsences() })
+
+const pendingCount = computed(
+  () => proposals.value.filter((p) => p.status === 'pending').length + pendingAbsences.value.length,
+)
 
 const segTabs = computed((): SegTab[] => [
   { id: 'calendar', label: t('supervisor.timeoff.tab_calendar') },
@@ -61,12 +72,16 @@ const bottomTabItems = computed<BottomTabItem[]>(() => [
   { id: 'timeoff', label: t('timeOff.nav_label'), icon: Umbrella },
   { id: 'me', label: t('nav.me'), icon: User, to: { ...homeRoute(), query: { mob: 'me' } } },
 ])
+
+function onReviewed() {
+  fetchProposals()
+  fetchPendingAbsences()
+}
 </script>
 
 <template>
   <!-- Mobile layout -->
   <template v-if="isMobile">
-    <!-- Header -->
     <div class="flex items-start justify-between mb-3">
       <div>
         <p class="text-lg font-bold leading-tight text-foreground">{{ t('supervisor.timeoff.title') }}</p>
@@ -76,25 +91,18 @@ const bottomTabItems = computed<BottomTabItem[]>(() => [
       </div>
     </div>
 
-    <!-- SegTabs -->
-    <SegTabs
-      :tabs="segTabs"
-      :active="activeSegTab"
-      class="mb-4"
-      @change="activeSegTab = $event"
-    />
+    <SegTabs :tabs="segTabs" :active="activeSegTab" class="mb-4" @change="activeSegTab = $event" />
 
-    <!-- Tab content -->
-    <Pending
+    <PendingUnified
       v-if="activeSegTab === 'pending'"
       :proposals="proposals"
+      :absences="pendingAbsences"
       :loading="loading"
-      @reviewed="fetchProposals"
+      @reviewed="onReviewed"
     />
     <Day v-else-if="activeSegTab === 'day'" />
     <TeamCalendar v-else />
 
-    <!-- BottomTabs -->
     <BottomTabs :items="bottomTabItems" active="timeoff" />
   </template>
 
@@ -106,24 +114,17 @@ const bottomTabItems = computed<BottomTabItem[]>(() => [
         <p class="text-sm text-muted-foreground">{{ t('supervisor.timeoff.subtitle', { count: pendingCount }) }}</p>
       </div>
 
-      <!-- SegTabs -->
-      <SegTabs
-        :tabs="segTabs"
-        :active="activeSegTab"
-        @change="activeSegTab = $event"
-      />
+      <SegTabs :tabs="segTabs" :active="activeSegTab" @change="activeSegTab = $event" />
 
-      <!-- Tab content -->
-      <Pending
+      <PendingUnified
         v-if="activeSegTab === 'pending'"
         :proposals="proposals"
+        :absences="pendingAbsences"
         :loading="loading"
-        @reviewed="fetchProposals"
+        @reviewed="onReviewed"
       />
       <Day v-else-if="activeSegTab === 'day'" />
-      <div v-else class="py-16 text-center text-sm text-muted-foreground">
-        {{ t('common.coming_soon') }}
-      </div>
+      <TeamCalendar v-else-if="activeSegTab === 'calendar'" />
     </div>
   </template>
 </template>

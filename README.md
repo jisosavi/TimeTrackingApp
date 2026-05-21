@@ -80,6 +80,7 @@ Support for multiple UI languages, easy to add more locales when needed.
 - Enable or disable **Time App** and **Approvals** per company via toggle cards; disabling requires a confirmation dialog and preserves all existing data
 - Manage admins of each company
 - Navigate directly to each company's admin panel
+- **Audit Log viewer** (`/admin/audit-log`) — read-only view of the `audit_log` table; filterable by company, event category, actor type, and outcome; full-text search; expandable rows show before/after JSON. Currently for testing/development use only — not intended as the final audit UI.
 
 ---
 
@@ -131,7 +132,7 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | Routing | Vue Router 5 (history mode, JWT-guarded navigation guards) |
 | i18n | vue-i18n v11 (`legacy: false`), flat JSON locale files in `locales/` |
 | Backend | Deno 2 + Hono framework |
-| Database | SQLite via `@db/sqlite` — one master DB + one DB per company |
+| Database | PostgreSQL via postgres.js (npm); single database, hosted on Neon |
 | Auth | JWT (HS256), HMAC-SHA256 PIN hashing |
 | AI | Google Gemini API (natural language → structured time entry) |
 | Payroll | Salaxy REST API — OAuth2 token auth, employee sync, payroll export |
@@ -139,8 +140,6 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | Production | Railway (Deno via Dockerfile) + Apache with `.htaccess` rewrites (frontend) |
 | Testing | Vitest (unit), Playwright (e2e), vue-tsc (type-check) |
 
-> **Database and Deno Deploy compatibility**
-> The backend uses SQLite via `@db/sqlite`, which requires FFI (Foreign Function Interface) to load the native SQLite C library into the Deno process. FFI is not available on Deno Deploy, which runs V8 isolates without native code access. The current setup is therefore **not compatible with Deno Deploy** and must be hosted on a platform that supports persistent disk and FFI — Railway with a mounted volume is the reference deployment target. Migrating to a serverless-compatible database (e.g. Neon/Supabase Postgres via the HTTP driver) would unblock Deno Deploy.
 
 ### Supported languages
 
@@ -171,6 +170,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 | `/{slug}/admin/payroll-settings` | Payroll period settings |
 | `/admin` | Super-admin login (Salaxy OAuth2) |
 | `/admin/dashboard` | Super-admin company list |
+| `/admin/audit-log` | Audit log viewer (super-admin only, testing use) |
 
 ---
 
@@ -195,6 +195,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
    ```
    JWT_SECRET=a-long-random-secret
    GEMINI_API_KEY=your-gemini-api-key
+   DATABASE_URL=postgres://user:pass@host/dbname
 
    # Salaxy API credentials — used for employee sync and payroll export (OAuth2 password grant)
    SALAXY_API_URL=https://api.salaxy.com/v03/api
@@ -249,7 +250,7 @@ npm run lint         # ESLint + Oxlint
 
 ### Deploying
 
-**Backend** — push to a Railway service configured with the `Dockerfile`. Mount a persistent volume at `/app/data` for the SQLite databases. Set all environment variables in the Railway dashboard.
+**Backend** — push to a Railway service configured with the `Dockerfile`. Set all environment variables in the Railway dashboard, including `DATABASE_URL` pointing to your Postgres instance (e.g. Neon). No persistent volume needed.
 
 **Frontend** — build with `VITE_API_BASE` pointing to the Railway service URL and `VITE_APP_BASE` set to the sub-path on your Apache server, then rsync `frontend/dist/` to the server:
 ```bash
@@ -276,14 +277,15 @@ npm run lint         # ESLint + Oxlint
 │
 ├── backend/
 │   ├── main.ts                           # Hono app entry point; CORS, route registration, super-admin seed
-│   ├── bootstrap.ts                      # SQLite schema init and inline migrations
+│   ├── migrations/                       # Numbered SQL migrations applied at startup by lib/migrate.ts
 │   ├── lib/
 │   │   ├── auth.ts                       # requireEmployee / requireSupervisor / requireAdmin / requireSuperAdmin middleware
 │   │   ├── config.ts                     # All config read from env vars
-│   │   ├── db.ts                         # getMasterDb / getCompanyDb / getCompanyDbBySlug
+│   │   ├── db.ts                         # postgres.js sql client (single Postgres connection)
+│   │   ├── migrate.ts                    # Runs pending migrations from migrations/ at startup
 │   │   ├── jwt.ts                        # JWT sign/verify (HS256), hashPin (HMAC-SHA256)
 │   │   ├── pin_rate_limit.ts             # PIN brute-force protection helpers
-│   │   └── salaxy.ts                     # Salaxy API: token cache, employee sync, payroll export
+│   │   └── salaxy.ts                     # Salaxy API: token cache (salaxy_tokens table), employee sync, payroll export
 │   ├── routes/                           # One file per endpoint group
 │   │   ├── health.ts                     # GET /health
 │   │   ├── validate_pin.ts               # POST /v01/api/validate_pin
@@ -333,7 +335,8 @@ npm run lint         # ESLint + Oxlint
 │   │   │   ├── AdminView.vue             # Personnel + Approvals management
 │   │   │   ├── PayrollView.vue           # Payroll export
 │   │   │   ├── PayrollSettingsView.vue   # Payroll period config
-│   │   │   └── SuperAdminView.vue        # Company management
+│   │   │   ├── SuperAdminView.vue        # Company management
+│   │   │   └── AuditLogView.vue          # Audit log viewer (super-admin, testing only)
 │   │   ├── components/
 │   │   │   ├── employee/                 # ChatPanel, EntryList, EntryCard
 │   │   │   ├── super-admin/              # CompanySettingsDrawer, FeatureToggleCard
@@ -343,9 +346,7 @@ npm run lint         # ESLint + Oxlint
 │   │       ├── useChat.ts, useTimeEntries.ts, useSuperAdmin.ts
 │   │       ├── useLocale.ts, useRefresh.ts, useHolidays.ts
 │
-└── data/                                 # SQLite databases (auto-created, not in git)
-    ├── master.sqlite                     # Company registry + super-admin accounts
-    └── companies/{id}.sqlite             # One file per company
+└── data/                                 # Gitignored local dev scratch (Salaxy token cache, etc.)
 ```
 
 ---
@@ -368,50 +369,20 @@ Each record carries: timestamp (UTC), event name, actor type and ID, client IP (
 
 ### Storage layout
 
-Audit records follow the same two-database split as the rest of the application data:
+All audit records go to a single `audit_log` table in PostgreSQL. The `company_id` column discriminates the scope: a non-null value identifies company-level events (time entries, auth, employee CRUD, payroll); `company_id = NULL` identifies master-level events (super-admin login, company management).
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Incoming Request                       │
-│                                                             │
-│  Employee  ──── validate_pin.ts         ───┐                │
-│  Supervisor ─── supervisor_login.ts     ───┤                │
-│  Admin ──────── admin_login.ts          ───┤                │
-│              ── employees.ts            ───┤  Hono route    │
-│              ── supervisors.ts          ───┤  handler       │
-│              ── time_entries.ts         ───┤                │
-│              ── review_entries.ts       ───┤                │
-│              ── clarify_entry.ts        ───┤                │
-│              ── export_payroll.ts       ───┤                │
-│  Super-admin ── admin_login.ts (no slug)───┘                │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          │  1. Business logic + DB write
-                          │  2. writeAudit() called
-                          ▼
-               ┌──────────────────────┐
-               │   lib/audit.ts       │
-               │   writeAudit(        │
-               │     companyId,       │
-               │     event            │
-               │   )                  │
-               └──────────┬───────────┘
-                          │
-           ┌──────────────┴────────────────┐
-           │ companyId > 0                 │ companyId = 0
-           ▼                               ▼
-┌─────────────────────┐       ┌────────────────────────────┐
-│ data/companies/     │       │ data/master.sqlite         │
-│ {id}.sqlite         │       │                            │
-│ ┌─────────────────┐ │       │ ┌────────────────────────┐ │
-│ │   audit_log     │ │       │ │       audit_log        │ │
-│ │                 │ │       │ │                        │ │
-│ │ time entries    │ │       │ │ superadmin login       │ │
-│ │ auth events     │ │       │ │ company management     │ │
-│ │ employee CRUD   │ │       │ │ system.audit_failure   │ │
-│ │ payroll exports │ │       │ └────────────────────────┘ │
-│ └─────────────────┘ │       └────────────────────────────┘
-└─────────────────────┘
+  writeAudit(companyId, event)
+        │
+        ▼
+  INSERT INTO audit_log
+  (company_id, ts, event, actor_type, actor_id, actor_ip,
+   resource, resource_id, before_json, after_json, outcome)
+        │
+        ├── company_id IS NOT NULL  →  company-level event
+        │                              (time entries, auth, employee CRUD, payroll)
+        └── company_id IS NULL      →  master-level event
+                                       (super-admin login, company management)
 ```
 
 ### Failure handling
@@ -429,7 +400,7 @@ Audit writes are not allowed to block business operations. If a write to the tar
   console.error (captured by Railway log drain)
         │
         ▼
-  try: INSERT system.audit_failure → master.sqlite
+  try: INSERT system.audit_failure → audit_log (company_id NULL)
        { originalEvent, companyId, error message }
         │
         │  ◄── gap is now detectable even if primary write failed
@@ -439,8 +410,12 @@ Audit writes are not allowed to block business operations. If a write to the tar
 
 This means:
 - A broken audit table never prevents employees from logging hours or admins from exporting payroll.
-- Any failure produces a `system.audit_failure` row in the master DB, creating a detectable gap — you know *that* a record was missed and approximately when.
-- If even the master DB is unavailable, the `console.error` remains in Railway's log drain as a last resort.
+- Any failure produces a `system.audit_failure` row, creating a detectable gap — you know *that* a record was missed and approximately when.
+- If even the DB is unavailable, the `console.error` remains in Railway's log drain as a last resort.
+
+### Viewing audit records
+
+A read-only audit log viewer is available in the super-admin UI at `/admin/audit-log`. It provides filtering by company, event category, actor type, and outcome, plus full-text search and expandable rows that show the before/after JSON payloads. This viewer is intended for development and testing only — the final product may expose audit data through a different interface.
 
 ### Compliance alignment
 

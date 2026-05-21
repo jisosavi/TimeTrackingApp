@@ -4,9 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { useApi } from '@/composables/useApi'
 import SegTabs from '@/components/ui/seg-tabs/SegTabs.vue'
 import type { SegTab } from '@/components/ui/seg-tabs/SegTabs.vue'
-import Pending from '@/views/supervisor/time-off/Pending.vue'
 import TeamCalendar from '@/views/supervisor/time-off/TeamCalendar.vue'
 import PerPerson from './time-off/PerPerson.vue'
+import PendingUnified from '@/components/time-off/PendingUnified.vue'
+import type { PendingAbsence } from '@/components/time-off/PendingUnified.vue'
 import RecordAbsenceOnBehalf from '@/components/admin/RecordAbsenceOnBehalf.vue'
 import type { SupervisorProposal } from '@/components/time-off/PendingCard.vue'
 import type { Employee } from '@/types/index'
@@ -14,7 +15,7 @@ import type { Employee } from '@/types/index'
 defineOptions({ name: 'AdminTimeOffView' })
 
 const { t } = useI18n({ useScope: 'global' })
-const { get } = useApi()
+const { get, post } = useApi()
 
 const activeTab = ref('calendar')
 const proposals = ref<SupervisorProposal[]>([])
@@ -28,6 +29,10 @@ const stats = ref<StatsData | null>(null)
 const employees = ref<Employee[]>([])
 const showRecordAbsence = ref(false)
 const recordAbsenceForId = ref<number | null>(null)
+const syncing = ref(false)
+const syncMessage = ref('')
+
+const pendingAbsences = ref<PendingAbsence[]>([])
 
 async function fetchProposals() {
   loadingProposals.value = true
@@ -56,7 +61,14 @@ async function fetchEmployees() {
   } catch { /* non-critical */ }
 }
 
-onMounted(() => { fetchProposals(); fetchStats(); fetchEmployees() })
+async function fetchPendingAbsences() {
+  try {
+    const data = await get<{ absences: PendingAbsence[] }>('/api/supervisor/pending_absences')
+    pendingAbsences.value = data.absences
+  } catch { /* non-critical */ }
+}
+
+onMounted(() => { fetchProposals(); fetchPendingAbsences(); fetchStats(); fetchEmployees() })
 
 const pendingCount = computed(() => proposals.value.filter((p) => p.status === 'pending').length)
 
@@ -73,6 +85,20 @@ const totalEmployees = computed(() => employees.value.length)
 function openRecordAbsence(employeeId?: number) {
   recordAbsenceForId.value = employeeId ?? null
   showRecordAbsence.value = true
+}
+
+async function syncFromSalaxy() {
+  syncing.value = true
+  syncMessage.value = ''
+  try {
+    const data = await post<{ imported: number; skipped: number }>('/api/admin/sync_holidays_from_salaxy', {})
+    syncMessage.value = t('admin.timeoff.sync_result', { imported: data.imported, skipped: data.skipped })
+    if (data.imported > 0) fetchProposals()
+  } catch {
+    syncMessage.value = t('admin.timeoff.sync_error')
+  } finally {
+    syncing.value = false
+  }
 }
 
 function onAbsenceSaved() {
@@ -92,13 +118,24 @@ function onAbsenceSaved() {
           {{ t('admin.timeoff.subtitle', { employees: totalEmployees, pending: pendingCount }) }}
         </p>
       </div>
-      <button
-        type="button"
-        class="px-3 py-1.5 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shrink-0"
-        @click="openRecordAbsence()"
-      >
-        {{ t('admin.timeoff.record_absence_btn') }}
-      </button>
+      <div class="flex items-center gap-2 flex-wrap shrink-0">
+        <span v-if="syncMessage" class="text-xs text-muted-foreground">{{ syncMessage }}</span>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-background hover:bg-muted transition-colors"
+          :disabled="syncing"
+          @click="syncFromSalaxy"
+        >
+          {{ syncing ? t('common.loading') : t('admin.timeoff.sync_from_salaxy_btn') }}
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+          @click="openRecordAbsence()"
+        >
+          {{ t('admin.timeoff.record_absence_btn') }}
+        </button>
+      </div>
     </div>
 
     <!-- Stats cards -->
@@ -152,12 +189,12 @@ function onAbsenceSaved() {
     <!-- Tab content -->
     <TeamCalendar v-if="activeTab === 'calendar'" />
     <PerPerson v-else-if="activeTab === 'per-person'" />
-    <Pending
+    <PendingUnified
       v-else-if="activeTab === 'pending'"
       :proposals="proposals"
+      :absences="pendingAbsences"
       :loading="loadingProposals"
-      :show-as-table="true"
-      @reviewed="fetchProposals"
+      @reviewed="fetchProposals(); fetchPendingAbsences(); fetchStats()"
     />
     <div v-else class="py-16 text-center text-sm text-muted-foreground">
       {{ t('common.coming_soon') }}

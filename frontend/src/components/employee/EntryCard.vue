@@ -10,7 +10,7 @@ const props = defineProps<{ entry: TimeEntry }>()
 const emit = defineEmits<{
   clarify: [id: number, text: string]
   clarifyKm: [id: number, text: string]
-  delete: [id: number]
+  delete: [id: number, reason: string]
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
@@ -19,6 +19,8 @@ const clarificationText = ref('')
 const showClarifyForm = ref(false)
 const kmClarificationText = ref('')
 const showKmClarifyForm = ref(false)
+const showDeleteForm = ref(false)
+const deleteReason = ref('')
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending:   'secondary',
@@ -59,6 +61,13 @@ function submitKmClarification() {
 }
 
 const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.status)
+
+function submitDelete() {
+  if (!deleteReason.value.trim()) return
+  emit('delete', props.entry.id, deleteReason.value.trim())
+  showDeleteForm.value = false
+  deleteReason.value = ''
+}
 </script>
 
 <template>
@@ -87,11 +96,11 @@ const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.stat
       <div class="flex items-center gap-2 shrink-0">
         <Badge :variant="cfg.variant">{{ cfg.label }}</Badge>
         <Button
-          v-if="canDelete"
+          v-if="canDelete && !showDeleteForm"
           variant="ghost"
           size="sm"
           class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-          @click="emit('delete', entry.id)"
+          @click="showDeleteForm = true"
         >
           ✕
         </Button>
@@ -101,6 +110,20 @@ const canDelete = ['pending', 'rejected', 'clarified'].includes(props.entry.stat
     <!-- Rejection note -->
     <div v-if="entry.status === 'rejected' && entry.rejection_note" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
       <span class="font-medium">{{ t('status.rejected') }}: </span>{{ entry.rejection_note }}
+    </div>
+
+    <!-- Inline delete reason form -->
+    <div v-if="showDeleteForm" class="space-y-2">
+      <Textarea
+        v-model="deleteReason"
+        :placeholder="t('entries.delete_reason_placeholder')"
+        class="text-sm min-h-14"
+        autofocus
+      />
+      <div class="flex gap-2">
+        <Button size="sm" variant="destructive" :disabled="!deleteReason.trim()" @click="submitDelete">{{ t('common.delete') }}</Button>
+        <Button size="sm" variant="ghost" @click="showDeleteForm = false; deleteReason = ''">{{ t('common.cancel') }}</Button>
+      </div>
     </div>
 
     <!-- Clarification actions -->

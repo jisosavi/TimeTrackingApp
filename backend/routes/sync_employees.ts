@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { requireAdmin } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { hashPin } from "../lib/jwt.ts";
 import { getCompanyCreds, salaxyRequest } from "../lib/salaxy.ts";
 import { SALAXY_TOKEN_URL } from "../lib/config.ts";
@@ -10,9 +10,8 @@ const app = new Hono<{ Variables: Record<string, unknown> }>();
 app.post("/api/sync_employees_from_salaxy", requireAdmin, async (c) => {
   const admin = c.get("user") as Record<string, unknown>;
   const companyId = admin.company_id as number;
-  const db = getCompanyDb(companyId);
 
-  const creds = getCompanyCreds(companyId);
+  const creds = await getCompanyCreds(companyId);
   if (!creds.username || !creds.password) {
     return c.json({ success: false, error: "Salaxy credentials not configured" }, 422);
   }
@@ -22,15 +21,14 @@ app.post("/api/sync_employees_from_salaxy", requireAdmin, async (c) => {
   let deleted = 0;
 
   if (clearFirst) {
-    const row = db.prepare("SELECT COUNT(*) AS n FROM employees WHERE company_id = ?").get(companyId) as { n: number };
-    deleted = row.n;
-    db.prepare("DELETE FROM time_entries WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ?)").run(companyId);
-    db.prepare("DELETE FROM supervisor_employees WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ?)").run(companyId);
-    db.prepare("DELETE FROM pin_rate_limit WHERE company_id = ?").run(companyId);
-    db.prepare("DELETE FROM employees WHERE company_id = ?").run(companyId);
+    const [row] = await sql`SELECT COUNT(*) AS n FROM employees WHERE company_id = ${companyId}`;
+    deleted = Number(row.n);
+    await sql`DELETE FROM time_entries WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ${companyId})`;
+    await sql`DELETE FROM supervisor_employees WHERE employee_id IN (SELECT id FROM employees WHERE company_id = ${companyId})`;
+    await sql`DELETE FROM pin_rate_limit WHERE company_id = ${companyId}`;
+    await sql`DELETE FROM employees WHERE company_id = ${companyId}`;
   }
 
-  // Fetch employees from Salaxy
   const tokenUrlCreds = { ...creds, tokenUrl: SALAXY_TOKEN_URL };
   const resp = await salaxyRequest("GET", "/employments", null, tokenUrlCreds);
   const salaxyEmployees: { id: string; firstName: string; lastName: string; ssn: string | null }[] = [];
@@ -63,32 +61,29 @@ app.post("/api/sync_employees_from_salaxy", requireAdmin, async (c) => {
     const fullName = `${emp.firstName} ${emp.lastName}`.trim();
     if (!fullName) continue;
 
-    const existing = db.prepare("SELECT id FROM employees WHERE company_id = ? AND salaxy_employment_id = ?")
-      .get(companyId, emp.id) as { id: number } | undefined;
+    const [existing] = await sql`SELECT id FROM employees WHERE company_id = ${companyId} AND salaxy_employment_id = ${emp.id}`;
 
     if (existing) {
-      db.prepare("UPDATE employees SET name = ?, ssn = COALESCE(?, ssn), salaxy_employment_id = ? WHERE id = ?")
-        .run(fullName, emp.ssn || null, emp.id, existing.id);
+      await sql`UPDATE employees SET name = ${fullName}, ssn = COALESCE(${emp.ssn || null}, ssn), salaxy_employment_id = ${emp.id} WHERE id = ${existing.id}`;
       updated++;
     } else {
-      const nameMatch = db.prepare("SELECT id FROM employees WHERE company_id = ? AND name = ? LIMIT 1")
-        .get(companyId, fullName) as { id: number } | undefined;
+      const [nameMatch] = await sql`SELECT id FROM employees WHERE company_id = ${companyId} AND name = ${fullName} LIMIT 1`;
       if (nameMatch) {
-        db.prepare("UPDATE employees SET salaxy_employment_id = ?, ssn = COALESCE(?, ssn) WHERE id = ?")
-          .run(emp.id, emp.ssn || null, nameMatch.id);
+        await sql`UPDATE employees SET salaxy_employment_id = ${emp.id}, ssn = COALESCE(${emp.ssn || null}, ssn) WHERE id = ${nameMatch.id}`;
         updated++;
         continue;
       }
 
-      // Generate unique 6-digit PIN
       let pinHash: string;
       do {
         const pin = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
         pinHash = await hashPin(pin);
-      } while (db.prepare("SELECT id FROM employees WHERE company_id = ? AND pin = ?").get(companyId, pinHash));
+      } while ((await sql`SELECT id FROM employees WHERE company_id = ${companyId} AND pin = ${pinHash}`).length > 0);
 
-      db.prepare("INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active) VALUES (?,?,?,?,?,'employee',1)")
-        .run(companyId, pinHash, fullName, emp.ssn || null, emp.id);
+      await sql`
+        INSERT INTO employees (company_id, pin, name, ssn, salaxy_employment_id, role, active)
+        VALUES (${companyId}, ${pinHash}, ${fullName}, ${emp.ssn || null}, ${emp.id}, 'employee', TRUE)
+      `;
       added++;
     }
   }

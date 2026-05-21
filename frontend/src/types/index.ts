@@ -20,6 +20,7 @@ export interface TimeEntry {
   rejection_note: string | null
   employee_clarification: string | null
   clarification_at: string | null
+  deletion_reason: string | null
   exported_to_salaxy: number
   exported_at: string | null
 }
@@ -49,6 +50,7 @@ export interface Employee {
   pin?: string
   ssn: string | null
   employmentId: string | null
+  salaxy_employment_id: string | null
   active: number
   pin_locked: number
   pin_temp_locked: number
@@ -174,7 +176,7 @@ export interface LlmAbsence {
   endDate: string
   isPaid: boolean
   affectsAccrual: boolean
-  reason: 'Kertausharjoitus'
+  causeCode: string
   note?: string
 }
 

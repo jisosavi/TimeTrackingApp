@@ -1,17 +1,17 @@
 import { Hono } from "@hono/hono";
-import { getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 
 const app = new Hono();
 
-app.get("/api/company_lang", (c) => {
+app.get("/api/company_lang", async (c) => {
   const slug = String(c.req.query("slug") ?? "").trim();
   if (!slug) return c.json({ ui_language: "en" });
 
   try {
-    const row = getMasterDb().prepare(
-      "SELECT ui_language FROM companies WHERE slug = ? AND active = 1 LIMIT 1"
-    ).get(slug) as { ui_language: string | null } | undefined;
-    return c.json({ ui_language: row?.ui_language ?? "en" });
+    const [row] = await sql`
+      SELECT ui_language FROM companies WHERE slug = ${slug} AND active = TRUE LIMIT 1
+    `;
+    return c.json({ ui_language: (row?.ui_language as string | null) ?? "en" });
   } catch {
     return c.json({ ui_language: "en" });
   }

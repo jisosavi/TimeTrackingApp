@@ -1,23 +1,27 @@
 import { Hono } from "@hono/hono";
 import { requireEmployee } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
 import { getCompanyCreds, createAbsence } from "../lib/salaxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
-app.get("/api/absences", requireEmployee, (c) => {
+const ALLOWED_CAUSE_CODES = new Set([
+  "illness", "partTimeSickLeave", "childIllness", "parentalLeave",
+  "specialMaternityLeave", "childCareLeave", "partTimeChildCareLeave",
+  "rehabilitation", "partTimeAbsenceDueToRehabilitation", "occupationalAccident",
+  "unpaidLeave", "personalReason", "leaveOfAbsence", "training",
+  "studyLeave", "jobAlternationLeave", "militaryRefresherTraining",
+  "militaryService", "layOff", "other",
+]);
+
+app.get("/api/absences", requireEmployee, async (c) => {
   const emp = c.get("user") as { id: number; company_id: number };
   const statusFilter = c.req.query("status");
-  const db = getCompanyDb(emp.company_id);
 
   const absences = statusFilter && statusFilter !== "all"
-    ? db.prepare(
-        "SELECT * FROM absence_records WHERE employee_id = ? AND status = ? ORDER BY start_date DESC"
-      ).all(emp.id, statusFilter)
-    : db.prepare(
-        "SELECT * FROM absence_records WHERE employee_id = ? ORDER BY start_date DESC"
-      ).all(emp.id);
+    ? await sql`SELECT * FROM absence_records WHERE company_id = ${emp.company_id} AND employee_id = ${emp.id} AND status = ${statusFilter} ORDER BY start_date DESC`
+    : await sql`SELECT * FROM absence_records WHERE company_id = ${emp.company_id} AND employee_id = ${emp.id} ORDER BY start_date DESC`;
 
   return c.json({ absences });
 });
@@ -32,6 +36,7 @@ app.post("/api/absences", requireEmployee, async (c) => {
   let body: {
     startDate?: string;
     endDate?: string;
+    causeCode?: string;
     isPaid?: boolean;
     affectsAccrual?: boolean;
     note?: string | null;
@@ -43,26 +48,20 @@ app.post("/api/absences", requireEmployee, async (c) => {
   }
 
   const { startDate, endDate, isPaid = true, affectsAccrual = true, note = null } = body;
+  const causeCode = body.causeCode && ALLOWED_CAUSE_CODES.has(body.causeCode) ? body.causeCode : "other";
   if (!startDate || !endDate) return c.json({ error: "missing_dates" }, 400);
   if (endDate < startDate) return c.json({ error: "invalid_range" }, 400);
 
-  const days = computeWorkDays(startDate, endDate);
-  if (days === 0) return c.json({ error: "no_work_days" }, 400);
+  const days = computeCalendarDays(startDate, endDate);
 
-  const db = getCompanyDb(emp.company_id);
   const now = new Date().toISOString();
-
-  const result = db.prepare(
-    `INSERT INTO absence_records
-       (employee_id, reason, start_date, end_date, days, is_paid, affects_accrual, status, note, created_at, updated_at)
-     VALUES (?, 'Kertausharjoitus', ?, ?, ?, ?, ?, 'approved', ?, ?, ?)`
-  ).run(
-    emp.id, startDate, endDate, days,
-    isPaid ? 1 : 0, affectsAccrual ? 1 : 0,
-    note ?? null, now, now,
-  );
-
-  const absenceId = result.lastInsertRowid;
+  const [result] = await sql`
+    INSERT INTO absence_records
+      (company_id, employee_id, reason, start_date, end_date, days, is_paid, affects_accrual, status, note, created_at, updated_at)
+    VALUES (${emp.company_id}, ${emp.id}, ${causeCode}, ${startDate}, ${endDate}, ${days}, ${isPaid}, ${affectsAccrual}, 'pending', ${note ?? null}, ${now}, ${now})
+    RETURNING id
+  `;
+  const absenceId = Number(result.id);
 
   writeAudit(emp.company_id, {
     event: "absence.created",
@@ -71,16 +70,15 @@ app.post("/api/absences", requireEmployee, async (c) => {
     actorIp: reqIp(c.req.header("x-forwarded-for")),
     resource: "absence",
     resourceId: String(absenceId),
-    after: { startDate, endDate, days, isPaid, affectsAccrual, reason: "Kertausharjoitus" },
+    after: { startDate, endDate, days, isPaid, affectsAccrual, reason: causeCode },
   });
 
-  // Degrade gracefully if Salaxy is unavailable
   const salaxyId = emp.salaxy_employment_id;
   if (salaxyId) {
     try {
-      const creds = getCompanyCreds(emp.company_id);
+      const creds = await getCompanyCreds(emp.company_id);
       const salaxyAbsence = await createAbsence(salaxyId, {
-        causeCode: "militaryRefresherTraining",
+        causeCode: causeCode as import("../lib/salaxy.ts").AbsenceCauseCode,
         startDate,
         endDate,
         days,
@@ -88,8 +86,7 @@ app.post("/api/absences", requireEmployee, async (c) => {
         affectsAccrual,
         note: note ?? null,
       }, creds);
-      db.prepare("UPDATE absence_records SET salaxy_absence_id = ?, updated_at = ? WHERE id = ?")
-        .run(salaxyAbsence.id, new Date().toISOString(), absenceId);
+      await sql`UPDATE absence_records SET salaxy_absence_id = ${salaxyAbsence.id}, updated_at = ${new Date().toISOString()} WHERE id = ${absenceId}`;
       writeAudit(emp.company_id, {
         event: "salaxy.absence.synced",
         actorType: "employee",
@@ -103,21 +100,14 @@ app.post("/api/absences", requireEmployee, async (c) => {
     }
   }
 
-  const absence = db.prepare("SELECT * FROM absence_records WHERE id = ?").get(absenceId);
+  const [absence] = await sql`SELECT * FROM absence_records WHERE id = ${absenceId}`;
   return c.json({ absence }, 201);
 });
 
-function computeWorkDays(startIso: string, endIso: string): number {
+function computeCalendarDays(startIso: string, endIso: string): number {
   const start = new Date(startIso + "T12:00:00");
   const end = new Date(endIso + "T12:00:00");
-  let count = 0;
-  const d = new Date(start);
-  while (d <= end) {
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) count++;
-    d.setDate(d.getDate() + 1);
-  }
-  return count;
+  return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
 }
 
 export default app;

@@ -1,12 +1,12 @@
 {
   "tasks": {
-    "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env --allow-ffi backend/main.ts",
-    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi backend/main.ts"
+    "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env backend/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env backend/main.ts",
+    "migrate:sqlite": "deno run --allow-net --allow-read --allow-env --allow-ffi backend/scripts/migrate_sqlite_to_postgres.ts"
   },
   "imports": {
     "@hono/hono": "jsr:@hono/hono",
     "@hono/hono/cors": "jsr:@hono/hono/cors",
-    "@db/sqlite": "jsr:@db/sqlite",
     "bcryptjs": "npm:bcryptjs",
     "postgres": "npm:postgres"
   },

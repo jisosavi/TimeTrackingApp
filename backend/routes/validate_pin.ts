@@ -1,5 +1,5 @@
 import { Hono } from "@hono/hono";
-import { getCompanyDb, getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { generateToken, hashPin } from "../lib/jwt.ts";
 import {
   checkPinRateLimit,
@@ -23,59 +23,43 @@ app.post("/api/validate_pin", async (c) => {
   if (!pin) return c.json({ valid: false, error: "PIN on tyhjä" }, 400);
 
   try {
-    const masterDb = getMasterDb();
-    let companyId: number | null = null;
-
-    if (slug) {
-      const company = masterDb
-        .prepare("SELECT id FROM companies WHERE slug = ? AND active = 1 LIMIT 1")
-        .get(slug) as { id: number } | undefined;
-      if (company) companyId = company.id;
-    }
-
-    if (companyId === null) {
-      return c.json({ valid: false, error: "Company not found" }, 400);
-    }
-
-    const companyDb = getCompanyDb(companyId);
+    if (!slug) return c.json({ valid: false, error: "Company not found" }, 400);
+    const [company] = await sql`SELECT id FROM companies WHERE slug = ${slug} AND active = TRUE LIMIT 1`;
+    if (!company) return c.json({ valid: false, error: "Company not found" }, 400);
+    const companyId = Number(company.id);
 
     if (deviceId) {
-      const rl = checkPinRateLimit(companyDb, deviceId, companyId);
+      const rl = await checkPinRateLimit(deviceId, companyId);
       if ("error" in rl) {
         return c.json({ valid: false, lockout: rl.error, ...rl }, 429);
       }
     }
 
     const pinHash = await hashPin(pin);
-    const employee = companyDb
-      .prepare(
-        "SELECT id, name, pin_locked, salaxy_employment_id AS employmentId, company_id AS companyId FROM employees WHERE pin = ? AND active = 1 LIMIT 1",
-      )
-      .get(pinHash) as
-      | { id: number; name: string; pin_locked: number; employmentId: string | null; companyId: number }
-      | undefined;
+    const [employee] = await sql`
+      SELECT id, name, pin_locked, salaxy_employment_id, company_id
+      FROM employees
+      WHERE pin = ${pinHash} AND company_id = ${companyId} AND active = TRUE
+      LIMIT 1
+    `;
 
     if (employee) {
-      if (employee.pin_locked === 1) {
-        writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorId: employee.id, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id), outcome: "error", meta: { reason: "pin_locked" } });
+      if (employee.pin_locked) {
+        writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorId: Number(employee.id), actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id), outcome: "error", meta: { reason: "pin_locked" } });
         return c.json({ valid: false, lockout: "locked" }, 403);
       }
 
       if (deviceId) {
-        recordPinSuccess(companyDb, deviceId, companyId, employee.id, "employee");
+        await recordPinSuccess(deviceId, companyId, Number(employee.id), "employee");
       }
 
-      const empData = companyDb
-        .prepare("SELECT ui_language FROM employees WHERE id = ? LIMIT 1")
-        .get(employee.id) as { ui_language: string | null } | undefined;
-      const compData = masterDb
-        .prepare("SELECT ui_language FROM companies WHERE id = ? LIMIT 1")
-        .get(companyId) as { ui_language: string | null } | undefined;
+      const [empData] = await sql`SELECT ui_language FROM employees WHERE id = ${employee.id} LIMIT 1`;
+      const [compData] = await sql`SELECT ui_language FROM companies WHERE id = ${companyId} LIMIT 1`;
 
-      const compLang = compData?.ui_language ?? "en";
-      const effectiveLang = empData?.ui_language ?? compLang;
-      const token = await generateToken(employee.id, "employee", companyId);
-      writeAudit(companyId, { event: "auth.pin.success", actorType: "employee", actorId: employee.id, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id) });
+      const compLang = (compData?.ui_language as string | null) ?? "en";
+      const effectiveLang = (empData?.ui_language as string | null) ?? compLang;
+      const token = await generateToken(Number(employee.id), "employee", companyId);
+      writeAudit(companyId, { event: "auth.pin.success", actorType: "employee", actorId: Number(employee.id), actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "employee", resourceId: String(employee.id) });
 
       return c.json({
         valid: true,
@@ -83,13 +67,13 @@ app.post("/api/validate_pin", async (c) => {
         id: employee.id,
         name: employee.name,
         companyId,
-        employmentId: employee.employmentId ?? null,
+        employmentId: employee.salaxy_employment_id ?? null,
         ui_language: effectiveLang,
       });
     } else {
       const result: Record<string, unknown> = { valid: false, error: "Väärä PIN" };
       if (deviceId) {
-        const rl = recordPinFailure(companyDb, deviceId, companyId);
+        const rl = await recordPinFailure(deviceId, companyId);
         if ("error" in rl) {
           writeAudit(companyId, { event: "auth.pin.failure", actorType: "employee", actorIp: reqIp(c.req.header("x-forwarded-for")), outcome: "error", meta: { reason: "rate_limited" } });
           return c.json({ valid: false, lockout: rl.error, ...rl }, 429);

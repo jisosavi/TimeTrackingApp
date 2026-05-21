@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { lastName, firstNames } from '@/utils/name'
 
 export interface SupervisorProposal {
   id: number
@@ -15,6 +16,7 @@ export interface SupervisorProposal {
   created_at: string
   conflict_warning: string | null
   decision_note: string | null
+  employee_clarification: string | null
 }
 
 const props = defineProps<{
@@ -101,7 +103,7 @@ function submitClarify() {
       <!-- Name + label -->
       <div class="flex-1 min-w-0">
         <p class="text-sm font-bold text-foreground leading-snug">
-          {{ proposal.employee_name }}
+          {{ lastName(proposal.employee_name) }}<template v-if="firstNames(proposal.employee_name)">, {{ firstNames(proposal.employee_name) }}</template>
           <span v-if="proposal.label" class="font-normal text-muted-foreground"> · {{ proposal.label }}</span>
         </p>
         <p class="text-sm text-foreground mt-0.5">{{ fmtRange(proposal.start_date, proposal.end_date) }}</p>
@@ -109,6 +111,14 @@ function submitClarify() {
       </div>
       <!-- Submitted time -->
       <span class="flex-shrink-0 text-xs text-muted-foreground">{{ timeSince(proposal.created_at) }}</span>
+    </div>
+
+    <!-- Employee clarification reply -->
+    <div
+      v-if="proposal.employee_clarification"
+      class="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2 text-xs text-blue-800 dark:text-blue-300"
+    >
+      <span class="font-semibold">{{ t('pending.employee_reply_label') }}: </span>{{ proposal.employee_clarification }}
     </div>
 
     <!-- Conflict warning or "no conflicts" -->

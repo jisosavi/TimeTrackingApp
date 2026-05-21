@@ -9,8 +9,23 @@ import type { AbsenceRecord } from '@/composables/useAbsences'
 import EntryCard from '@/components/employee/EntryCard.vue'
 
 const { t } = useI18n({ useScope: 'global' })
-const { get } = useApi()
+const { get, post } = useApi()
 const { entries, clarifyEntry, clarifyKmEntry, deleteEntry, fetchEntries } = useTimeEntries()
+
+const clarifyTexts = ref<Record<number, string>>({})
+const clarifyingId = ref<number | null>(null)
+
+async function submitClarification(proposalId: number) {
+  const text = clarifyTexts.value[proposalId]?.trim()
+  if (!text) return
+  clarifyingId.value = proposalId
+  try {
+    await post(`/api/holiday_proposals/${proposalId}/clarify`, { text })
+    await refresh()
+  } catch { /* error visible via failed request */ } finally {
+    clarifyingId.value = null
+  }
+}
 
 const rejectedEntries = ref<TimeEntry[]>([])
 const rejectedProposals = ref<Proposal[]>([])
@@ -86,15 +101,16 @@ function fmtRange(start: string, end: string): string {
           :entry="entry"
           @clarify="(id, text) => clarifyEntry(id, text)"
           @clarify-km="(id, text) => clarifyKmEntry(id, text)"
-          @delete="(id) => deleteEntry(id)"
+          @delete="(id, reason) => deleteEntry(id, reason)"
         />
       </div>
 
-      <!-- Rejected holiday proposals (read-only) -->
+      <!-- Holiday proposals: clarifying or rejected -->
       <div
         v-for="p in rejectedProposals"
         :key="`proposal-${p.id}`"
         class="rounded-lg border p-4 bg-card"
+        :class="p.status === 'clarifying' ? 'border-amber-300' : ''"
       >
         <span
           class="inline-block mb-2 rounded-full bg-muted px-2 py-px text-[10px] font-semibold text-muted-foreground uppercase tracking-wide"
@@ -109,15 +125,45 @@ function fmtRange(start: string, end: string): string {
             <p class="text-xs text-muted-foreground mt-0.5">{{ fmtRange(p.start_date, p.end_date) }}</p>
             <p class="text-xs text-muted-foreground">{{ t('proposals.work_days', { count: p.work_days }) }}</p>
           </div>
-          <span class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+          <span
+            v-if="p.status === 'clarifying'"
+            class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-amber-50 text-amber-700 border-amber-300"
+          >
+            {{ t('rejected.status_clarification_needed') }}
+          </span>
+          <span
+            v-else
+            class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-red-50 text-red-700 border-red-200"
+          >
             {{ t('timeOff.status.rejected') }}
           </span>
         </div>
+
+        <!-- Supervisor's clarification question -->
         <div
           v-if="p.decision_note"
-          class="mt-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          class="mt-3 rounded-md px-3 py-2 text-sm"
+          :class="p.status === 'clarifying' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-destructive/10 text-destructive'"
         >
           {{ p.decision_note }}
+        </div>
+
+        <!-- Employee reply form (clarifying only) -->
+        <div v-if="p.status === 'clarifying'" class="mt-3 space-y-2">
+          <textarea
+            v-model="clarifyTexts[p.id]"
+            :placeholder="t('rejected.clarification_placeholder')"
+            rows="2"
+            class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+          />
+          <button
+            type="button"
+            :disabled="!clarifyTexts[p.id]?.trim() || clarifyingId === p.id"
+            class="w-full rounded-lg bg-amber-500 text-white text-sm font-semibold py-2 hover:bg-amber-600 transition-colors disabled:opacity-50"
+            @click="submitClarification(p.id)"
+          >
+            {{ clarifyingId === p.id ? t('common.saving') : t('rejected.clarification_submit') }}
+          </button>
         </div>
       </div>
 

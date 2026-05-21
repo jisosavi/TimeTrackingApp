@@ -229,11 +229,3 @@ CREATE INDEX idx_proposals_dates               ON holiday_proposals(start_date, 
 CREATE INDEX idx_absences_status_emp           ON absence_records(status, employee_id);
 CREATE INDEX idx_audit_company                 ON audit_log(company_id);
 
--- ── Migration tracking ────────────────────────────────────────────────────────
-
-CREATE TABLE schema_migrations (
-  version    TEXT PRIMARY KEY,
-  applied_at TEXT NOT NULL DEFAULT to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-);
-
-INSERT INTO schema_migrations (version) VALUES ('001_initial');

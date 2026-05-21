@@ -24,10 +24,11 @@ export interface Proposal {
   label: string | null
   note: string | null
   source: string
-  status: 'pending' | 'approved' | 'rejected' | 'clarified' | 'withdrawn'
+  status: 'pending' | 'approved' | 'rejected' | 'clarifying' | 'withdrawn'
   decided_by: number | null
   decided_at: string | null
   decision_note: string | null
+  employee_clarification: string | null
   salaxy_holiday_id: string | null
   created_at: string
   updated_at: string
@@ -62,7 +63,7 @@ export function useTimeOff() {
     error.value = null
     try {
       const [hyData, propData] = await Promise.all([
-        get<{ holidayYear: HolidayYear | null }>(`/api/holiday_year?year=${year}`),
+        get<{ holidayYear: HolidayYear | null }>(`/api/holiday_year?year=${year}`).catch(() => ({ holidayYear: null })),
         get<{ proposals: Proposal[] }>('/api/holiday_proposals?status=all'),
       ])
 

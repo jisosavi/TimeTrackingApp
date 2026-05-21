@@ -35,14 +35,14 @@ export function useTimeEntries() {
     await fetchEntries()
   }
 
-  async function deleteEntry(entryId: number) {
+  async function deleteEntry(entryId: number, reason: string) {
     const entry = entries.value.find((e) => e.id === entryId)
     if (!entry) return
 
     if (entry.status === 'rejected') {
-      await post('/api/clarify_entry', { action: 'delete', id: entryId })
+      await post('/api/clarify_entry', { action: 'delete', id: entryId, deletion_reason: reason })
     } else {
-      await del('/api/time_entries', { id: entryId })
+      await del('/api/time_entries', { id: entryId, deletion_reason: reason })
     }
 
     entries.value = entries.value.filter((e) => e.id !== entryId)

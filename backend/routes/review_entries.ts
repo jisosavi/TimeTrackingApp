@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { requireAdminOrSupervisor } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
@@ -16,24 +16,25 @@ app.post("/api/review_entries", requireAdminOrSupervisor, async (c) => {
   const ids: number[] = Array.isArray(body.ids) ? body.ids.map(Number) : [];
   const action = String(body.action ?? "").trim();
   const rejectionNote = String(body.rejection_note ?? "").trim();
+  const deletionReason = String(body.deletion_reason ?? "").trim();
   const field = String(body.field ?? "").trim() === "km_status" ? "km_status" : "status";
 
   if (!ids.length || !["approve", "reject", "delete"].includes(action)) {
     return c.json({ success: false, error: "ids ja action (approve|reject|delete) vaaditaan" }, 400);
   }
 
-  const db = getCompanyDb(companyId);
-  const placeholders = ids.map(() => "?").join(",");
-
-  let allowed: { id: number }[];
+  let allowed: { id: unknown }[];
   if (userType === "supervisor") {
-    allowed = db.prepare(
-      `SELECT id FROM time_entries WHERE id IN (${placeholders}) AND company_id = ? AND employee_id IN (SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ?)`
-    ).all(...ids, companyId, reviewerId) as { id: number }[];
+    allowed = await sql`
+      SELECT id FROM time_entries
+      WHERE id IN ${sql(ids)} AND company_id = ${companyId}
+        AND employee_id IN (SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ${reviewerId})
+    `;
   } else {
-    allowed = db.prepare(
-      `SELECT id FROM time_entries WHERE id IN (${placeholders}) AND company_id = ?`
-    ).all(...ids, companyId) as { id: number }[];
+    allowed = await sql`
+      SELECT id FROM time_entries
+      WHERE id IN ${sql(ids)} AND company_id = ${companyId}
+    `;
   }
 
   if (allowed.length !== ids.length) {
@@ -41,8 +42,8 @@ app.post("/api/review_entries", requireAdminOrSupervisor, async (c) => {
   }
 
   if (action === "delete") {
-    db.prepare(`UPDATE time_entries SET status = 'deleted' WHERE id IN (${placeholders})`).run(...ids);
-    writeAudit(companyId, { event: "time_entry.deleted", actorType: userType as "admin" | "supervisor", actorId: reviewerId, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length } });
+    await sql`UPDATE time_entries SET status = 'deleted', deletion_reason = ${deletionReason || null} WHERE id IN ${sql(ids)}`;
+    writeAudit(companyId, { event: "time_entry.deleted", actorType: userType as "admin" | "supervisor", actorId: reviewerId, actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length, deletion_reason: deletionReason || undefined } });
     return c.json({ success: true, updated: ids.length, status: "deleted" });
   }
 
@@ -51,11 +52,14 @@ app.post("/api/review_entries", requireAdminOrSupervisor, async (c) => {
 
   if (field === "km_status") {
     const kmNote = action === "reject" ? rejectionNote : null;
-    db.prepare(`UPDATE time_entries SET km_status = ?, km_rejection_note = ? WHERE id IN (${placeholders})`).run(newStatus, kmNote, ...ids);
+    await sql`UPDATE time_entries SET km_status = ${newStatus}, km_rejection_note = ${kmNote} WHERE id IN ${sql(ids)}`;
   } else {
-    db.prepare(
-      `UPDATE time_entries SET status = ?, reviewed_by_type = ?, reviewed_by_id = ?, reviewed_at = ?, rejection_note = ? WHERE id IN (${placeholders})`
-    ).run(newStatus, userType, reviewerId, now, action === "reject" ? rejectionNote : null, ...ids);
+    await sql`
+      UPDATE time_entries
+      SET status = ${newStatus}, reviewed_by_type = ${userType}, reviewed_by_id = ${reviewerId},
+          reviewed_at = ${now}, rejection_note = ${action === "reject" ? rejectionNote : null}
+      WHERE id IN ${sql(ids)}
+    `;
   }
 
   const event = action === "approve" ? "time_entry.approved" : "time_entry.rejected";

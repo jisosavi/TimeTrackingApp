@@ -1,8 +1,8 @@
 import { Hono } from "@hono/hono";
 import { requireAdminOrSupervisor } from "../lib/auth.ts";
-import { getCompanyDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { writeAudit, reqIp } from "../lib/audit.ts";
-import { getCompanyCreds, getHolidayYears, createAbsence } from "../lib/salaxy.ts";
+import { getCompanyCreds, getHolidayYears, createAbsence, getPlannedHolidays } from "../lib/salaxy.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -20,15 +20,13 @@ function computeWorkDays(startIso: string, endIso: string): number {
   return count;
 }
 
-function supervisorTeamIds(db: ReturnType<typeof getCompanyDb>, supervisorId: number): number[] {
-  return (db.prepare("SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ?").all(supervisorId) as { employee_id: number }[]).map((r) => r.employee_id);
+async function supervisorTeamIds(supervisorId: number): Promise<number[]> {
+  const rows = await sql`SELECT employee_id FROM supervisor_employees WHERE supervisor_id = ${supervisorId}`;
+  return rows.map((r) => Number(r.employee_id));
 }
 
-// ── GET /api/admin/time_off_stats?month=YYYY-MM ───────────────────────────
-
-app.get("/api/admin/time_off_stats", requireAdminOrSupervisor, (c) => {
+app.get("/api/admin/time_off_stats", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
-  const db = getCompanyDb(actor.company_id);
 
   const monthParam = c.req.query("month");
   const today = new Date().toISOString().slice(0, 10);
@@ -38,44 +36,39 @@ app.get("/api/admin/time_off_stats", requireAdminOrSupervisor, (c) => {
   const daysInMonth = new Date(Number(y), Number(m), 0).getDate();
   const monthEnd = `${ym}-${String(daysInMonth).padStart(2, "0")}`;
 
-  // Scope: admin = all employees, supervisor = team
   const empIds = actor._type === "admin"
-    ? (db.prepare("SELECT id FROM employees WHERE company_id = ? AND active = 1").all(actor.company_id) as { id: number }[]).map((r) => r.id)
-    : supervisorTeamIds(db, actor.id);
+    ? (await sql`SELECT id FROM employees WHERE company_id = ${actor.company_id} AND active = TRUE`).map((r) => Number(r.id))
+    : await supervisorTeamIds(actor.id);
 
   if (empIds.length === 0) {
     return c.json({ on_holiday_this_month: [], active_absences_today: [] });
   }
 
-  const ph = empIds.map(() => "?").join(",");
+  const holidayRows = await sql`
+    SELECT e.name AS employee_name, hp.start_date, hp.end_date, hp.work_days
+    FROM holiday_proposals hp
+    JOIN employees e ON e.id = hp.employee_id
+    WHERE hp.company_id = ${actor.company_id} AND hp.employee_id IN ${sql(empIds)}
+      AND hp.status = 'approved'
+      AND hp.start_date <= ${monthEnd} AND hp.end_date >= ${monthStart}
+    ORDER BY hp.start_date
+  `;
 
-  const holidayRows = db.prepare(
-    `SELECT e.name AS employee_name, hp.start_date, hp.end_date, hp.work_days
-     FROM holiday_proposals hp
-     JOIN employees e ON e.id = hp.employee_id
-     WHERE hp.employee_id IN (${ph})
-       AND hp.status = 'approved'
-       AND hp.start_date <= ? AND hp.end_date >= ?
-     ORDER BY hp.start_date`,
-  ).all(...empIds, monthEnd, monthStart) as { employee_name: string; start_date: string; end_date: string; work_days: number }[];
-
-  const absenceRows = db.prepare(
-    `SELECT e.name AS employee_name, ar.reason, ar.end_date
-     FROM absence_records ar
-     JOIN employees e ON e.id = ar.employee_id
-     WHERE ar.employee_id IN (${ph})
-       AND ar.status IN ('approved','pending')
-       AND ar.start_date <= ? AND ar.end_date >= ?
-     ORDER BY ar.start_date`,
-  ).all(...empIds, today, today) as { employee_name: string; reason: string; end_date: string }[];
+  const absenceRows = await sql`
+    SELECT e.name AS employee_name, ar.reason, ar.end_date
+    FROM absence_records ar
+    JOIN employees e ON e.id = ar.employee_id
+    WHERE ar.company_id = ${actor.company_id} AND ar.employee_id IN ${sql(empIds)}
+      AND ar.status IN ('approved','pending')
+      AND ar.start_date <= ${today} AND ar.end_date >= ${today}
+    ORDER BY ar.start_date
+  `;
 
   return c.json({
     on_holiday_this_month: holidayRows,
     active_absences_today: absenceRows,
   });
 });
-
-// ── GET /api/admin/holiday_year_summary?employeeId=N ─────────────────────
 
 app.get("/api/admin/holiday_year_summary", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
@@ -84,20 +77,19 @@ app.get("/api/admin/holiday_year_summary", requireAdminOrSupervisor, async (c) =
   const empId = parseInt(empIdStr, 10);
   if (isNaN(empId)) return c.json({ error: "invalid_employee_id" }, 400);
 
-  const db = getCompanyDb(actor.company_id);
-
   if (actor._type === "supervisor") {
-    if (!supervisorTeamIds(db, actor.id).includes(empId)) return c.json({ error: "forbidden" }, 403);
+    const teamIds = await supervisorTeamIds(actor.id);
+    if (!teamIds.includes(empId)) return c.json({ error: "forbidden" }, 403);
   }
 
-  const emp = db.prepare("SELECT * FROM employees WHERE id = ?").get(empId) as Record<string, unknown> | undefined;
+  const [emp] = await sql`SELECT * FROM employees WHERE id = ${empId} AND company_id = ${actor.company_id}`;
   if (!emp) return c.json({ error: "not_found" }, 404);
 
   const salaxyId = emp.salaxy_employment_id as string | null;
   if (!salaxyId) return c.json({ summary: null, salaxy_url: null });
 
   try {
-    const creds = getCompanyCreds(actor.company_id);
+    const creds = await getCompanyCreds(actor.company_id);
     const years = await getHolidayYears(salaxyId, creds);
     const today = new Date().toISOString().slice(0, 10);
     const currentYear = years.find((y) => today >= y.startDate && today <= y.endDate) ??
@@ -111,11 +103,8 @@ app.get("/api/admin/holiday_year_summary", requireAdminOrSupervisor, async (c) =
   }
 });
 
-// ── POST /api/admin/record_absence.php ───────────────────────────────────────
-
 app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
   const actor = c.get("user") as Actor;
-  const db = getCompanyDb(actor.company_id);
 
   let body: {
     employeeId?: number;
@@ -132,24 +121,24 @@ app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
   if (endDate < startDate) return c.json({ error: "invalid_range" }, 400);
 
   if (actor._type === "supervisor") {
-    if (!supervisorTeamIds(db, actor.id).includes(employeeId)) return c.json({ error: "forbidden" }, 403);
+    const teamIds = await supervisorTeamIds(actor.id);
+    if (!teamIds.includes(employeeId)) return c.json({ error: "forbidden" }, 403);
   }
 
-  const emp = db.prepare("SELECT * FROM employees WHERE id = ?").get(employeeId) as Record<string, unknown> | undefined;
+  const [emp] = await sql`SELECT * FROM employees WHERE id = ${employeeId} AND company_id = ${actor.company_id}`;
   if (!emp) return c.json({ error: "not_found" }, 404);
 
   const days = computeWorkDays(startDate, endDate);
   if (days === 0) return c.json({ error: "no_work_days" }, 400);
 
   const now = new Date().toISOString();
-
-  const result = db.prepare(
-    `INSERT INTO absence_records
-       (employee_id, reason, start_date, end_date, days, is_paid, affects_accrual, status, note, created_at, updated_at)
-     VALUES (?, 'Kertausharjoitus', ?, ?, ?, ?, ?, 'approved', ?, ?, ?)`,
-  ).run(employeeId, startDate, endDate, days, isPaid ? 1 : 0, affectsAccrual ? 1 : 0, note ?? null, now, now);
-
-  const absenceId = result.lastInsertRowid;
+  const [result] = await sql`
+    INSERT INTO absence_records
+      (company_id, employee_id, reason, start_date, end_date, days, is_paid, affects_accrual, status, note, created_at, updated_at)
+    VALUES (${actor.company_id}, ${employeeId}, 'Kertausharjoitus', ${startDate}, ${endDate}, ${days}, ${isPaid}, ${affectsAccrual}, 'approved', ${note ?? null}, ${now}, ${now})
+    RETURNING id
+  `;
+  const absenceId = Number(result.id);
 
   writeAudit(actor.company_id, {
     event: "absence.created",
@@ -164,7 +153,7 @@ app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
   const salaxyId = emp.salaxy_employment_id as string | null;
   if (salaxyId) {
     try {
-      const creds = getCompanyCreds(actor.company_id);
+      const creds = await getCompanyCreds(actor.company_id);
       const salaxyAbsence = await createAbsence(salaxyId, {
         causeCode: "militaryRefresherTraining",
         startDate,
@@ -174,8 +163,7 @@ app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
         affectsAccrual,
         note: note ?? null,
       }, creds);
-      db.prepare("UPDATE absence_records SET salaxy_absence_id = ?, updated_at = ? WHERE id = ?")
-        .run(salaxyAbsence.id, new Date().toISOString(), absenceId);
+      await sql`UPDATE absence_records SET salaxy_absence_id = ${salaxyAbsence.id}, updated_at = ${new Date().toISOString()} WHERE id = ${absenceId}`;
       writeAudit(actor.company_id, {
         event: "salaxy.absence.synced",
         actorType: actor._type,
@@ -189,7 +177,48 @@ app.post("/api/admin/record_absence", requireAdminOrSupervisor, async (c) => {
     }
   }
 
-  return c.json({ absence: db.prepare("SELECT * FROM absence_records WHERE id = ?").get(absenceId) }, 201);
+  const [absence] = await sql`SELECT * FROM absence_records WHERE id = ${absenceId}`;
+  return c.json({ absence }, 201);
+});
+
+// deno-lint-ignore no-explicit-any
+app.post("/api/admin/sync_holidays_from_salaxy", requireAdminOrSupervisor, async (c: any) => {
+  const actor = c.get("user") as Actor;
+
+  const empRows = await sql`
+    SELECT id, salaxy_employment_id FROM employees
+    WHERE company_id = ${actor.company_id} AND active = TRUE AND salaxy_employment_id IS NOT NULL
+  `;
+  if (empRows.length === 0) return c.json({ imported: 0, skipped: 0 });
+
+  let creds;
+  try { creds = await getCompanyCreds(actor.company_id); } catch {
+    return c.json({ error: "salaxy_unavailable" }, 502);
+  }
+
+  const now = new Date().toISOString();
+  let imported = 0, skipped = 0;
+
+  for (const emp of empRows) {
+    const salaxyId = emp.salaxy_employment_id as string;
+    const empId = Number(emp.id);
+    let holidays;
+    try { holidays = await getPlannedHolidays(salaxyId, creds); } catch { continue; }
+
+    for (const h of holidays) {
+      const [existing] = await sql`SELECT id FROM holiday_proposals WHERE company_id = ${actor.company_id} AND salaxy_holiday_id = ${h.id}`;
+      if (existing) { skipped++; continue; }
+      await sql`
+        INSERT INTO holiday_proposals
+          (company_id, employee_id, start_date, end_date, work_days, source, status, salaxy_holiday_id, created_at, updated_at)
+        VALUES
+          (${actor.company_id}, ${empId}, ${h.startDate}, ${h.endDate}, ${h.days}, 'salaxy_sync', 'approved', ${h.id}, ${now}, ${now})
+      `;
+      imported++;
+    }
+  }
+
+  return c.json({ imported, skipped });
 });
 
 export default app;

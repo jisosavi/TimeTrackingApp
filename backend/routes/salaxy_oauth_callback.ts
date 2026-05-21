@@ -1,5 +1,5 @@
 import { Hono } from "@hono/hono";
-import { getMasterDb } from "../lib/db.ts";
+import { sql } from "../lib/db.ts";
 import { generateToken } from "../lib/jwt.ts";
 
 const app = new Hono();
@@ -16,7 +16,6 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
     return c.json({ success: false, error: "code and redirect_uri required" }, 400);
   }
 
-  // Step 1: exchange code for Salaxy access token
   let tokenData: Record<string, unknown>;
   try {
     const res = await fetch(TOKEN_URL, {
@@ -36,7 +35,6 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
 
   const salaxyToken = tokenData.access_token as string;
 
-  // Step 2: fetch session/current to identify the user
   let session: Record<string, unknown>;
   try {
     const res = await fetch(SESSION_URL, {
@@ -64,28 +62,20 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
     return c.json({ success: false, error: "Could not determine Salaxy account ID" }, 502);
   }
 
-  // Step 3: check Time app super-admin authorisation (whitelist fallback)
-  const masterDb = getMasterDb();
-  let admin = masterDb
-    .prepare("SELECT * FROM super_admins WHERE salaxy_account_id = ? AND active = 1")
-    .get(salaxyAccountId) as Record<string, unknown> | undefined;
+  let admin = (await sql`SELECT * FROM super_admins WHERE salaxy_account_id = ${salaxyAccountId} AND active = TRUE LIMIT 1`)[0] as Record<string, unknown> | undefined;
 
   if (!admin) {
-    // Bootstrap: if exactly one super-admin exists with no salaxy_account_id, auto-link
-    const total = (masterDb.prepare("SELECT COUNT(*) as n FROM super_admins WHERE active = 1").get() as { n: number }).n;
-    const unlinked = masterDb
-      .prepare("SELECT * FROM super_admins WHERE salaxy_account_id IS NULL AND active = 1 LIMIT 1")
-      .get() as Record<string, unknown> | undefined;
+    const [countRow] = await sql`SELECT COUNT(*) AS n FROM super_admins WHERE active = TRUE`;
+    const [unlinked] = await sql`SELECT * FROM super_admins WHERE salaxy_account_id IS NULL AND active = TRUE LIMIT 1`;
 
-    if (total === 1 && unlinked) {
-      admin = unlinked;
+    if (Number(countRow.n) === 1 && unlinked) {
+      admin = unlinked as Record<string, unknown>;
     } else {
       console.error("Salaxy OAuth2: unauthorized account ID:", salaxyAccountId);
       return c.json({ success: false, error: "Not authorized" }, 403);
     }
   }
 
-  // Step 4: refresh identity from Salaxy session and persist
   const sesAvat = (session.avatar ?? {}) as Record<string, unknown>;
   const av = (Array.isArray(cur.avatar) ? {} : (cur.avatar ?? {})) as Record<string, unknown>;
   const cred = (session.currentCredential ?? {}) as Record<string, unknown>;
@@ -110,23 +100,21 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
     av.url ?? av.imageUrl ?? av.pictureUrl ?? av.thumbnailUrl ?? ""
   ) as string;
 
-  masterDb.prepare(
-    "UPDATE super_admins SET salaxy_account_id = ?, name = CASE WHEN ? != '' THEN ? ELSE name END WHERE id = ?",
-  ).run(salaxyAccountId, salaxyName, salaxyName, admin.id as number);
+  await sql`
+    UPDATE super_admins
+    SET salaxy_account_id = ${salaxyAccountId}, name = CASE WHEN ${salaxyName} != '' THEN ${salaxyName} ELSE name END
+    WHERE id = ${admin.id as number}
+  `;
 
   if (salaxyEmail) {
     try {
-      masterDb.prepare(
-        "UPDATE super_admins SET email = ? WHERE id = ? AND (email IS NULL OR email = '')",
-      ).run(salaxyEmail, admin.id as number);
-    } catch (_) { /* UNIQUE conflict — skip */ }
+      await sql`UPDATE super_admins SET email = ${salaxyEmail} WHERE id = ${admin.id as number} AND (email IS NULL OR email = '')`;
+    } catch { /* UNIQUE conflict — skip */ }
   }
 
-  admin = masterDb
-    .prepare("SELECT * FROM super_admins WHERE id = ?")
-    .get(admin.id as number) as Record<string, unknown>;
+  const [updated] = await sql`SELECT * FROM super_admins WHERE id = ${admin.id as number}`;
+  admin = updated as Record<string, unknown>;
 
-  // Step 5: issue app JWT
   const token = await generateToken(admin.id as number, "superadmin", 0);
 
   return c.json({

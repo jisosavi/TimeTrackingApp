@@ -45,6 +45,12 @@ const router = createRouter({
           meta: { requiresAuth: true, allowedTypes: ['superadmin'] },
         },
         {
+          path: 'admin/audit-log',
+          name: 'superadmin-audit-log',
+          component: () => import('@/views/AuditLogView.vue'),
+          meta: { requiresAuth: true, allowedTypes: ['superadmin'] },
+        },
+        {
           path: ':slug/home',
           name: 'employee-home',
           component: () => import('@/views/EmployeeView.vue'),
