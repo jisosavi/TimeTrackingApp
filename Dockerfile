@@ -1,5 +1,7 @@
 FROM denoland/deno:2.3.3
 
+ARG CACHE_BUST=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
