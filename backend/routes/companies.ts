@@ -17,7 +17,12 @@ async function countActiveEmployees(companyId: number): Promise<number> {
 
 async function getLastActivity(companyId: number): Promise<string | null> {
   try {
-    const [row] = await sql`SELECT MAX(submitted_at) AS v FROM time_entries WHERE company_id = ${companyId}`;
+    const [row] = await sql`
+      SELECT GREATEST(
+        (SELECT MAX(submitted_at) FROM time_entries WHERE company_id = ${companyId}),
+        (SELECT MAX(ts)           FROM audit_log    WHERE company_id = ${companyId})
+      ) AS v
+    `;
     return (row?.v as string | null) ?? null;
   } catch {
     return null;
