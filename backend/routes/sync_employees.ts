@@ -31,6 +31,7 @@ app.post("/api/sync_employees_from_salaxy", requireAdmin, async (c) => {
 
   const tokenUrlCreds = { ...creds, tokenUrl: SALAXY_TOKEN_URL };
   const resp = await salaxyRequest("GET", "/employments", null, tokenUrlCreds);
+  console.log("[sync] employments response:", resp.httpCode, JSON.stringify(resp.data)?.slice(0, 500));
   const salaxyEmployees: { id: string; firstName: string; lastName: string; ssn: string | null }[] = [];
 
   if (resp.success) {
