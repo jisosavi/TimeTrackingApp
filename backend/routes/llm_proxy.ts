@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { verifyToken } from "../lib/jwt.ts";
-import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } from "../lib/config.ts";
+import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BEARER_TOKEN_BEDROCK } from "../lib/config.ts";
 // import { GEMINI_API_KEY } from "../lib/config.ts";
 
 const BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
@@ -34,6 +34,16 @@ async function callBedrock(body: string, modelId: string): Promise<Response> {
   const region = AWS_REGION || "eu-north-1";
   const host = `bedrock-runtime.${region}.amazonaws.com`;
   const path = `/model/${encodeURIComponent(modelId)}/invoke`;
+  const url = `https://${host}${path}`;
+
+  if (AWS_BEARER_TOKEN_BEDROCK) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${AWS_BEARER_TOKEN_BEDROCK}` },
+      body,
+      signal: AbortSignal.timeout(30000),
+    });
+  }
 
   const amzDate = new Date().toISOString().replace(/[:-]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
@@ -55,13 +65,9 @@ async function callBedrock(body: string, modelId: string): Promise<Response> {
 
   const authHeader = `AWS4-HMAC-SHA256 Credential=${AWS_ACCESS_KEY_ID}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-  return fetch(`https://${host}${path}`, {
+  return fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Amz-Date": amzDate,
-      "Authorization": authHeader,
-    },
+    headers: { "Content-Type": "application/json", "X-Amz-Date": amzDate, "Authorization": authHeader },
     body,
     signal: AbortSignal.timeout(30000),
   });
