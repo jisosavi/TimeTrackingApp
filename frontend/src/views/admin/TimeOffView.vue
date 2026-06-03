@@ -70,7 +70,7 @@ async function fetchPendingAbsences() {
 
 onMounted(() => { fetchProposals(); fetchPendingAbsences(); fetchStats(); fetchEmployees() })
 
-const pendingCount = computed(() => proposals.value.filter((p) => p.status === 'pending').length)
+const pendingCount = computed(() => proposals.value.filter((p) => p.status === 'pending').length + pendingAbsences.value.length)
 
 const segTabs = computed((): SegTab[] => [
   { id: 'calendar', label: t('admin.timeoff.tab_calendar') },

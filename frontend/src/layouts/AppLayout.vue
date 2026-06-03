@@ -41,13 +41,15 @@ onMounted(async () => {
   const type = auth.user?.type
   if (type === 'employee') {
     try {
-      const [{ proposals }, { entries }] = await Promise.all([
-        get<{ proposals: { status: string }[] }>('/api/holiday_proposals?status=clarifying'),
+      const [{ proposals }, { entries }, { absences }] = await Promise.all([
+        get<{ proposals: { status: string }[] }>('/api/holiday_proposals?status=rejected'),
         get<{ entries: { status: string; km_status: string | null }[] }>('/api/time_entries?view=mine'),
+        get<{ absences: { status: string }[] }>('/api/absences?status=rejected'),
       ])
       pendingCount.value =
         proposals.length +
-        entries.filter(e => e.status === 'rejected' || e.km_status === 'rejected').length
+        entries.filter(e => e.status === 'rejected' || e.km_status === 'rejected').length +
+        absences.length
     } catch {}
   }
   if (type === 'admin' || type === 'supervisor') {

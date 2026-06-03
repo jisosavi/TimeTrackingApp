@@ -1,6 +1,15 @@
 import { Hono } from "@hono/hono";
+import { AnthropicBedrock } from "@anthropic-ai/sdk";
 import { verifyToken } from "../lib/jwt.ts";
-import { GEMINI_API_KEY } from "../lib/config.ts";
+import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } from "../lib/config.ts";
+// import { GEMINI_API_KEY } from "../lib/config.ts";
+
+const bedrock = new AnthropicBedrock({
+  awsAccessKey: AWS_ACCESS_KEY_ID,
+  awsSecretKey: AWS_SECRET_ACCESS_KEY,
+  awsRegion: AWS_REGION,
+});
+const BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 const app = new Hono();
 
@@ -132,51 +141,69 @@ JSON-muoto poissaololle:
 \`\`\`
 `;
 
-  const contents = (body.history as { role: string; content: string }[])
+  const messages = (body.history as { role: string; content: string }[])
     .filter((m) => m.role !== "system")
     .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      role: (m.role === "assistant" || m.role === "model") ? "assistant" as const : "user" as const,
+      content: m.content,
     }));
 
-  const geminiBody = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents,
-    generationConfig: { temperature: 0.2 },
-  };
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  let res: Response;
   try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
-      signal: AbortSignal.timeout(30000),
+    const response = await bedrock.messages.create({
+      model: BEDROCK_MODEL,
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages,
     });
-  } catch (e) {
+    const reply = response.content[0]?.type === "text" ? response.content[0].text : "Ei vastausta.";
+    return c.json({ reply });
+  } catch (e: unknown) {
+    const status = (e as { status?: number })?.status;
+    if (status === 429) return c.json({ error: "Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen." }, 429);
+    if (status === 401 || status === 403) return c.json({ error: "API-avain on virheellinen tai vanhentunut." }, status as 401 | 403);
     return c.json({ error: `LLM-pyyntö epäonnistui: ${e}` }, 500);
   }
 
-  const data = await res.json().catch(() => ({})) as Record<string, unknown>;
-
-  if (!res.ok) {
-    const errMsg = (data as { error?: { message?: string } }).error?.message ?? "Tuntematon virhe";
-    let friendly = errMsg;
-    if (res.status === 429 || errMsg.includes("Resource exhausted")) {
-      friendly = "Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen.";
-    } else if (res.status === 401 || res.status === 403 || errMsg.includes("API key")) {
-      friendly = "API-avain on virheellinen tai vanhentunut.";
-    } else if (res.status === 404) {
-      friendly = "Tekoälymallia ei löydy.";
-    }
-    return c.json({ error: friendly }, res.status as 400 | 401 | 403 | 404 | 429 | 500);
-  }
-
-  const reply = ((data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
-    .candidates?.[0]?.content?.parts?.[0]?.text) ?? "Ei vastausta.";
-  return c.json({ reply });
+  // --- Gemini fallback (commented out) ---
+  // const contents = (body.history as { role: string; content: string }[])
+  //   .filter((m) => m.role !== "system")
+  //   .map((m) => ({
+  //     role: m.role === "assistant" ? "model" : "user",
+  //     parts: [{ text: m.content }],
+  //   }));
+  // const geminiBody = {
+  //   system_instruction: { parts: [{ text: systemPrompt }] },
+  //   contents,
+  //   generationConfig: { temperature: 0.2 },
+  // };
+  // const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  // let res: Response;
+  // try {
+  //   res = await fetch(url, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify(geminiBody),
+  //     signal: AbortSignal.timeout(30000),
+  //   });
+  // } catch (e) {
+  //   return c.json({ error: `LLM-pyyntö epäonnistui: ${e}` }, 500);
+  // }
+  // const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+  // if (!res.ok) {
+  //   const errMsg = (data as { error?: { message?: string } }).error?.message ?? "Tuntematon virhe";
+  //   let friendly = errMsg;
+  //   if (res.status === 429 || errMsg.includes("Resource exhausted")) {
+  //     friendly = "Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen.";
+  //   } else if (res.status === 401 || res.status === 403 || errMsg.includes("API key")) {
+  //     friendly = "API-avain on virheellinen tai vanhentunut.";
+  //   } else if (res.status === 404) {
+  //     friendly = "Tekoälymallia ei löydy.";
+  //   }
+  //   return c.json({ error: friendly }, res.status as 400 | 401 | 403 | 404 | 429 | 500);
+  // }
+  // const reply = ((data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+  //   .candidates?.[0]?.content?.parts?.[0]?.text) ?? "Ei vastausta.";
+  // return c.json({ reply });
 });
 
 export default app;

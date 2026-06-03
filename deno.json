@@ -9,6 +9,7 @@
   "imports": {
     "@hono/hono": "jsr:@hono/hono",
     "@hono/hono/cors": "jsr:@hono/hono/cors",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk",
     "bcryptjs": "npm:bcryptjs",
     "postgres": "npm:postgres"
   },

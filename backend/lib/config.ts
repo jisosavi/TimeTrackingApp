@@ -1,5 +1,8 @@
 export const JWT_SECRET = Deno.env.get("JWT_SECRET") ?? "";
 export const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
+export const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID") ?? "";
+export const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY") ?? "";
+export const AWS_REGION = Deno.env.get("AWS_REGION") ?? "eu-north-1";
 export const SALAXY_API_URL = Deno.env.get("SALAXY_API_URL") ?? "";
 export const SALAXY_USERNAME = Deno.env.get("SALAXY_USERNAME") ?? "";
 export const SALAXY_PASSWORD = Deno.env.get("SALAXY_PASSWORD") ?? "";
