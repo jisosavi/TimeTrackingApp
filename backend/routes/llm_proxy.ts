@@ -1,10 +1,10 @@
 import { Hono } from "@hono/hono";
-import Anthropic from "@anthropic-ai/sdk";
+import AnthropicBedrock from "@anthropic-ai/sdk/bedrock";
 import { verifyToken } from "../lib/jwt.ts";
 import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } from "../lib/config.ts";
 // import { GEMINI_API_KEY } from "../lib/config.ts";
 
-const bedrock = new Anthropic.AnthropicBedrock({
+const bedrock = new AnthropicBedrock({
   awsAccessKey: AWS_ACCESS_KEY_ID,
   awsSecretKey: AWS_SECRET_ACCESS_KEY,
   awsRegion: AWS_REGION,
