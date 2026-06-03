@@ -43,7 +43,7 @@ onMounted(async () => {
     try {
       const [{ proposals }, { entries }] = await Promise.all([
         get<{ proposals: { status: string }[] }>('/api/holiday_proposals?status=clarifying'),
-        get<{ entries: { status: string; km_status: string | null }[] }>('/api/time_entries'),
+        get<{ entries: { status: string; km_status: string | null }[] }>('/api/time_entries?view=mine'),
       ])
       pendingCount.value =
         proposals.length +
