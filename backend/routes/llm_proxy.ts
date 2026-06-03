@@ -1,14 +1,8 @@
 import { Hono } from "@hono/hono";
-import AnthropicBedrock from "@anthropic-ai/sdk/bedrock";
 import { verifyToken } from "../lib/jwt.ts";
 import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } from "../lib/config.ts";
 // import { GEMINI_API_KEY } from "../lib/config.ts";
 
-const bedrock = new AnthropicBedrock({
-  awsAccessKey: AWS_ACCESS_KEY_ID,
-  awsSecretKey: AWS_SECRET_ACCESS_KEY,
-  awsRegion: AWS_REGION,
-});
 const BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 const app = new Hono();
@@ -24,6 +18,53 @@ const LANG_INSTRUCTIONS: Record<string, string> = {
 
 function bearerToken(authHeader: string | undefined): string {
   return authHeader?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+}
+
+async function hmacSha256(key: BufferSource, data: string): Promise<ArrayBuffer> {
+  const k = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return crypto.subtle.sign("HMAC", k, new TextEncoder().encode(data));
+}
+
+async function sha256Hex(data: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function callBedrock(body: string, modelId: string): Promise<Response> {
+  const region = AWS_REGION || "eu-north-1";
+  const host = `bedrock-runtime.${region}.amazonaws.com`;
+  const path = `/model/${encodeURIComponent(modelId)}/invoke`;
+
+  const amzDate = new Date().toISOString().replace(/[:-]/g, "").replace(/\.\d{3}/, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = await sha256Hex(body);
+
+  const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "content-type;host;x-amz-date";
+  const canonicalRequest = `POST\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+  const credentialScope = `${dateStamp}/${region}/bedrock/aws4_request`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256Hex(canonicalRequest)}`;
+
+  const kDate = await hmacSha256(new TextEncoder().encode(`AWS4${AWS_SECRET_ACCESS_KEY}`), dateStamp);
+  const kRegion = await hmacSha256(kDate, region);
+  const kService = await hmacSha256(kRegion, "bedrock");
+  const kSigning = await hmacSha256(kService, "aws4_request");
+  const signature = Array.from(new Uint8Array(await hmacSha256(kSigning, stringToSign)))
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+
+  const authHeader = `AWS4-HMAC-SHA256 Credential=${AWS_ACCESS_KEY_ID}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  return fetch(`https://${host}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Amz-Date": amzDate,
+      "Authorization": authHeader,
+    },
+    body,
+    signal: AbortSignal.timeout(30000),
+  });
 }
 
 app.post("/api/llm_proxy", async (c) => {
@@ -149,18 +190,20 @@ JSON-muoto poissaololle:
     }));
 
   try {
-    const response = await bedrock.messages.create({
-      model: BEDROCK_MODEL,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages,
-    });
-    const reply = response.content[0]?.type === "text" ? response.content[0].text : "Ei vastausta.";
+    const res = await callBedrock(
+      JSON.stringify({ anthropic_version: "bedrock-2023-05-31", max_tokens: 2048, system: systemPrompt, messages }),
+      BEDROCK_MODEL,
+    );
+    const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+    if (!res.ok) {
+      const msg = (data as { message?: string }).message ?? "Tuntematon virhe";
+      if (res.status === 429) return c.json({ error: "Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen." }, 429);
+      if (res.status === 401 || res.status === 403) return c.json({ error: "API-avain on virheellinen tai vanhentunut." }, res.status as 401 | 403);
+      return c.json({ error: `LLM-pyyntö epäonnistui: ${msg}` }, 500);
+    }
+    const reply = ((data as { content?: { type: string; text: string }[] }).content?.[0]?.text) ?? "Ei vastausta.";
     return c.json({ reply });
   } catch (e: unknown) {
-    const status = (e as { status?: number })?.status;
-    if (status === 429) return c.json({ error: "Tekoälypalvelun käyttöraja on täynnä. Odota hetki ja yritä uudelleen." }, 429);
-    if (status === 401 || status === 403) return c.json({ error: "API-avain on virheellinen tai vanhentunut." }, status as 401 | 403);
     return c.json({ error: `LLM-pyyntö epäonnistui: ${e}` }, 500);
   }
 
