@@ -50,7 +50,7 @@ Support for multiple UI languages, easy to add more locales when needed.
 **Employee** (`/{slug}/`)
 - Kiosk-style full-viewport PIN pad with live clock; physical keyboard support, auto-submit on last digit, haptic feedback on mobile
 - Voice or text input — natural language like *"Yesterday 2h on project Alpha"*
-- Gemini AI interprets entries, asks follow-up questions if details are missing, then shows an editable preview card (date, hours, project, notes) before saving
+- AI interprets entries, asks follow-up questions if details are missing, then shows an editable preview card (date, hours, project, notes) before saving
 - Four tabs: **Log** (AI chat), **Entries** (full history), **Rejected** (entries needing attention — badge count), **Time off**
 - Rejected tab shows the manager's rejection note per entry; employee can submit a clarification reply for hours and km rejections independently
 - Entries exported to Salaxy payroll via API — one payroll created per day, entries added as payslip items
@@ -136,7 +136,7 @@ Nothing else is needed for onboarding, no configuration or installing anything!
 | Backend | Deno 2 + Hono framework |
 | Database | PostgreSQL via postgres.js (npm); single database, hosted on Neon |
 | Auth | JWT (HS256), HMAC-SHA256 PIN hashing |
-| AI | Google Gemini API (natural language → structured time entry) |
+| AI | AWS Bedrock (Claude Haiku) or Google Gemini — configurable via env vars |
 | Payroll | Salaxy REST API — OAuth2 token auth, employee sync, payroll export |
 | Dev server | Vite (frontend) + Deno with `--watch` (backend) |
 | Production | Railway (Deno via Dockerfile) + Apache with `.htaccess` rewrites (frontend) |
@@ -182,7 +182,7 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 
 - [Deno 2.x](https://deno.com)
 - Node.js 20+ and npm
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
+- AWS Bedrock access (recommended) **or** a Google Gemini API key — at least one AI backend is required for the chat UI
 - Salaxy API credentials (URL, username, password) — contact [Salaxy](https://salaxy.com) for API access
 
 ### Installation
@@ -196,8 +196,20 @@ Adding a new locale requires only a new JSON file in `locales/` — no code chan
 2. Set environment variables (Railway dashboard for production, `.env` file or shell for local dev):
    ```
    JWT_SECRET=a-long-random-secret
-   GEMINI_API_KEY=your-gemini-api-key
    DATABASE_URL=postgres://user:pass@host/dbname
+
+   # AI backend — use AWS Bedrock (recommended) or Google Gemini; at least one required
+   # Option A: AWS Bedrock with a long-term bearer token (simplest)
+   AWS_BEARER_TOKEN_BEDROCK=your-bedrock-bearer-token
+   AWS_REGION=eu-north-1
+
+   # Option B: AWS Bedrock with IAM access key + secret (SigV4; used if bearer token is not set)
+   AWS_ACCESS_KEY_ID=your-access-key-id
+   AWS_SECRET_ACCESS_KEY=your-secret-access-key
+   AWS_REGION=eu-north-1
+
+   # Option C: Google Gemini (fallback implementation kept in llm_proxy.ts, commented out)
+   GEMINI_API_KEY=your-gemini-api-key
 
    # Salaxy API credentials — used for employee sync and payroll export (OAuth2 password grant)
    SALAXY_API_URL=https://api.salaxy.com/v03/api
@@ -318,7 +330,7 @@ npm run lint         # ESLint + Oxlint
 │   │   ├── company_lang.ts               # GET /v01/api/company_lang
 │   │   ├── update_language.ts            # POST /v01/api/update_language
 │   │   ├── logout.ts                     # ALL /v01/api/logout
-│   │   └── llm_proxy.ts                  # POST /v01/api/llm_proxy (Gemini API proxy)
+│   │   └── llm_proxy.ts                  # POST /v01/api/llm_proxy (AWS Bedrock proxy; Gemini fallback commented out)
 │   └── scripts/
 │       └── seed_superadmin.ts            # One-time seed script (alternative to env-var auto-seed)
 │
