@@ -27,6 +27,7 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
     });
     tokenData = await res.json();
     if (res.status !== 200 || !tokenData.access_token) {
+      console.error("Salaxy token exchange failed:", res.status, JSON.stringify(tokenData));
       const msg = (tokenData.error_description ?? tokenData.error ?? "Token exchange failed") as string;
       return c.json({ success: false, error: msg }, 502);
     }
