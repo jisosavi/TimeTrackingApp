@@ -21,8 +21,8 @@ app.post("/api/salaxy_oauth_callback", async (c) => {
   try {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ grant_type: "authorization_code", code, client_id: "time", redirect_uri: redirectUri }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body: new URLSearchParams({ grant_type: "authorization_code", code, client_id: "time", redirect_uri: redirectUri }).toString(),
       signal: AbortSignal.timeout(15000),
     });
     tokenData = await res.json();
