@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env backend/main.ts",
+    "dev": "deno run --watch --env-file --allow-net --allow-read --allow-write --allow-env backend/main.ts",
     "start": "deno run --allow-net --allow-read --allow-write --allow-env backend/main.ts",
     "migrate:sqlite": "deno run --allow-net --allow-read --allow-env --allow-ffi backend/scripts/migrate_sqlite_to_postgres.ts",
     "create:salaxy-timetracking-test": "deno deploy create --org salaxy --app salaxy-timetracking-test --source local --runtime-mode dynamic --entrypoint backend/main.ts --region eu",
