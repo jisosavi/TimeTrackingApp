@@ -1,0 +1,3 @@
+# HTML is authored as UTF-8 with LF (Finnish text in the role guides depends on
+# it). Pin the line endings so no editor or platform rewrites these files.
+*.html text eol=lf

@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       name: 'generate-htaccess',
       closeBundle() {
         const content = `Options -MultiViews
+AddDefaultCharset UTF-8
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
