@@ -33,7 +33,8 @@ async function sha256Hex(data: string): Promise<string> {
 async function callBedrock(body: string, modelId: string): Promise<Response> {
   const region = AWS_REGION || "eu-north-1";
   const host = `bedrock-runtime.${region}.amazonaws.com`;
-  const path = `/model/${encodeURIComponent(modelId)}/invoke`;
+  const encodedModel = encodeURIComponent(modelId);
+  const path = `/model/${encodedModel}/invoke`;
   const url = `https://${host}${path}`;
 
   if (AWS_BEARER_TOKEN_BEDROCK) {
@@ -51,7 +52,10 @@ async function callBedrock(body: string, modelId: string): Promise<Response> {
 
   const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-amz-date:${amzDate}\n`;
   const signedHeaders = "content-type;host;x-amz-date";
-  const canonicalRequest = `POST\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  // SigV4 canonical URI encodes each path segment twice (S3 is the only exception),
+  // while the wire path stays single-encoded. Signing `path` here yields a 403.
+  const canonicalPath = `/model/${encodeURIComponent(encodedModel)}/invoke`;
+  const canonicalRequest = `POST\n${canonicalPath}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   const credentialScope = `${dateStamp}/${region}/bedrock/aws4_request`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256Hex(canonicalRequest)}`;
