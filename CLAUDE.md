@@ -57,7 +57,7 @@ PIN hashing: employee and supervisor PINs are stored as `HMAC-SHA256(pin, JWT_SE
 
 ### i18n
 
-Locale files live in `locales/` at the repo root as flat dot-notation JSON (e.g. `"employee.tabs.log": "Log hours"`). `frontend/src/i18n.ts` expands these to nested objects at startup using the `expand()` helper. Adding a new locale requires only a new JSON file — no code changes. `useLocale.ts` composable watches `auth.user.uiLanguage` and updates the global vue-i18n locale reactively.
+Locale files live in `frontend/locales/` as flat dot-notation JSON (e.g. `"employee.tabs.log": "Log hours"`). `frontend/src/i18n.ts` expands these to nested objects at startup using the `expand()` helper. Adding a new locale means the JSON file plus three edits in `i18n.ts`: the static import, the `SUPPORTED_LOCALES` entry, and the `messages` entry. `useLocale.ts` composable watches `auth.user.uiLanguage` and updates the global vue-i18n locale reactively.
 
 ### Salaxy API integration
 
@@ -87,6 +87,10 @@ Key tables:
 ### Production deployment
 
 Railway (Deno via `Dockerfile`) serves the backend. The frontend is separately built and deployed to an Apache server via `deploy-frontend.sh`, which rsyncs `frontend/dist/` to a remote path derived from `VITE_APP_BASE` in `frontend/.env.production`. Set `VITE_API_BASE` to the Deno Railway service URL.
+
+### Role guides
+
+Standalone bilingual (EN/FI) HTML guides live in `frontend/public/guides/`, named `<user_type>_user-guide.html` (`employee_user-guide.html`, `supervisor_user-guide.html`, `admin_user-guide.html`) so an in-app link needs no mapping table. They are self-contained — own CSS tokens and JS, no build step — and Vite copies them verbatim into `dist/`. When writing or editing one, follow `docs/salaxy-guide-format-spec.md` exactly; they are served publicly, so no test hostnames, personal names or repo links.
 
 ---
 
