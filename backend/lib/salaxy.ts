@@ -93,6 +93,9 @@ export async function salaxyRequest(method: string, endpoint: string, data: unkn
   }
 }
 
+// The message doubles as the row's identity for dedup against rows already on the
+// calculation, so it must include the quantity: a corrected entry then lands as a
+// new row for the payroll manager to see, while an unchanged re-export still dedupes.
 function buildDescription(entry: EntryForExport): string {
   const parts: string[] = [];
   if (entry.date) parts.push(entry.date);
@@ -100,6 +103,7 @@ function buildDescription(entry: EntryForExport): string {
   else if (entry.start) parts.push(`alkaen ${entry.start}`);
   if (entry.project) parts.push(entry.project);
   if (entry.notes) parts.push(entry.notes);
+  if (Number(entry.hours ?? 0) > 0) parts.push(`${Number(entry.hours)} h`);
   return parts.join(" | ");
 }
 
@@ -276,7 +280,7 @@ export async function exportEmployeeEntries(
     }
 
     if (mileage > 0) {
-      const msg = `${entry.date}${entry.project ? " | " + entry.project : ""} | km-korvaus`;
+      const msg = `${entry.date}${entry.project ? " | " + entry.project : ""} | km-korvaus | ${mileage} km`;
       if (!existingMsgs[msg]) {
         const kmRate = kmRates.get(Number(isoFromEntryDate(entry.date)!.slice(0, 4)))!;
         addedRows.push({ rowIndex: ++maxIdx, rowType: "milageOwnCar", count: mileage, price: kmRate, unit: "km", message: msg, ...EMPTY_ROW_FIELDS });
