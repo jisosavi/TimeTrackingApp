@@ -116,6 +116,39 @@ async function getEmployeeDefaultHourlyPrice(employmentId: string, creds: Salaxy
   return null;
 }
 
+/** Entry dates reach this module as DD-MM-YYYY (see export_payroll.ts); Salaxy wants ISO. */
+function isoFromEntryDate(date: string): string | null {
+  const p = date.split("-");
+  return p.length === 3 && p[2]?.length === 4 ? `${p[2]}-${p[1]}-${p[0]}` : null;
+}
+
+/**
+ * Tax-free km allowance as set by the Finnish tax authorities, read from Salaxy's
+ * yearlyNumbers endpoint. That endpoint only serves the current +/- 1 year, so the
+ * value is cached per company+year and the rate actually applied is persisted on
+ * each exported entry (time_entries.km_rate) to keep old exports reproducible.
+ */
+export async function getTaxFreeKmAllowance(isoDate: string, creds: SalaxyCreds): Promise<number | null> {
+  const year = Number(isoDate.slice(0, 4));
+  if (!Number.isInteger(year)) return null;
+
+  const [cached] = await sql`
+    SELECT rate FROM salaxy_km_allowance WHERE company_id = ${creds.companyId} AND year = ${year}
+  ` as { rate: string }[];
+  if (cached?.rate != null) return Number(cached.rate);
+
+  const resp = await salaxyRequest("GET", `/calculator/yearlyNumbers/${isoDate}`, null, creds);
+  const rate = Number((resp.data as { sideCosts?: { taxFreeKmAllowance?: number } } | null)?.sideCosts?.taxFreeKmAllowance);
+  if (!resp.success || !Number.isFinite(rate) || rate <= 0) return null;
+
+  await sql`
+    INSERT INTO salaxy_km_allowance (company_id, year, rate, updated_at)
+    VALUES (${creds.companyId}, ${year}, ${rate}, ${new Date().toISOString()})
+    ON CONFLICT (company_id, year) DO UPDATE SET rate = EXCLUDED.rate, updated_at = EXCLUDED.updated_at
+  `.catch(() => {});
+  return rate;
+}
+
 interface CalcResult {
   success: boolean;
   calculationId: string | null;
@@ -172,6 +205,23 @@ export async function exportEmployeeEntries(
   periodEnd: string,
   periodDays: number,
 ): Promise<Record<string, unknown>> {
+  // Resolve the km rate for every calendar year in this batch before touching
+  // Salaxy: a period spanning 1 Jan legitimately carries two different rates,
+  // and exporting mileage at a guessed rate is worse than not exporting it.
+  const kmRates = new Map<number, number>();
+  for (const entry of entries) {
+    if (Number(entry.mileage ?? 0) <= 0) continue;
+    const iso = isoFromEntryDate(entry.date);
+    if (!iso) return { success: false, error: `Cannot derive a date from entry date "${entry.date}" to look up the km allowance` };
+    const year = Number(iso.slice(0, 4));
+    if (kmRates.has(year)) continue;
+    const rate = await getTaxFreeKmAllowance(iso, creds);
+    if (rate == null) {
+      return { success: false, error: `Tax-free km allowance for ${year} unavailable from Salaxy; refusing to export mileage at a placeholder rate` };
+    }
+    kmRates.set(year, rate);
+  }
+
   const calcResult = await getOrCreateCalculation(existingCalcId, employmentId, creds, periodStart, periodEnd, periodDays);
   if (!calcResult.success) {
     return { success: false, error: calcResult.error ?? "Failed to get/create calculation", createHttpCode: calcResult.createHttpCode, createData: calcResult.createData };
@@ -209,6 +259,7 @@ export async function exportEmployeeEntries(
   }
 
   const addedRows: Record<string, unknown>[] = [];
+  const appliedKmRates: Record<number, number> = {};
   let newEntryCount = 0, skipEntryCount = 0;
 
   for (const entry of entries) {
@@ -227,7 +278,9 @@ export async function exportEmployeeEntries(
     if (mileage > 0) {
       const msg = `${entry.date}${entry.project ? " | " + entry.project : ""} | km-korvaus`;
       if (!existingMsgs[msg]) {
-        addedRows.push({ rowIndex: ++maxIdx, rowType: "milageOwnCar", count: mileage, price: 0.25, unit: "km", message: msg, ...EMPTY_ROW_FIELDS });
+        const kmRate = kmRates.get(Number(isoFromEntryDate(entry.date)!.slice(0, 4)))!;
+        addedRows.push({ rowIndex: ++maxIdx, rowType: "milageOwnCar", count: mileage, price: kmRate, unit: "km", message: msg, ...EMPTY_ROW_FIELDS });
+        appliedKmRates[entry.id] = kmRate;
         entryIsNew = true;
       }
     }
@@ -236,7 +289,7 @@ export async function exportEmployeeEntries(
   }
 
   if (addedRows.length === 0 && !isNew) {
-    return { success: true, isNewCalculation: false, calculationId, finalCalculationId: calculationId, saveResponse: { success: true }, newEntryCount: 0, skipEntryCount: entries.length };
+    return { success: true, isNewCalculation: false, calculationId, finalCalculationId: calculationId, saveResponse: { success: true }, newEntryCount: 0, skipEntryCount: entries.length, appliedKmRates };
   }
 
   calcObject.rows = [...baseRows, ...addedRows];
@@ -259,7 +312,7 @@ export async function exportEmployeeEntries(
   }
 
   const finalCalcId = String((saveResponse.data as Record<string, unknown>).id);
-  const result: Record<string, unknown> = { success: true, isNewCalculation: isNew, calculationId, finalCalculationId: finalCalcId, saveResponse, newEntryCount, skipEntryCount };
+  const result: Record<string, unknown> = { success: true, isNewCalculation: isNew, calculationId, finalCalculationId: finalCalcId, saveResponse, newEntryCount, skipEntryCount, appliedKmRates };
 
   if (isNew) {
     result.addCalcResponse = await salaxyRequest("POST", `/payroll/${payrollId}/add-calc?ids=${finalCalcId}`, null, creds);

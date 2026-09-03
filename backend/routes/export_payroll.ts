@@ -186,6 +186,7 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
   let totalSent = 0, totalAdded = 0, totalAlready = 0;
   const errors: unknown[] = [];
   const exportedIds: number[] = [];
+  const kmRateByEntry = new Map<number, number>();
   const payrollLinks: Record<string, string> = {};
 
   for (const [pk, p] of allPeriods) {
@@ -285,6 +286,9 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
           `;
         }
         for (const entry of empEnts) exportedIds.push(entry.id);
+        for (const [id, rate] of Object.entries((r.appliedKmRates as Record<string, number>) ?? {})) {
+          kmRateByEntry.set(Number(id), rate);
+        }
         totalSent += empEnts.length;
         totalAdded += (r.newEntryCount as number) ?? empEnts.length;
         totalAlready += (r.skipEntryCount as number) ?? 0;
@@ -300,6 +304,22 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
       UPDATE time_entries SET exported_to_salaxy = TRUE, exported_at = ${now}
       WHERE id = ANY(${exportedIds})
     `;
+  }
+
+  // Persist the km rate each entry was exported at. Salaxy's yearlyNumbers
+  // endpoint cannot be queried for past years, so this is the only record of
+  // what was actually paid. Grouped by rate: one statement in the normal case,
+  // two when the period straddles a year boundary.
+  if (kmRateByEntry.size) {
+    const idsByRate = new Map<number, number[]>();
+    for (const [id, rate] of kmRateByEntry) {
+      const bucket = idsByRate.get(rate);
+      if (bucket) bucket.push(id);
+      else idsByRate.set(rate, [id]);
+    }
+    for (const [rate, ids] of idsByRate) {
+      await sql`UPDATE time_entries SET km_rate = ${rate} WHERE id = ANY(${ids})`;
+    }
   }
 
   writeAudit(companyId, {
