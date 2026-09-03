@@ -69,7 +69,7 @@ Per-company Salaxy credentials (`salaxy_api_url`, `salaxy_username`, `salaxy_pas
 
 ### Database layout
 
-Single PostgreSQL database. `backend/lib/db.ts` exports one `sql` tagged-template client (postgres.js). Schema is applied at startup by `backend/lib/migrate.ts` which runs any unapplied `.sql` files from `backend/migrations/` in order. To add a column, create a new numbered migration file there.
+Single PostgreSQL database, hosted on Railway. **Local dev and production share that one instance** — there is no separate local database, so `deno task dev` applies migrations to, and writes against, production data. `backend/lib/db.ts` exports one `sql` tagged-template client (postgres.js). Schema is applied at startup by `backend/lib/migrate.ts` which runs any unapplied `.sql` files from `backend/migrations/` in order. To add a column, create a new numbered migration file there.
 
 Key tables:
 - `companies` — slug, active flag, per-company Salaxy credentials, payroll settings
