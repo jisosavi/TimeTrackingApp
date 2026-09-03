@@ -88,4 +88,36 @@ describe('parseBlock', () => {
     const text = '```json\n{"action":"new","entries":[]}\n```'
     expect(parseBlock(text)).toBeNull()
   })
+
+  it('merges entries from several JSON blocks instead of dropping all but the first', () => {
+    const text = [
+      '1.9. Laituri:',
+      '```json',
+      '{"action":"new","entries":[{"date":"01-09-2026","start":"","end":"","hours":0,"mileage":79,"project":"Laituri","notes":""}]}',
+      '```',
+      '2.9. Moonlanding:',
+      '```json',
+      '{"action":"new","entries":[{"date":"02-09-2026","start":"","end":"","hours":0,"mileage":1160,"project":"Moonlanding","notes":""}]}',
+      '```',
+    ].join('\n')
+    const result = parseBlock(text) as { action: string; entries: { mileage: number; project: string }[] }
+    expect(result).not.toBeNull()
+    expect(result.action).toBe('new')
+    expect(result.entries).toHaveLength(2)
+    expect(result.entries.map((e) => e.mileage)).toEqual([79, 1160])
+    expect(result.entries.map((e) => e.project)).toEqual(['Laituri', 'Moonlanding'])
+  })
+
+  it('skips an unparseable block but still reads a later valid one', () => {
+    const text = '```json\n{broken\n```\n```json\n{"action":"new","entries":[{"date":"03-09-2026","start":"","end":"","hours":0,"mileage":12,"project":"Z","notes":""}]}\n```'
+    const result = parseBlock(text) as { entries: unknown[] }
+    expect(result).not.toBeNull()
+    expect(result.entries).toHaveLength(1)
+  })
+
+  it('prefers a holiday_proposal block over entry blocks', () => {
+    const text = '```json\n{"action":"new","entries":[{"date":"01-09-2026","start":"","end":"","hours":1,"mileage":0,"project":"","notes":""}]}\n```\n```json\n{"type":"holiday_proposal","startDate":"2026-09-10","endDate":"2026-09-12","label":"","note":""}\n```'
+    const result = parseBlock(text) as { type: string }
+    expect(result.type).toBe('holiday_proposal')
+  })
 })

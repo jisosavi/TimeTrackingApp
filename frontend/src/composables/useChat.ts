@@ -17,28 +17,53 @@ export interface ChatPreview {
   messageIndex: number
 }
 
-export function parseEntriesFromText(text: string): LlmParsedResponse | null {
-  const match = text.match(/```json\s*([\s\S]*?)\s*```/)
-  if (!match) return null
-  try {
-    return JSON.parse(match[1]!) as LlmParsedResponse
-  } catch {
-    return null
+// The model sometimes emits one JSON block per entry instead of one block with
+// several entries, so read every block: taking only the first silently dropped
+// every entry after it.
+function parseAllBlocks(text: string): Record<string, unknown>[] {
+  const blocks: Record<string, unknown>[] = []
+  for (const m of text.matchAll(/```json\s*([\s\S]*?)\s*```/g)) {
+    try {
+      const raw = JSON.parse(m[1]!) as Record<string, unknown>
+      if (raw && typeof raw === 'object') blocks.push(raw)
+    } catch {
+      // ignore an unparseable block; a later one may still be valid
+    }
+  }
+  return blocks
+}
+
+/** Merges the entries of every time_entry block into one, keeping the first action. */
+function mergeEntryBlocks(blocks: Record<string, unknown>[]): LlmParsedResponse | null {
+  const entryBlocks = blocks.filter((b) => Array.isArray(b.entries) && (b.entries as unknown[]).length > 0)
+  if (entryBlocks.length === 0) return null
+  return {
+    ...(entryBlocks[0] as unknown as LlmParsedResponse),
+    entries: entryBlocks.flatMap((b) => b.entries as LlmParsedResponse['entries']),
   }
 }
 
+export function parseEntriesFromText(text: string): LlmParsedResponse | null {
+  return mergeEntryBlocks(parseAllBlocks(text))
+}
+
 export function parseBlock(text: string): LlmParsedBlock | null {
-  const match = text.match(/```json\s*([\s\S]*?)\s*```/)
-  if (!match) return null
-  try {
-    const raw = JSON.parse(match[1]!) as Record<string, unknown>
-    if (raw.type === 'holiday_proposal') return raw as unknown as LlmHolidayProposal
-    if (raw.type === 'absence') return raw as unknown as LlmAbsence
-    if (Array.isArray(raw.entries) && raw.entries.length > 0) return raw as unknown as LlmParsedResponse
-    return null
-  } catch {
-    return null
-  }
+  const blocks = parseAllBlocks(text)
+  const holiday = blocks.find((b) => b.type === 'holiday_proposal')
+  if (holiday) return holiday as unknown as LlmHolidayProposal
+  const absence = blocks.find((b) => b.type === 'absence')
+  if (absence) return absence as unknown as LlmAbsence
+  return mergeEntryBlocks(blocks)
+}
+
+/** Identity of an entry for duplicate detection: date + hours + km + project. */
+function entrySignature(e: LlmParsedResponse['entries'][number]): string {
+  return [
+    String(e.date ?? '').trim(),
+    Number(e.hours ?? 0),
+    Number(e.mileage ?? 0),
+    String(e.project ?? '').trim().toLowerCase(),
+  ].join('|')
 }
 
 function countWorkDays(start: string, end: string): number {
@@ -61,6 +86,8 @@ export function useChat() {
   const history = ref<ChatMessage[]>([])
   const loading = ref(false)
   const lastSavedIds = ref<number[]>([])
+  const savedSignatures = ref<Set<string>>(new Set())
+  const lastSavedSignatures = ref<string[]>([])
   const pendingPreview = ref<ChatPreview | null>(null)
   const auth = useAuthStore()
   const { post, del } = useApi()
@@ -134,14 +161,24 @@ export function useChat() {
       await Promise.allSettled(
         lastSavedIds.value.map((id) => del('/api/time_entries', { id })),
       )
+      for (const sig of lastSavedSignatures.value) savedSignatures.value.delete(sig)
+      lastSavedSignatures.value = []
     }
+
+    // The model picks action itself, and labelling a repeat as 'new' would append
+    // a duplicate rather than replace. Drop anything already saved this conversation.
+    const incoming = parsed.entries.map((e) => ({ entry: e, sig: entrySignature(e) }))
+    const fresh = incoming.filter(({ sig }) => !savedSignatures.value.has(sig))
+    if (fresh.length === 0) return 0
 
     const result = await post<{ success: boolean; saved: number; ids: number[] }>(
       '/api/time_entries',
-      { entries: parsed.entries },
+      { entries: fresh.map(({ entry }) => entry) },
     )
 
     lastSavedIds.value = result.ids ?? []
+    lastSavedSignatures.value = fresh.map(({ sig }) => sig)
+    for (const sig of lastSavedSignatures.value) savedSignatures.value.add(sig)
     return result.saved
   }
 
@@ -168,6 +205,8 @@ export function useChat() {
   function reset() {
     history.value = []
     lastSavedIds.value = []
+    savedSignatures.value = new Set()
+    lastSavedSignatures.value = []
     pendingPreview.value = null
   }
 

@@ -175,10 +175,25 @@ JSON-SÄÄNNÖT:
 TÄRKEÄÄ - action-kenttä:
 - action: 'new' = ensimmäinen kirjaus tai uusi kirjaus
 - action: 'update' = käyttäjä KORJAA tai TÄYDENTÄÄ juuri käsiteltyä kirjausta
+- Jos käyttäjä korjaa juuri tallennettua kirjausta, käytä AINA action:'update'. Jos käytät
+  action:'new', kirjaus tallentuu toiseen kertaan ja esimies näkee sen kahdesti.
+
+ÄLÄ TOISTA JO TALLENNETTUJA KIRJAUKSIA:
+- Kun keskustelussa näkyy kuittaus (esim. "2 tuntikirjausta tallennettu"), ne kirjaukset ovat
+  jo tietokannassa. ÄLÄ KOSKAAN sisällytä niitä uudelleen entries-taulukkoon.
+- Uusi JSON-lohko sisältää VAIN ne kirjaukset joita käyttäjä pyytää juuri nyt.
 
 JSON-muoto tuntikirjaukselle (käytä TARKALLEEN kolme backtick-merkkiä):
 \`\`\`json
 {"type":"time_entry","action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"}]}
+\`\`\`
+
+USEITA KIRJAUKSIA SAMASSA SYÖTTEESSÄ:
+Jos syötteessä on monta kirjausta, palauta ne KAIKKI samaan entries-taulukkoon YHDESSÄ
+JSON-lohkossa. ÄLÄ tee montaa erillistä JSON-lohkoa.
+Esim. "1.9. projektille Laituri 79km ja 2.9. 1160 km projektille Moonlanding":
+\`\`\`json
+{"type":"time_entry","action":"new","entries":[{"date":"01-09-2026","start":"","end":"","hours":0,"mileage":79,"project":"Laituri","notes":""},{"date":"02-09-2026","start":"","end":"","hours":0,"mileage":1160,"project":"Moonlanding","notes":""}]}
 \`\`\`
 
 JSON-muoto loma-ehdotukselle:
