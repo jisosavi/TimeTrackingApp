@@ -67,6 +67,32 @@ function entrySignature(e: LlmParsedResponse['entries'][number]): string {
   ].join('|')
 }
 
+export interface DedupedEntry {
+  entry: LlmParsedResponse['entries'][number]
+  sig: string
+}
+
+/**
+ * Entries that still need saving. Two ways the same entry can arrive twice: the
+ * model re-emits it on a later turn, or repeats it inside one entries array.
+ * Both are dropped, because a mislabelled action:'new' would otherwise append a
+ * duplicate rather than replace.
+ */
+export function dedupeEntries(
+  entries: LlmParsedResponse['entries'],
+  alreadySaved: ReadonlySet<string>,
+): DedupedEntry[] {
+  const seen = new Set<string>()
+  const fresh: DedupedEntry[] = []
+  for (const entry of entries) {
+    const sig = entrySignature(entry)
+    if (alreadySaved.has(sig) || seen.has(sig)) continue
+    seen.add(sig)
+    fresh.push({ entry, sig })
+  }
+  return fresh
+}
+
 function countWorkDays(start: string, end: string): number {
   if (!start || !end) return 0
   const s = new Date(start)
@@ -168,8 +194,7 @@ export function useChat() {
 
     // The model picks action itself, and labelling a repeat as 'new' would append
     // a duplicate rather than replace. Drop anything already saved this conversation.
-    const incoming = parsed.entries.map((e) => ({ entry: e, sig: entrySignature(e) }))
-    const fresh = incoming.filter(({ sig }) => !savedSignatures.value.has(sig))
+    const fresh = dedupeEntries(parsed.entries, savedSignatures.value)
     if (fresh.length === 0) return 0
 
     const result = await post<{ success: boolean; saved: number; ids: number[] }>(
