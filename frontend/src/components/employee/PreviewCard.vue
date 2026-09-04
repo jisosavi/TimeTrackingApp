@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import { useDimensions } from '@/composables/useDimensions'
 import type { LlmParsedBlock, LlmEntry } from '@/types'
 
 const props = defineProps<{
@@ -20,9 +21,23 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' })
 
+// ── Cost accounting dimension ─────────────────────────────────────────────────
+// When the company has a Salaxy dimension enabled the project field becomes a
+// required picker; otherwise it stays free text exactly as before.
+const { dimension, options: dimensionOptions, loadActive, isSelectable } = useDimensions()
+onMounted(() => { loadActive().catch(() => {}) })
+
+const SELECT_CLASS =
+  'w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+
 // ── Time entry state ──────────────────────────────────────────────────────────
-interface PreviewRow { date: string; hours: string; km: string; project: string; notes: string }
+interface PreviewRow { date: string; hours: string; km: string; project: string; notes: string; dimensionValue: string }
 const entryRows = ref<PreviewRow[]>([])
+
+/** Every row must carry a code before the entry can be saved in dimension mode. */
+const dimensionMissing = computed(
+  () => dimension.value !== null && entryRows.value.some((r) => !r.dimensionValue),
+)
 
 function toInputDate(raw: string): string {
   if (!raw) return ''
@@ -64,11 +79,27 @@ watch(
         km: e.mileage > 0 ? String(e.mileage) : '',
         project: e.project ?? '',
         notes: e.notes ?? '',
+        // The interpreter returns a code; keep it only if it is genuinely selectable,
+        // so a hallucinated code leaves the picker empty rather than pre-filling wrongly.
+        dimensionValue: isSelectable(String(e.dimension ?? '')) ? String(e.dimension) : '',
       }))
     }
   },
   { immediate: true },
 )
+
+// Options arrive after the watch above has already run, so re-apply the
+// interpreter's suggestion once they are known. Rows the employee has already
+// touched are left alone.
+watch(dimensionOptions, () => {
+  const p = props.parsed
+  if (!('entries' in p) || !Array.isArray(p.entries)) return
+  p.entries.forEach((e, i) => {
+    const row = entryRows.value[i]
+    const code = String(e.dimension ?? '')
+    if (row && !row.dimensionValue && isSelectable(code)) row.dimensionValue = code
+  })
+})
 
 // ── Work days ─────────────────────────────────────────────────────────────────
 function workDays(start: string, end: string): number {
@@ -124,6 +155,7 @@ function handleConfirm() {
         mileage: row.km !== '' ? parseFloat(row.km) : orig.mileage,
         project: row.project,
         notes: row.notes,
+        dimensionValue: row.dimensionValue || undefined,
       }
     })
     emit('confirm', { ...p, entries: merged })
@@ -227,8 +259,14 @@ function handleConfirm() {
             <Input v-model="row.km" type="number" min="0" step="1" class="h-8 text-sm" />
           </div>
           <div class="space-y-1">
-            <Label class="text-xs">{{ t('entries.col_project') }}</Label>
-            <Input v-model="row.project" class="h-8 text-sm" />
+            <Label class="text-xs">{{ dimension ? dimension.label : t('entries.col_project') }}</Label>
+            <select v-if="dimension" v-model="row.dimensionValue" :class="SELECT_CLASS">
+              <option value="">{{ t('dimensions.choose') }}</option>
+              <option v-for="opt in dimensionOptions" :key="opt.value" :value="opt.value">
+                {{ opt.option_text }} ({{ opt.value }})
+              </option>
+            </select>
+            <Input v-else v-model="row.project" class="h-8 text-sm" />
           </div>
           <div class="space-y-1">
             <Label class="text-xs">{{ t('employee.preview_notes_label') }}</Label>
@@ -238,13 +276,16 @@ function handleConfirm() {
       </CardContent>
     </template>
 
-    <CardFooter class="flex gap-2 border-t-0 bg-transparent pt-2">
-      <Button size="sm" :disabled="loading" @click="handleConfirm">
+    <CardFooter class="flex flex-wrap items-center gap-2 border-t-0 bg-transparent pt-2">
+      <Button size="sm" :disabled="loading || dimensionMissing" @click="handleConfirm">
         {{ t('employee.preview_confirm') }}
       </Button>
       <Button size="sm" variant="ghost" @click="emit('cancel')">
         {{ t('common.cancel') }}
       </Button>
+      <span v-if="dimensionMissing" class="text-xs text-muted-foreground">
+        {{ t('dimensions.required_hint', { label: dimension?.label ?? '' }) }}
+      </span>
     </CardFooter>
   </Card>
 </template>

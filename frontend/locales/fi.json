@@ -726,5 +726,17 @@
   "admin.absence_on_behalf.days_excludes": "(pl. viikonloput)",
   "admin.absence_on_behalf.save_btn": "Tallenna poissaolo",
   "admin.absence_on_behalf.missing_fields": "Täytä kaikki pakolliset kentät.",
-  "admin.absence_on_behalf.record_btn": "Kirjaa poissaolo"
+  "admin.absence_on_behalf.record_btn": "Kirjaa poissaolo",
+  "dimensions.title": "Kustannuspaikat ja projektikoodit",
+  "dimensions.intro": "Haetaan Salaxysta vain luettavaksi. Valitse yksi, jolla työntekijät merkitsevät kirjauksensa, tai pidä vapaa projektikenttä.",
+  "dimensions.sync": "Hae Salaxysta",
+  "dimensions.sync_result": "Haettu {synced}. Ohitettu {skipped}, jotka eivät ole rivitasoisia.",
+  "dimensions.sync_failed": "Haku Salaxysta epäonnistui.",
+  "dimensions.load_failed": "Dimensioiden lataus epäonnistui.",
+  "dimensions.save_failed": "Valinnan tallennus epäonnistui.",
+  "dimensions.none_synced": "Ei vielä haettuja. Hae Salaxysta nähdäksesi tilin rivitasoiset dimensiot.",
+  "dimensions.option_count": "{count} vaihtoehtoa",
+  "dimensions.use_free_text": "Käytä vapaata projektikenttää",
+  "dimensions.choose": "Valitse…",
+  "dimensions.required_hint": "Valitse {label} jokaiselle riville ennen tallennusta."
 }

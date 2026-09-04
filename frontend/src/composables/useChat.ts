@@ -56,13 +56,14 @@ export function parseBlock(text: string): LlmParsedBlock | null {
   return mergeEntryBlocks(blocks)
 }
 
-/** Identity of an entry for duplicate detection: date + hours + km + project. */
+/** Identity of an entry for duplicate detection: date + hours + km + project + code. */
 function entrySignature(e: LlmParsedResponse['entries'][number]): string {
   return [
     String(e.date ?? '').trim(),
     Number(e.hours ?? 0),
     Number(e.mileage ?? 0),
     String(e.project ?? '').trim().toLowerCase(),
+    String(e.dimensionValue ?? '').trim(),
   ].join('|')
 }
 

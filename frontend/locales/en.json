@@ -726,5 +726,17 @@
   "admin.absence_on_behalf.days_excludes": "(excludes weekends)",
   "admin.absence_on_behalf.save_btn": "Save absence",
   "admin.absence_on_behalf.missing_fields": "Please fill in all required fields.",
-  "admin.absence_on_behalf.record_btn": "Record absence"
+  "admin.absence_on_behalf.record_btn": "Record absence",
+  "dimensions.title": "Cost centres and project codes",
+  "dimensions.intro": "Synced read-only from Salaxy. Pick one for employees to tag entries with, or keep the free-text project field.",
+  "dimensions.sync": "Sync from Salaxy",
+  "dimensions.sync_result": "Synced {synced}. Skipped {skipped} that are not row-level.",
+  "dimensions.sync_failed": "Sync from Salaxy failed.",
+  "dimensions.load_failed": "Could not load dimensions.",
+  "dimensions.save_failed": "Could not save the selection.",
+  "dimensions.none_synced": "Nothing synced yet. Sync from Salaxy to see the row-level dimensions on this account.",
+  "dimensions.option_count": "{count} options",
+  "dimensions.use_free_text": "Use the free-text project field instead",
+  "dimensions.choose": "Choose…",
+  "dimensions.required_hint": "Choose a {label} for every row before saving."
 }

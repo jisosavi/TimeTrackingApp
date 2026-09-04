@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import HolidayRulesPanel from '@/components/admin/HolidayRulesPanel.vue'
 import RecordAbsenceOnBehalf from '@/components/admin/RecordAbsenceOnBehalf.vue'
+import DimensionsPanel from '@/components/admin/DimensionsPanel.vue'
 import { useAdminData, validateEmployeeForm } from '@/composables/useAdminData'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -337,6 +338,8 @@ async function submitAddForm() {
     </div>
 
     <p v-if="syncMessage" class="text-sm text-muted-foreground">{{ syncMessage }}</p>
+
+    <DimensionsPanel />
 
     <!-- Testing tools -->
     <div class="rounded border border-dashed border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">

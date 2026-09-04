@@ -154,6 +154,28 @@ export interface LlmEntry {
   mileage: number
   project: string
   notes: string
+  /** Cost accounting dimension code, when the company has a Salaxy dimension enabled. */
+  dimension?: string
+  dimensionValue?: string
+}
+
+/** A selectable cost centre / project code synced from Salaxy. */
+export interface DimensionOption {
+  value: string
+  option_text: string
+  active?: boolean
+}
+
+export interface ActiveDimension {
+  dimension_id: string
+  label: string
+}
+
+export interface SyncedDimension extends ActiveDimension {
+  scope: string
+  allow_cost_sharing: boolean
+  enabled: boolean
+  synced_at: string
 }
 
 export interface LlmParsedResponse {
