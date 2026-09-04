@@ -1,7 +1,182 @@
 # Roadmap
 
-Deferred and planned work. Each item records why it is not being built yet, so the
-decision does not have to be rediscovered.
+Planned and deferred work. Each item records the decisions already taken and what is
+knowingly left out, so neither has to be rediscovered.
+
+---
+
+## Cost accounting dimensions (cost centres / project codes)
+
+**Status:** planned (Sep 2026). Scope is deliberately the simplest case: one row-scoped
+dimension, one value per entry. Salaxy's dimension support is far more versatile; the
+extensions we are knowingly leaving out are listed at the end.
+
+### What Salaxy provides
+
+```
+GET    /v03/api/settings/dimensions        -> CostAccountingDimensionDefinition[]
+GET    /v03/api/settings/dimensions/{id}
+POST   /v03/api/settings/dimensions        -> saves ONE definition
+POST   /v03/api/settings/dimensions/all    -> REPLACES ALL definitions (dangerous)
+DELETE /v03/api/settings/dimensions/{id}
+```
+
+| Schema | Fields |
+|---|---|
+| `CostAccountingDimensionDefinition` | `id`, `label`, `options[]`, `allowCostSharing`, `scope` |
+| `CostAccountingDimensionOption` | `value`, `text`, `path` (for hierarchies), `scope` |
+| `CostAccountingDimension` (the assignment) | `id`, `value`, `percent` |
+| `CostAccountingDimensionScope` | `none` / `calculation` / `row` / `hidden` |
+
+Assignment points: `UserDefinedRow.accounting.dimensions[]` (per row) and
+`CalculationAccounting.dimensions` (per calculation).
+
+### Already in place
+
+`EMPTY_ROW_FIELDS` in `backend/lib/salaxy.ts` already sends
+`accounting: { vatPercent: null, vatEntries: null, dimensions: [], entry: null }` on every
+exported row. The export side is populating an array we already send, not new plumbing.
+
+### Decisions taken
+
+| Decision | Choice |
+|---|---|
+| Sync direction | **Read-only.** `POST /settings/dimensions/all` replaces every dimension on the account, so the time tracker must never write back |
+| Dimensions per entry | One for now, stored in a child table so percentage splits and multiple dimensions are additive later |
+| Eligible dimensions | `scope: 'row'` only — a time entry becomes a calculation row |
+| Option count | Assume under ~20, so the enabled options can be injected into the LLM system prompt |
+| Free-text `project` | Kept. Per company it is **either** free text **or** Salaxy dimensions, never both |
+| Sync trigger | Admin-initiated, following `backend/routes/sync_employees.ts` (`POST`, `requireAdmin`) |
+
+### Data model
+
+| Table | Columns | Notes |
+|---|---|---|
+| `company_dimensions` (new) | `company_id`, `dimension_id`, `label`, `scope`, `allow_cost_sharing`, `enabled`, `synced_at` | One row per Salaxy definition; `enabled` is the admin's pick |
+| `company_dimension_options` (new) | `company_id`, `dimension_id`, `value`, `text`, `path`, `active` | `active=false` when an option disappears from Salaxy but is still referenced by history |
+| `time_entry_dimensions` (new) | `entry_id`, `dimension_id`, `value`, `percent` | `percent` defaults 100. Exactly one row per entry today; the table shape is what makes splits additive later |
+| `time_entries.project` | unchanged | Holds the option's `text` as the display label when dimensions are on, free text when they are off |
+
+Keeping `project` as the label means the export row message stays human-readable for the
+payroll manager while the authoritative code lives in `accounting.dimensions`.
+
+### Mode switch, per company
+
+- **No dimensions synced/enabled** -> `project` is a free-text input. Exactly today's behaviour.
+- **Dimensions enabled** -> the preview card shows a required select of enabled options; free
+  text is not offered.
+
+This is why no migration is needed: existing companies stay in the first mode until an admin
+opts in.
+
+### LLM logging
+
+With under ~20 options, inject the enabled options into the interpreter's system prompt so the
+model maps a spoken name to a code directly:
+
+```
+KUSTANNUSPAIKAT (valitse VAIN näistä, palauta koodi):
+  LAI-01  Laituri
+  MOO-02  Moonlanding
+```
+
+The model returns the code; the backend validates it against the enabled options; the preview
+card shows a select pre-filled with the match. An unmatched or missing code leaves the select
+empty for the employee to pick. This keeps the app's existing rule that nothing is saved
+without a confirmable, editable preview.
+
+### Export
+
+Populate the array already being sent, on both rows an entry generates (hours and km):
+
+```ts
+accounting: { ...EMPTY_ROW_FIELDS.accounting,
+              dimensions: [{ id: dimensionId, value, percent: 100 }] }
+```
+
+Validate before sending: if an entry references an option that is no longer `active`, refuse
+the export and name the entry rather than sending a value Salaxy may reject.
+
+### Phases
+
+1. **Sync + storage** — `POST /api/sync_dimensions_from_salaxy` (`requireAdmin`), the three
+   tables, no UI. *Verify:* a company's row-scoped dimensions and options appear locally and a
+   re-sync is idempotent.
+2. **Admin selection UI** — list synced dimensions, toggle `enabled`. *Verify:* enabling one
+   flips that company into dimension mode.
+3. **Employee select in the preview card** — replaces the free-text `project` input when
+   enabled. *Verify:* an entry saves with a `time_entry_dimensions` row.
+4. **LLM prompt injection + code validation.** *Verify:* parser tests mapping a spoken project
+   name to the right code, and an unknown name leaving the field empty.
+5. **Export.** *Verify:* the exported row in Salaxy carries the dimension value, visible on the
+   calculation.
+
+### Test fixture to create in Salaxy
+
+Three definitions: two that the feature should pick up, and one that it must ignore. Two
+usable dimensions rather than one is deliberate — the admin's "which are used for time
+tracking" step cannot be tested with a single dimension.
+
+Create them one at a time with `POST /v03/api/settings/dimensions`. **Never use
+`/settings/dimensions/all`** — it replaces every dimension on the account.
+
+```json
+{ "id": "costcentre", "label": "Kustannuspaikka", "scope": "row", "allowCostSharing": false,
+  "options": [ { "value": "100", "text": "Helsinki" },
+               { "value": "200", "text": "Tampere" },
+               { "value": "300", "text": "Äänekoski" } ] }
+
+{ "id": "project", "label": "Projekti", "scope": "row", "allowCostSharing": false,
+  "options": [ { "value": "LAI-01", "text": "Laituri" },
+               { "value": "MOO-02", "text": "Moonlanding" },
+               { "value": "LAI-02", "text": "Laiturin huolto" } ] }
+
+{ "id": "dept", "label": "Osasto", "scope": "calculation", "allowCostSharing": false,
+  "options": [ { "value": "A", "text": "Hallinto" },
+               { "value": "B", "text": "Tuotanto" } ] }
+```
+
+If Salaxy assigns the `id` itself rather than accepting the one posted, use whatever it
+returns — the values above only need to be stable, not specific.
+
+Each element is there to prove something:
+
+| Fixture element | What it tests |
+|---|---|
+| Two `row`-scoped dimensions | The admin can enable a subset; impossible to test with one |
+| `dept` at `calculation` scope | The scope filter genuinely excludes it from the admin list |
+| `Äänekoski` | UTF-8 survives Salaxy -> DB -> LLM prompt -> preview -> export row message |
+| `LAI-01 Laituri` beside `LAI-02 Laiturin huolto` | The model picks the right one; an ambiguous "laituri" should leave the field empty rather than guess |
+| Codes that do not resemble their text | The model returns the **code**, not the label |
+| Reusing "Laituri" and "Moonlanding" | Directly comparable with the existing free-text entries already in the test data |
+
+Two follow-up tests that need no new fixture:
+
+- **Option withdrawn:** delete `LAI-02` in Salaxy after an entry references it, re-sync, and
+  confirm the option goes `active = false`, history still renders, and the export refuses
+  rather than sending a dead value.
+- **Cost sharing flag:** flip `costcentre` to `allowCostSharing: true` and confirm the app
+  still sends exactly one value at `percent: 100` and does not break. This is the closest
+  cheap check that the deferred percentage-split work will not require restructuring.
+
+### Deliberately out of scope for now
+
+Salaxy supports considerably more than this, and these are the pieces we are choosing not to
+build yet. All are additive on the model above.
+
+- **Percentage splits** — one entry divided across several dimension values.
+  `CostAccountingDimension.percent` and `allowCostSharing` already exist for this, and
+  `time_entry_dimensions.percent` is why it needs no restructuring.
+- **Multiple dimensions per entry** — e.g. a cost centre *and* a project on the same entry.
+  The child table already permits it; it is a UI question.
+- **Non-row scopes** — `calculation`-scoped dimensions, and any future payroll-level or
+  employee-level dimensions. A company whose cost centre is not row-scoped cannot use this
+  feature at all until then.
+- **Hierarchical options** — `CostAccountingDimensionOption.path` describes a tree. We flatten
+  and ignore `path` while option counts are small.
+- **Different codes for the hours and km halves of one entry** — one value applies to both rows
+  the entry generates. Worth revisiting if a driving leg genuinely belongs to a different cost
+  centre than the work.
 
 ---
 
