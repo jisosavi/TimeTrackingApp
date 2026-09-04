@@ -20,6 +20,22 @@ app.post("/api/time_entries", async (c) => {
   const entries = Array.isArray(body.entries) ? body.entries : [];
   if (!entries.length) return c.json({ success: false, error: "entries puuttuu" }, 400);
 
+  // When the company uses Salaxy dimensions, every entry must carry a valid code:
+  // the free-text project field is not offered in that mode.
+  const [activeDim] = await sql`
+    SELECT dimension_id FROM company_dimensions
+    WHERE company_id = ${companyId} AND enabled = TRUE AND scope = 'row'
+  ` as { dimension_id: string }[];
+  const dimensionId = activeDim?.dimension_id ?? null;
+  const optionText = new Map<string, string>();
+  if (dimensionId) {
+    const opts = await sql`
+      SELECT value, option_text FROM company_dimension_options
+      WHERE company_id = ${companyId} AND dimension_id = ${dimensionId} AND active = TRUE
+    ` as { value: string; option_text: string }[];
+    for (const o of opts) optionText.set(o.value, o.option_text);
+  }
+
   const ids: unknown[] = [];
   for (const e of entries) {
     const rawDate = String(e.date ?? new Date().toLocaleDateString("fi-FI")).trim();
@@ -27,13 +43,31 @@ app.post("/api/time_entries", async (c) => {
     const isoDate = parts.length === 3 && parts[0].length === 2
       ? `${parts[2]}-${parts[1]}-${parts[0]}`
       : rawDate;
+    let project = String(e.project ?? "").trim();
+    const dimensionValue = String(e.dimensionValue ?? "").trim();
+
+    if (dimensionId) {
+      if (!dimensionValue || !optionText.has(dimensionValue)) {
+        return c.json({ success: false, error: "Kustannuspaikka puuttuu tai on tuntematon" }, 400);
+      }
+      // project carries the human-readable label; the code is the authoritative value.
+      project = optionText.get(dimensionValue)!;
+    }
+
     const [result] = await sql`
       INSERT INTO time_entries (company_id, employee_id, entry_date, start_time, end_time, hours, km, project, comment)
       VALUES (${companyId}, ${emp.id}, ${isoDate}, ${String(e.start ?? "").trim()}, ${String(e.end ?? "").trim()},
-              ${Number(e.hours ?? 0)}, ${Number(e.mileage ?? 0)}, ${String(e.project ?? "").trim()}, ${String(e.notes ?? "").trim()})
+              ${Number(e.hours ?? 0)}, ${Number(e.mileage ?? 0)}, ${project}, ${String(e.notes ?? "").trim()})
       RETURNING id
     `;
     ids.push(result.id);
+
+    if (dimensionId) {
+      await sql`
+        INSERT INTO time_entry_dimensions (entry_id, dimension_id, value, percent)
+        VALUES (${result.id as number}, ${dimensionId}, ${dimensionValue}, 100)
+      `;
+    }
   }
   writeAudit(companyId, { event: "time_entry.created", actorType: "employee", actorId: Number(emp.id), actorIp: reqIp(c.req.header("x-forwarded-for")), resource: "time_entry", after: { ids, count: ids.length } });
   return c.json({ success: true, saved: ids.length, ids });

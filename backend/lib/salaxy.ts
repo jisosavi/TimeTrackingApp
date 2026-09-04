@@ -24,6 +24,8 @@ export interface EntryForExport {
   mileage: number;
   project: string;
   notes: string;
+  dimensionId?: string | null;
+  dimensionValue?: string | null;
 }
 
 export async function getCompanyCreds(companyId: number): Promise<SalaxyCreds> {
@@ -199,6 +201,18 @@ const EMPTY_ROW_FIELDS = {
   period: null, data: {},
 };
 
+/**
+ * Cost accounting dimension for one row. The empty-array shape was already being
+ * sent on every row, so this only fills it in.
+ */
+function rowAccounting(entry: EntryForExport): Record<string, unknown> {
+  if (!entry.dimensionId || !entry.dimensionValue) return EMPTY_ROW_FIELDS.accounting;
+  return {
+    ...EMPTY_ROW_FIELDS.accounting,
+    dimensions: [{ id: entry.dimensionId, value: entry.dimensionValue, percent: 100 }],
+  };
+}
+
 export async function exportEmployeeEntries(
   payrollId: string,
   entries: EntryForExport[],
@@ -274,7 +288,7 @@ export async function exportEmployeeEntries(
     if (hours > 0) {
       const msg = buildDescription(entry);
       if (!existingMsgs[msg]) {
-        addedRows.push({ rowIndex: ++maxIdx, rowType: "hourlySalary", count: hours, price: defaultHourlyPrice, unit: "hours", message: msg, ...EMPTY_ROW_FIELDS });
+        addedRows.push({ rowIndex: ++maxIdx, rowType: "hourlySalary", count: hours, price: defaultHourlyPrice, unit: "hours", message: msg, ...EMPTY_ROW_FIELDS, accounting: rowAccounting(entry) });
         entryIsNew = true;
       }
     }
@@ -283,7 +297,7 @@ export async function exportEmployeeEntries(
       const msg = `${entry.date}${entry.project ? " | " + entry.project : ""} | km-korvaus | ${mileage} km`;
       if (!existingMsgs[msg]) {
         const kmRate = kmRates.get(Number(isoFromEntryDate(entry.date)!.slice(0, 4)))!;
-        addedRows.push({ rowIndex: ++maxIdx, rowType: "milageOwnCar", count: mileage, price: kmRate, unit: "km", message: msg, ...EMPTY_ROW_FIELDS });
+        addedRows.push({ rowIndex: ++maxIdx, rowType: "milageOwnCar", count: mileage, price: kmRate, unit: "km", message: msg, ...EMPTY_ROW_FIELDS, accounting: rowAccounting(entry) });
         appliedKmRates[entry.id] = kmRate;
         entryIsNew = true;
       }

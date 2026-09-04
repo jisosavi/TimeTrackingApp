@@ -1,5 +1,6 @@
 import { Hono } from "@hono/hono";
 import { verifyToken } from "../lib/jwt.ts";
+import { sql } from "../lib/db.ts";
 import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BEARER_TOKEN_BEDROCK } from "../lib/config.ts";
 // import { GEMINI_API_KEY } from "../lib/config.ts";
 
@@ -88,6 +89,35 @@ app.post("/api/llm_proxy", async (c) => {
   const langInstruction = LANG_INSTRUCTIONS[language] ?? LANG_INSTRUCTIONS["fi"];
   const today = new Date().toLocaleDateString("fi-FI", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "-");
 
+  // With a Salaxy dimension enabled the option list is small enough to inline, so
+  // the model can map a spoken name straight to a code.
+  const companyId = claims["company_id"] as number;
+  const [activeDim] = await sql`
+    SELECT dimension_id, label FROM company_dimensions
+    WHERE company_id = ${companyId} AND enabled = TRUE AND scope = 'row'
+  ` as { dimension_id: string; label: string }[];
+
+  let dimensionBlock = "";
+  let dimensionJsonField = "";
+  if (activeDim) {
+    const opts = await sql`
+      SELECT value, option_text FROM company_dimension_options
+      WHERE company_id = ${companyId} AND dimension_id = ${activeDim.dimension_id} AND active = TRUE
+      ORDER BY option_text, value
+    ` as { value: string; option_text: string }[];
+    if (opts.length) {
+      const list = opts.map((o) => `  ${o.value}  ${o.option_text}`).join("\n");
+      dimensionBlock = `
+${(activeDim.label || "KUSTANNUSPAIKKA").toUpperCase()} (pakollinen):
+- Valitse dimension-kenttaan VAIN jokin alla olevista koodeista. Palauta KOODI, ei nimea.
+- Jos kayttajan mainitsema nimi ei vastaa selvasti yhta vaihtoehtoa, jata dimension tyhjaksi
+  - ala arvaa. Tyontekija valitsee sen itse esikatselusta.
+${list}
+`;
+      dimensionJsonField = ',"dimension":"KOODI tai tyhja"';
+    }
+  }
+
   const systemPrompt = `Olet TimeAppin tuntikirjausassistentti. Tänään on ${today}. ${langInstruction}.
 
 TULKINTAOHJEET:
@@ -99,6 +129,7 @@ TULKINTAOHJEET:
 - Jos projektia tai kommenttia ei anneta, jätä tyhjäksi
 - TÄRKEÄÄ: Laske tunnit AINA kellonaikojen perusteella (loppu - alku)
 
+${dimensionBlock}
 KILOMETRIKORVAUKSET:
 - Tunnista km-korvaukset syötteestä: 'km-korvaus 134km', 'kilometrikorvaus 145km', 'kilometrit 150', 'lisäksi 145 km', 'ajoin 80km'
 - Km-korvaus voi olla samassa syötteessä tuntien kanssa tai erikseen
@@ -185,7 +216,7 @@ TÄRKEÄÄ - action-kenttä:
 
 JSON-muoto tuntikirjaukselle (käytä TARKALLEEN kolme backtick-merkkiä):
 \`\`\`json
-{"type":"time_entry","action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"}]}
+{"type":"time_entry","action":"new tai update","entries":[{"date":"DD-MM-YYYY","start":"HH:MM","end":"HH:MM","hours":X.X,"mileage":0,"project":"nimi","notes":"kommentti"${dimensionJsonField}}]}
 \`\`\`
 
 USEITA KIRJAUKSIA SAMASSA SYÖTTEESSÄ:

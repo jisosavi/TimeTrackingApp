@@ -150,7 +150,10 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
   if (employeeIds.length) {
     const exportedFilter = force ? "" : "AND te.exported_to_salaxy = FALSE";
     const rows = await sql.unsafe(
-      `SELECT te.*, e.salaxy_employment_id FROM time_entries te JOIN employees e ON e.id = te.employee_id
+      `SELECT te.*, e.salaxy_employment_id, ted.dimension_id, ted.value AS dimension_value
+       FROM time_entries te
+       JOIN employees e ON e.id = te.employee_id
+       LEFT JOIN time_entry_dimensions ted ON ted.entry_id = te.id
        WHERE te.company_id = $1 AND te.status = 'approved' ${exportedFilter}
          AND te.entry_date >= $2 AND te.entry_date <= $3 AND te.employee_id = ANY($4)
        ORDER BY te.entry_date ASC`,
@@ -172,6 +175,8 @@ app.post("/api/export_payroll", requireAdmin, async (c) => {
         start: String(row.start_time ?? ""), end: String(row.end_time ?? ""),
         hours: Number(row.hours), mileage: exportableKm,
         project: String(row.project ?? ""), notes: String(row.comment ?? ""),
+        dimensionId: (row.dimension_id as string | null) ?? null,
+        dimensionValue: (row.dimension_value as string | null) ?? null,
       });
     }
   }
