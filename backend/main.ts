@@ -35,6 +35,7 @@ import absences from "./routes/absences.ts";
 import supervisorTimeOff from "./routes/supervisor_time_off.ts";
 import teamCalendar from "./routes/team_calendar.ts";
 import adminTimeOff from "./routes/admin_time_off.ts";
+import dimensions from "./routes/dimensions.ts";
 
 const app = new Hono<{ Variables: Record<string, unknown> }>();
 
@@ -104,6 +105,7 @@ app.route(API_V,absences);
 app.route(API_V,supervisorTimeOff);
 app.route(API_V,teamCalendar);
 app.route(API_V,adminTimeOff);
+app.route(API_V,dimensions);
 
 const port = parseInt(Deno.env.get("PORT") ?? "8080");
 console.log(`Starting on port ${port}`);
